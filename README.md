@@ -11,7 +11,7 @@ Protótipo de manager de futebol inspirado na experiência clássica de jogos co
 - Janela de transferências no meio da temporada.
 - Evolução de jogadores ao fim da época.
 - Fechamento financeiro simples (prêmios + folha salarial).
-- Persistência básica de carreira (SQLite): campeão e artilheiro por temporada.
+- Persistência básica de carreira (SQLite): campeão, artilheiro e tabela completa por temporada.
 
 ## Executar demo
 
@@ -24,6 +24,7 @@ python3 src/newbras/simulate.py
 ```bash
 PYTHONPATH=src python3 -m newbras.cli season --db ./career.db
 PYTHONPATH=src python3 -m newbras.cli history --db ./career.db
+PYTHONPATH=src python3 -m newbras.cli history --db ./career.db --detailed
 ```
 
 ## Testar o estado atual
@@ -37,8 +38,8 @@ python3 -m pytest -q
 - `src/newbras/domain.py`: entidades de domínio (`Player`, `Team`).
 - `src/newbras/engine.py`: motor de temporada, calendário e transferências.
 - `src/newbras/demo.py`: fábrica da liga demo e saída de console.
-- `src/newbras/career.py`: persistência SQLite de histórico de temporadas.
-- `src/newbras/cli.py`: comandos de demo, simulação de temporada e histórico.
+- `src/newbras/career.py`: persistência SQLite de histórico e tabela por temporada.
+- `src/newbras/cli.py`: comandos de demo, simulação de temporada e histórico detalhado.
 - `src/newbras/simulate.py`: camada de compatibilidade para imports antigos.
 - `tests/test_simulate.py`: testes automatizados da temporada e regras básicas.
 - `tests/test_career.py`: testes automatizados de persistência de carreira.

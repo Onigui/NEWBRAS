@@ -17,6 +17,17 @@ class SeasonRecord:
     top_scorer_goals: int
 
 
+@dataclass
+class StandingRecord:
+    season: int
+    position: int
+    team: str
+    points: int
+    gf: int
+    ga: int
+    gd: int
+
+
 class CareerStore:
     def __init__(self, db_path: str = "newbras_career.db") -> None:
         self.db_path = Path(db_path)
@@ -31,6 +42,21 @@ class CareerStore:
                     points INTEGER NOT NULL,
                     top_scorer TEXT NOT NULL,
                     top_scorer_goals INTEGER NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS standings (
+                    season INTEGER NOT NULL,
+                    position INTEGER NOT NULL,
+                    team TEXT NOT NULL,
+                    points INTEGER NOT NULL,
+                    gf INTEGER NOT NULL,
+                    ga INTEGER NOT NULL,
+                    gd INTEGER NOT NULL,
+                    PRIMARY KEY (season, position),
+                    FOREIGN KEY (season) REFERENCES seasons(season)
                 )
                 """
             )
@@ -73,6 +99,16 @@ class CareerStore:
                     record.top_scorer_goals,
                 ),
             )
+            conn.executemany(
+                """
+                INSERT INTO standings (season, position, team, points, gf, ga, gd)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (season_number, idx, team.name, team.points, team.gf, team.ga, team.gd)
+                    for idx, team in enumerate(table, start=1)
+                ],
+            )
             conn.commit()
 
         return record
@@ -84,3 +120,17 @@ class CareerStore:
             ).fetchall()
 
         return [SeasonRecord(*row) for row in rows]
+
+    def season_table(self, season: int) -> List[StandingRecord]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT season, position, team, points, gf, ga, gd
+                FROM standings
+                WHERE season = ?
+                ORDER BY position
+                """,
+                (season,),
+            ).fetchall()
+
+        return [StandingRecord(*row) for row in rows]
