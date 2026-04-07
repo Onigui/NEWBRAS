@@ -56,6 +56,36 @@ Sim, dá para testar sem baixar nada localmente.
 - Rode `python3 -m http.server 8080 -d web`.
 - Abra a porta 8080 no browser do próprio Codespaces.
 
+
+## Passo a passo (GitHub, sem instalar nada)
+
+1. Entre no repositório no GitHub.
+2. Vá em **Settings → Pages**.
+3. Em **Build and deployment**, selecione **Source: GitHub Actions**.
+4. Garanta que o arquivo `.github/workflows/pages.yml` está no branch `work`.
+5. Faça um commit qualquer na pasta `web/` (ou rode manualmente em **Actions → Deploy Web Prototype to GitHub Pages → Run workflow**).
+6. Aguarde o workflow terminar (ícone verde em **Actions**).
+7. Volte em **Settings → Pages** e abra a URL publicada.
+8. Pronto: o jogo roda direto no navegador, sem instalação local.
+
+### Se não publicar
+- Confira se o branch usado é `work`.
+- Confira se a aba **Actions** está habilitada para o repositório.
+- Confira se o job de deploy está com permissão para Pages (já configurado no workflow).
+
+
+### Erro comum do Actions: `Get Pages site failed (Not Found)`
+Isso significa que o GitHub Pages ainda não está habilitado no repositório.
+
+Como corrigir:
+1. Abra **Settings → Pages**.
+2. Em **Build and deployment**, selecione **Source: GitHub Actions** e salve.
+3. Rode novamente o workflow de deploy.
+
+Também atualizamos o workflow para:
+- tentar habilitar Pages automaticamente (`enablement: true`);
+- rodar ações JavaScript em Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`) para evitar o aviso de depreciação do Node 20.
+
 ## CLI de carreira
 
 ```bash
