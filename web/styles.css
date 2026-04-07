@@ -1,0 +1,12 @@
+:root { color-scheme: dark; }
+body { font-family: Arial, sans-serif; background: #121212; color: #ececec; margin: 0; }
+.container { max-width: 980px; margin: 0 auto; padding: 20px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+select, input, button { background: #2962ff; color: #fff; border: 0; border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+select, input { background: #2b2b2b; border: 1px solid #555; }
+button.danger { background: #c62828; }
+section { background: #1e1e1e; border-radius: 10px; padding: 12px; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; border-bottom: 1px solid #333; text-align: left; }
+pre { white-space: pre-wrap; max-height: 300px; overflow: auto; }
