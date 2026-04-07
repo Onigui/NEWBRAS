@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEWBRAS Web</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>NEWBRAS (Modo Carreira Web)</h1>
+
+      <section class="actions">
+        <label>Seu time:
+          <select id="managerTeam"></select>
+        </label>
+        <label>Estilo:
+          <select id="tactic">
+            <option value="balanced">Equilibrado</option>
+            <option value="offensive">Ofensivo</option>
+            <option value="defensive">Defensivo</option>
+          </select>
+        </label>
+        <button id="startSeasonBtn">Iniciar temporada</button>
+        <button id="playRoundBtn">Jogar próxima rodada</button>
+        <button id="saveBtn">Salvar histórico</button>
+      </section>
+
+      <section>
+        <h2 id="seasonTitle">Temporada 1</h2>
+        <p id="status">Selecione um time e inicie a temporada.</p>
+        <p id="managerMatch"></p>
+      </section>
+
+      <section>
+        <h2>Criar jogador próprio</h2>
+        <div class="actions">
+          <input id="pName" placeholder="Nome" />
+          <select id="pPos"><option>ATA</option><option>MEI</option><option>ZAG</option><option>LAT</option><option>GOL</option></select>
+          <input id="pAge" type="number" min="16" max="40" value="18" />
+          <input id="pRating" type="number" min="40" max="95" value="68" />
+          <input id="pPotential" type="number" min="45" max="99" value="84" />
+          <button id="createPlayerBtn">Adicionar ao meu time</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Próxima rodada</h2>
+        <ul id="fixtures"></ul>
+      </section>
+
+      <section>
+        <h2>Tabela</h2>
+        <table id="table">
+          <thead><tr><th>#</th><th>Time</th><th>Pts</th><th>SG</th><th>GP</th><th>GC</th><th>Caixa</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Artilheiros</h2>
+        <ol id="scorers"></ol>
+      </section>
+
+      <section>
+        <h2>Eventos da temporada</h2>
+        <ul id="events"></ul>
+      </section>
+
+      <section>
+        <h2>Histórico (localStorage)</h2>
+        <pre id="history"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
