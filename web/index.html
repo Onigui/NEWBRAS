@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEWBRAS Web Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>NEWBRAS (Web)</h1>
+      <p>Protótipo jogável no navegador com temporadas sequenciais.</p>
+
+      <section class="actions">
+        <label>
+          Seu time:
+          <select id="managerTeam"></select>
+        </label>
+        <label>
+          Estilo tático:
+          <select id="tactic">
+            <option value="balanced">Equilibrado</option>
+            <option value="offensive">Ofensivo</option>
+            <option value="defensive">Defensivo</option>
+          </select>
+        </label>
+        <button id="simulateBtn">Simular temporada</button>
+        <button id="nextBtn">Próxima temporada</button>
+        <button id="saveBtn">Salvar no histórico local</button>
+        <button id="historyBtn">Ver histórico</button>
+        <button id="resetBtn" class="danger">Limpar histórico</button>
+      </section>
+
+      <section>
+        <h2 id="seasonTitle">Temporada 1</h2>
+        <p id="champion"></p>
+      </section>
+
+
+      <section>
+        <h2>Criar jogador próprio</h2>
+        <div class="actions">
+          <input id="pName" placeholder="Nome" />
+          <select id="pPos"><option>ATA</option><option>MEI</option><option>ZAG</option><option>LAT</option><option>GOL</option></select>
+          <input id="pAge" type="number" min="16" max="40" value="18" />
+          <input id="pRating" type="number" min="40" max="95" value="68" />
+          <input id="pPotential" type="number" min="45" max="99" value="84" />
+          <button id="createPlayerBtn">Adicionar ao meu time</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Janela de transferências</h2>
+        <ul id="transfers"></ul>
+      </section>
+
+      <section>
+        <h2>Tabela final</h2>
+        <table id="table">
+          <thead>
+            <tr><th>#</th><th>Time</th><th>Pts</th><th>SG</th><th>GP</th><th>GC</th><th>Caixa</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Artilheiros</h2>
+        <ol id="scorers"></ol>
+      </section>
+
+      <section>
+        <h2>Histórico de temporadas (localStorage)</h2>
+        <pre id="history"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
