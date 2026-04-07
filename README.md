@@ -34,7 +34,9 @@ No Web você pode:
 - escolher seu time;
 - criar jogador próprio para seu time;
 - escolher estilo tático (equilibrado/ofensivo/defensivo);
-- simular temporada e avançar para próxima;
+- disputar rodada por rodada (partida por partida da temporada);
+- simular a próxima rodada quando quiser;
+- avançar para próxima temporada;
 - acompanhar evolução/regressão de jogadores por idade;
 - ver aposentadorias e promoção automática da base ao fim da temporada;
 - salvar histórico local no navegador.

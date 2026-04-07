@@ -3,39 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NEWBRAS Web Prototype</title>
+    <title>NEWBRAS Web</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="container">
-      <h1>NEWBRAS (Web)</h1>
-      <p>Protótipo jogável no navegador com temporadas sequenciais.</p>
+      <h1>NEWBRAS (Modo Carreira Web)</h1>
 
       <section class="actions">
-        <label>
-          Seu time:
+        <label>Seu time:
           <select id="managerTeam"></select>
         </label>
-        <label>
-          Estilo tático:
+        <label>Estilo:
           <select id="tactic">
             <option value="balanced">Equilibrado</option>
             <option value="offensive">Ofensivo</option>
             <option value="defensive">Defensivo</option>
           </select>
         </label>
-        <button id="simulateBtn">Simular temporada</button>
-        <button id="nextBtn">Próxima temporada</button>
-        <button id="saveBtn">Salvar no histórico local</button>
-        <button id="historyBtn">Ver histórico</button>
-        <button id="resetBtn" class="danger">Limpar histórico</button>
+        <button id="startSeasonBtn">Iniciar temporada</button>
+        <button id="playRoundBtn">Jogar próxima rodada</button>
+        <button id="saveBtn">Salvar histórico</button>
       </section>
 
       <section>
         <h2 id="seasonTitle">Temporada 1</h2>
-        <p id="champion"></p>
+        <p id="status">Selecione um time e inicie a temporada.</p>
+        <p id="managerMatch"></p>
       </section>
-
 
       <section>
         <h2>Criar jogador próprio</h2>
@@ -50,16 +45,14 @@
       </section>
 
       <section>
-        <h2>Janela de transferências</h2>
-        <ul id="transfers"></ul>
+        <h2>Próxima rodada</h2>
+        <ul id="fixtures"></ul>
       </section>
 
       <section>
-        <h2>Tabela final</h2>
+        <h2>Tabela</h2>
         <table id="table">
-          <thead>
-            <tr><th>#</th><th>Time</th><th>Pts</th><th>SG</th><th>GP</th><th>GC</th><th>Caixa</th></tr>
-          </thead>
+          <thead><tr><th>#</th><th>Time</th><th>Pts</th><th>SG</th><th>GP</th><th>GC</th><th>Caixa</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
@@ -70,7 +63,12 @@
       </section>
 
       <section>
-        <h2>Histórico de temporadas (localStorage)</h2>
+        <h2>Eventos da temporada</h2>
+        <ul id="events"></ul>
+      </section>
+
+      <section>
+        <h2>Histórico (localStorage)</h2>
         <pre id="history"></pre>
       </section>
     </main>
