@@ -39,6 +39,23 @@ No Web você pode:
 - ver aposentadorias e promoção automática da base ao fim da temporada;
 - salvar histórico local no navegador.
 
+## Testar só pelo navegador (sem instalar nada)
+
+Sim, dá para testar sem baixar nada localmente.
+
+### Opção 1: GitHub Pages (recomendado)
+1. Suba commits no branch `work` com mudanças em `web/`.
+2. O workflow `.github/workflows/pages.yml` publica automaticamente o conteúdo da pasta `web/`.
+3. Abra a URL de Pages do repositório e jogue direto no navegador.
+
+> Observação: GitHub Pages roda apenas frontend estático.
+> Então o jogo Web funciona 100% lá, mas o backend Python/CLI não roda no Pages.
+
+### Opção 2: GitHub Codespaces (também sem instalar local)
+- Abra um Codespace no repositório.
+- Rode `python3 -m http.server 8080 -d web`.
+- Abra a porta 8080 no browser do próprio Codespaces.
+
 ## CLI de carreira
 
 ```bash
