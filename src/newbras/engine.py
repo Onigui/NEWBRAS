@@ -141,6 +141,10 @@ class League:
             for player in team.squad:
                 player.evolve(self.rng)
 
+            retired = team.refresh_squad(self.rng)
+            if retired:
+                transfer_logs.append(f"{team.name} teve {retired} aposentadoria(s) e promoveu base")
+
         return all_results, transfer_logs
 
     def standings(self) -> List[Team]:

@@ -31,4 +31,5 @@ def test_top_scorers_returns_limited_list() -> None:
 def test_transfer_window_respects_max_deals() -> None:
     league = build_demo_league()
     _, transfer_logs = league.play_season()
-    assert len(transfer_logs) <= 4
+    market_logs = [l for l in transfer_logs if "contratou" in l]
+    assert len(market_logs) <= 4

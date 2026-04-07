@@ -9,15 +9,35 @@ Protótipo de manager de futebol inspirado na experiência clássica de jogos co
 - Força de ataque/defesa derivada do elenco.
 - Distribuição de gols para artilharia individual.
 - Janela de transferências no meio da temporada.
-- Evolução de jogadores ao fim da época.
+- Evolução de jogadores ao fim da época (com regressão por idade).
+- Aposentadoria de veteranos e promoção automática de jogadores da base.
 - Fechamento financeiro simples (prêmios + folha salarial).
 - Persistência básica de carreira (SQLite): campeão, artilheiro e tabela completa por temporada.
+- Protótipo Web com temporadas sequenciais, estilo tático, criação de jogador próprio e histórico em localStorage.
 
 ## Executar demo
 
 ```bash
 python3 src/newbras/simulate.py
 ```
+
+## Rodar no navegador
+
+```bash
+cd web
+python3 -m http.server 8080
+```
+
+Depois abra `http://localhost:8080` no navegador.
+
+No Web você pode:
+- escolher seu time;
+- criar jogador próprio para seu time;
+- escolher estilo tático (equilibrado/ofensivo/defensivo);
+- simular temporada e avançar para próxima;
+- acompanhar evolução/regressão de jogadores por idade;
+- ver aposentadorias e promoção automática da base ao fim da temporada;
+- salvar histórico local no navegador.
 
 ## CLI de carreira
 

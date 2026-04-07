@@ -8,14 +8,14 @@ from newbras.engine import League
 
 def _base_squad(prefix: str, base_rating: int) -> List[Player]:
     return [
-        Player(f"{prefix} Goleiro", "GOL", base_rating - 1, base_rating + 2, 2.3, 0.22),
-        Player(f"{prefix} Zagueiro A", "ZAG", base_rating, base_rating + 3, 2.7, 0.24),
-        Player(f"{prefix} Zagueiro B", "ZAG", base_rating - 2, base_rating + 1, 2.2, 0.20),
-        Player(f"{prefix} Lateral", "LAT", base_rating - 1, base_rating + 2, 2.0, 0.19),
-        Player(f"{prefix} Meia A", "MEI", base_rating + 1, base_rating + 5, 3.5, 0.32),
-        Player(f"{prefix} Meia B", "MEI", base_rating - 1, base_rating + 2, 2.1, 0.22),
-        Player(f"{prefix} Atacante A", "ATA", base_rating + 2, base_rating + 5, 4.2, 0.38),
-        Player(f"{prefix} Atacante B", "ATA", base_rating, base_rating + 3, 3.0, 0.27),
+        Player(f"{prefix} Goleiro", "GOL", base_rating - 1, base_rating + 2, 2.3, 0.22, age=30),
+        Player(f"{prefix} Zagueiro A", "ZAG", base_rating, base_rating + 3, 2.7, 0.24, age=27),
+        Player(f"{prefix} Zagueiro B", "ZAG", base_rating - 2, base_rating + 1, 2.2, 0.20, age=22),
+        Player(f"{prefix} Lateral", "LAT", base_rating - 1, base_rating + 2, 2.0, 0.19, age=24),
+        Player(f"{prefix} Meia A", "MEI", base_rating + 1, base_rating + 5, 3.5, 0.32, age=25),
+        Player(f"{prefix} Meia B", "MEI", base_rating - 1, base_rating + 2, 2.1, 0.22, age=21),
+        Player(f"{prefix} Atacante A", "ATA", base_rating + 2, base_rating + 5, 4.2, 0.38, age=23),
+        Player(f"{prefix} Atacante B", "ATA", base_rating, base_rating + 3, 3.0, 0.27, age=19),
     ]
 
 
