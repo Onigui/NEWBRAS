@@ -16,6 +16,8 @@ export const Contrato = z.object({
   fim: Data,
   /** Salário mensal na moeda do jogo. */
   salario: z.int().min(0),
+  /** Multa rescisória: quem paga leva o jogador, mesmo contra a vontade do clube. */
+  multaRescisoria: z.int().min(0).optional(),
 });
 export type Contrato = z.infer<typeof Contrato>;
 

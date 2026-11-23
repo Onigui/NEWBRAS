@@ -64,6 +64,9 @@ export function gerarElenco(
   return ELENCO_PADRAO.map((vaga) => {
     const estrangeiro = fracao > 0 && rng.chance(fracao) ? rng.pick(o.estrangeiros!) : undefined;
     const nivel = vaga.titular ? clube.nivel : Math.max(1, clube.nivel - rng.int(4, 10));
+    // Titulares tendem a estar perto do auge; goleiros titulares, um pouco mais velhos.
+    const idadeTitular = Math.round(rng.normal(vaga.posicao === "G" ? 29 : 27, 3));
+    const idade = vaga.titular ? Math.min(34, Math.max(20, idadeTitular)) : undefined;
     const jogador = gerarJogador(rng, {
       id: `${clube.id}-${vaga.numero}`,
       nacionalidade: estrangeiro?.nacionalidade ?? o.nacionalidade,
@@ -72,6 +75,7 @@ export function gerarElenco(
       nivel,
       hoje: o.hoje,
       clube: clube.id,
+      ...(idade !== undefined ? { idade } : {}),
       ...(vaga.lado ? { lado: vaga.lado } : {}),
       ...(o.fimDeContrato ? { fimDeContrato: o.fimDeContrato } : {}),
     });

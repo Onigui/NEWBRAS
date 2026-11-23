@@ -32,6 +32,7 @@ export const COLUNAS_JOGADORES = [
   "clube",
   "contrato_fim",
   "salario",
+  "multa_rescisoria",
   "numero",
 ] as const;
 
@@ -132,7 +133,11 @@ export function importarJogadoresCsv(conteudo: string): ResultadoPlanilha<Jogado
       estrela: simNao(l.estrela ?? ""),
       clube: texto(l.clube),
       contrato: contratoFim
-        ? { fim: contratoFim, salario: numero(l.salario ?? "") ?? 0 }
+        ? {
+            fim: contratoFim,
+            salario: numero(l.salario ?? "") ?? 0,
+            multaRescisoria: numero(l.multa_rescisoria ?? ""),
+          }
         : undefined,
       numero: numero(l.numero ?? ""),
     };
@@ -168,6 +173,7 @@ export function exportarJogadoresCsv(
     j.clube ?? "",
     j.contrato?.fim ?? "",
     j.contrato ? String(j.contrato.salario) : "",
+    j.contrato?.multaRescisoria !== undefined ? String(j.contrato.multaRescisoria) : "",
     j.numero ? String(j.numero) : "",
   ]);
   return escreverCsv([[...COLUNAS_JOGADORES], ...linhas], separador);

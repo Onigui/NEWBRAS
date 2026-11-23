@@ -1,0 +1,57 @@
+import type { ClubeEntrada } from "@newbras/data";
+
+/**
+ * Tupla compacta de clube, para os arquivos de cada país ficarem legíveis:
+ * [id (sem o prefixo do país), nome, nome curto, abreviação, estado (ou ""), cidade,
+ *  estádio, capacidade, cor principal, cor secundária, reputação 1-5, nível 1-100, rivais (ids sem prefixo)]
+ */
+export type ClubeLinha = readonly [
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
+  string,
+  string,
+  number,
+  number,
+  readonly string[],
+];
+
+/** Converte as tuplas de um país em clubes completos, com id "pais-nome" (ex.: "bra-flamengo"). */
+export function clubesDe(pais: string, linhas: readonly ClubeLinha[]): ClubeEntrada[] {
+  const prefixo = pais.toLowerCase();
+  return linhas.map(
+    ([
+      id,
+      nome,
+      nomeCurto,
+      abreviacao,
+      estado,
+      cidade,
+      estadio,
+      capacidade,
+      primaria,
+      secundaria,
+      reputacao,
+      nivel,
+      rivais,
+    ]) => ({
+      id: `${prefixo}-${id}`,
+      nome,
+      nomeCurto,
+      abreviacao,
+      pais,
+      ...(estado ? { estado } : {}),
+      cidade,
+      estadio: { nome: estadio, capacidade },
+      cores: { primaria, secundaria },
+      reputacao,
+      nivel,
+      rivais: rivais.map((r) => `${prefixo}-${r}`),
+    }),
+  );
+}
