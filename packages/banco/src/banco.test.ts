@@ -541,3 +541,63 @@ describe("nível 3: Américas", () => {
     expect(can.length).toBe(11);
   });
 });
+
+describe("nível 3: UEFA", () => {
+  const ligas = banco.competicoes.filter(
+    (c) => c.divisao === 1 && c.escopo.tipo === "pais" && c.movimentos.length === 0,
+  );
+
+  it("38 países europeus ganham a primeira divisão", () => {
+    const paises = [
+      "ALB",
+      "AND",
+      "ARM",
+      "AZE",
+      "BLR",
+      "BIH",
+      "BUL",
+      "CRO",
+      "CYP",
+      "CZE",
+      "EST",
+      "FIN",
+      "GEO",
+      "GIB",
+      "HUN",
+      "ISL",
+      "ISR",
+      "KAZ",
+      "KVX",
+      "LVA",
+      "LTU",
+      "LUX",
+      "MLT",
+      "MDA",
+      "MNE",
+      "MKD",
+      "NIR",
+      "NOR",
+      "POL",
+      "IRL",
+      "ROU",
+      "RUS",
+      "SMR",
+      "SRB",
+      "SVK",
+      "SVN",
+      "UKR",
+      "WAL",
+    ];
+    for (const pais of paises) {
+      const liga = ligas.find((c) => c.escopo.tipo === "pais" && c.escopo.pais === pais);
+      expect(liga, pais).toBeDefined();
+      expect(liga!.participantes.fixos.length, pais).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it("estádios desconhecidos ficam marcados para conferir", () => {
+    const semEstadio = banco.clubes.filter((c) => c.estadio.nome === `Estádio de ${c.cidade}`);
+    expect(semEstadio.length).toBeGreaterThan(100);
+    for (const c of semEstadio) expect(c.aConferir, c.id).toContain("estadio");
+  });
+});
