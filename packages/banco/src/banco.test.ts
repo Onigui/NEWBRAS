@@ -511,3 +511,33 @@ describe("Ásia: nível 2", () => {
     expect(liga("qat-qsl-2").participantes.fixos).toContain("qat-umm-salal");
   });
 });
+
+describe("nível 3: Américas", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+
+  it("cada país tem a primeira divisão, sem acesso nem rebaixamento", () => {
+    const tamanhos: [string, number][] = [
+      ["par-primera", 12],
+      ["per-liga-1", 18],
+      ["bol-division-profesional", 16],
+      ["ven-liga-futve", 14],
+      ["ecu-ligapro", 16],
+      ["can-cpl", 8],
+      ["crc-liga-fpd", 10],
+      ["hon-liga-nacional", 10],
+      ["gua-liga-nacional", 12],
+      ["slv-primera", 12],
+      ["pan-lpf", 12],
+    ];
+    for (const [id, n] of tamanhos) {
+      expect(liga(id).participantes.fixos, id).toHaveLength(n);
+      expect(liga(id).divisao).toBe(1);
+      expect(liga(id).movimentos, id).toEqual([]);
+    }
+  });
+
+  it("os clubes canadenses da CPL convivem com os da MLS", () => {
+    const can = banco.clubes.filter((c) => c.pais === "CAN");
+    expect(can.length).toBe(11);
+  });
+});
