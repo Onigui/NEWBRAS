@@ -11,14 +11,18 @@ import { DATAS_FIFA, SELECOES } from "./mundo/selecoes";
 import * as brasil from "./paises/brasil";
 import { CLUBES_ESTADUAIS, COMPETICOES_ESTADUAIS } from "./paises/brasil-estaduais";
 import * as alemanha from "./paises/alemanha";
+import * as arabia from "./paises/arabia";
 import * as espanha from "./paises/espanha";
+import * as eua from "./paises/eua";
 import * as franca from "./paises/franca";
 import * as inglaterra from "./paises/inglaterra";
 import * as italia from "./paises/italia";
 
-/** Data de referência do banco: idades e contratos são calculados a partir dela. */
-export const DATA_REFERENCIA = "2026-07-01";
-export const VERSAO_BANCO = "0.4.0";
+import { iconesNaBase } from "./lendas/icones";
+import { DATA_REFERENCIA } from "./referencia";
+
+export { DATA_REFERENCIA };
+export const VERSAO_BANCO = "0.5.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -163,6 +167,35 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
   },
+  USA: {
+    clubes: eua.CLUBES,
+    competicoes: eua.COMPETICOES,
+    jogadores: eua.JOGADORES,
+    fimDeContrato: "12-31",
+  },
+  KSA: {
+    clubes: arabia.CLUBES,
+    competicoes: arabia.COMPETICOES,
+    jogadores: arabia.JOGADORES,
+    estrangeiros: [
+      "BRA",
+      "POR",
+      "FRA",
+      "MAR",
+      "ALG",
+      "EGY",
+      "SEN",
+      "CIV",
+      "COL",
+      "ARG",
+      "ESP",
+      "TUN",
+      "NGA",
+      "CMR",
+    ],
+    fracaoEstrangeiros: 0.25,
+    fimDeContrato: "06-30",
+  },
 };
 
 export interface OpcoesBanco {
@@ -209,6 +242,9 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
     }
   }
 
+  // Ícones aposentados recomeçam na base de clubes sorteados.
+  jogadores.push(...iconesNaBase(clubes, semente));
+
   return Banco.parse({
     formato: 1,
     meta: {
@@ -216,7 +252,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       nome: "NewBras: Mundo 2026",
       versao: VERSAO_BANCO,
       descricao:
-        "Banco oficial do NewBras. Clubes reais; elencos gerados onde ainda não há jogadores reais.",
+        "Banco oficial do NewBras. Clubes reais; jogadores reais na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
       atualizadoEm: "2026-11-23",
     },
     paises: PAISES,
