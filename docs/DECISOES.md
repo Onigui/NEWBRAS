@@ -12,6 +12,7 @@
 | 23/11/2026 | Jogadores          | Banco híbrido                                  | Reais nas primeiras divisões principais (atualizados até meados de 2026); gerados com nomes da nacionalidade no resto; planilha e editor para corrigir                                                                                               |
 | 23/11/2026 | Venda de craques   | Jogo duro                                      | Clubes classificam jogadores (intocável, peça-chave, negociável, dispensável), cobram muito acima do valor pelos raros, renovam e se reforçam para segurá-los; multa rescisória obriga a venda                                                       |
 | 23/11/2026 | Seleções           | Clube e seleção ao mesmo tempo                 | Convites pela reputação e pelos resultados; convocação em datas FIFA e torneios                                                                                                                                                                      |
+| 23/11/2026 | Estádios           | Base do Brasfoot + 4 melhorias                 | Obras com prazo e capacidade reduzida; público realista; setores e sócio-torcedor; manutenção, gramado e exigências por competição com aluguel de estádio; arena nova com financiamento, naming rights e eventos                                     |
 
 ## Exceções à regra "paridade antes de inovação"
 

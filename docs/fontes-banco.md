@@ -8,15 +8,15 @@ pnpm --filter @newbras/banco exportar   # gera packages/banco/saida/ (JSON e CSV
 
 ## Etapas da Fase 3
 
-| Etapa | Conteúdo                                                                                                                                                     | Status       |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
-| 3.1   | Pacote do banco, 211 países da FIFA (confederação, nível, nomes, temporada, janelas, cores), seleções, datas FIFA 2026, 27 estados e Séries A, B e C de 2026 | Concluída    |
-| 3.2   | Brasil: Série D (96 clubes, concluída) e clubes dos estaduais (a fazer)                                                                                      | Em andamento |
-| 3.3   | Inglaterra, Espanha, Itália, Alemanha e França, todas as divisões previstas                                                                                  | A fazer      |
-| 3.4   | Os 20 países de nível 2                                                                                                                                      | A fazer      |
-| 3.5   | Os países de nível 3                                                                                                                                         | A fazer      |
-| 3.6   | Jogadores reais nas primeiras divisões dos 6 países de nível 1                                                                                               | A fazer      |
-| 3.7   | Jogadores reais nas principais ligas de nível 2                                                                                                              | A fazer      |
+| Etapa | Conteúdo                                                                                                                                                     | Status    |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| 3.1   | Pacote do banco, 211 países da FIFA (confederação, nível, nomes, temporada, janelas, cores), seleções, datas FIFA 2026, 27 estados e Séries A, B e C de 2026 | Concluída |
+| 3.2   | Brasil: Série D (96 clubes) e os 27 estaduais de 2026 (123 clubes que só jogam estadual)                                                                     | Concluída |
+| 3.3   | Inglaterra, Espanha, Itália, Alemanha e França, todas as divisões previstas                                                                                  | A fazer   |
+| 3.4   | Os 20 países de nível 2                                                                                                                                      | A fazer   |
+| 3.5   | Os países de nível 3                                                                                                                                         | A fazer   |
+| 3.6   | Jogadores reais nas primeiras divisões dos 6 países de nível 1                                                                                               | A fazer   |
+| 3.7   | Jogadores reais nas principais ligas de nível 2                                                                                                              | A fazer   |
 
 Enquanto não há jogadores reais, cada clube recebe um elenco gerado (25 jogadores) com nomes da nacionalidade e força coerente com o nível do clube. A semente é por clube: editar um clube não muda os outros.
 
@@ -33,4 +33,5 @@ Enquanto não há jogadores reais, cada clube recebe um elenco gerado (25 jogado
 - Série B 2026: [Lance!](https://www.lance.com.br/futebol-nacional/quando-comeca-a-serie-b-de-2026-veja-participantes.html), [CNN Brasil, playoffs](https://www.cnnbrasil.com.br/esportes/futebol/serie-b-completa-20-anos-adota-playoffs-e-amplia-transmissoes/)
 - Série C 2026: [Diário do Pará](https://diariodopara.com.br/bola/serie-c-2026-com-o-paysandu-em-campo-veja-onde-assistir-e-como-sera-o-formato/), [CBF](https://www.cbf.com.br/futebol-brasileiro/noticias/jogos-selecao-futsal/a/cbf-publica-documentos-tecnicos-da-serie-c-de-2026)
 - Série D 2026: grupos em [Correio Braziliense](https://www.correiobraziliense.com.br/esportes/2026/03/7370211-serie-d-veja-os-grupos-de-brasiliense-capital-ceilandia-e-gama.html), cidades na [Wikipédia](https://en.wikipedia.org/wiki/2026_Campeonato_Brasileiro_S%C3%A9rie_D), formato em [TNH1](https://www.tnh1.com.br/noticia/nid/serie-d-confira-os-grupos-formato-datas-e-premiacao/)
+- Estaduais 2026: [guia do Terra](https://www.terra.com.br/esportes/futebol/estaduais/campeonato-carioca/confira-o-guia-completo-de-todos-os-estaduais-de-2026-veja-os-duelos,f07fc726855d272383b6b9fc621bd708oianqktd.html), Pernambuco e Rio Grande do Norte conferidos na imprensa local. Formatos simplificados; detalhados na Fase 9. Clubes que só jogam estadual estão com cidade, estádio e cores a conferir.
 - Janelas e datas FIFA 2026: [CBF, calendário 2026](https://www.cbf.com.br/a-cbf/arbitragem/comissao-termos-sorteios/a/cbf-oficializa-datas-do-calendario-do-futebol-do-brasil-profissional-masculino-de-2026), [Itatiaia](https://www.itatiaia.com.br/esportes/futebol/futebol-nacional/veja-todas-as-datas-do-novo-calendario-do-futebol-brasileiro-em-2026/)
