@@ -15,8 +15,10 @@ import * as arabia from "./paises/arabia";
 import * as argentina from "./paises/argentina";
 import * as austria from "./paises/austria";
 import * as belgica from "./paises/belgica";
+import * as catar from "./paises/catar";
 import * as chile from "./paises/chile";
 import * as colombia from "./paises/colombia";
+import * as coreia from "./paises/coreia";
 import * as dinamarca from "./paises/dinamarca";
 import * as escocia from "./paises/escocia";
 import * as espanha from "./paises/espanha";
@@ -27,6 +29,7 @@ import * as grecia from "./paises/grecia";
 import * as holanda from "./paises/holanda";
 import * as inglaterra from "./paises/inglaterra";
 import * as italia from "./paises/italia";
+import * as japao from "./paises/japao";
 import * as mexico from "./paises/mexico";
 import * as portugal from "./paises/portugal";
 import * as suecia from "./paises/suecia";
@@ -38,7 +41,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.7.0";
+export const VERSAO_BANCO = "0.8.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -285,6 +288,27 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     clubes: mexico.CLUBES,
     competicoes: mexico.COMPETICOES,
     estrangeiros: ["ARG", "URU", "COL", "CHI", "PAR", "ECU", "BRA", "USA", "ESP", "VEN"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  JPN: {
+    clubes: japao.CLUBES,
+    competicoes: japao.COMPETICOES,
+    estrangeiros: ["BRA", "KOR", "AUS", "THA", "ESP", "NED", "SWE", "SRB", "NGA", "USA"],
+    fracaoEstrangeiros: 0.12,
+    fimDeContrato: "06-30",
+  },
+  KOR: {
+    clubes: coreia.CLUBES,
+    competicoes: coreia.COMPETICOES,
+    estrangeiros: ["BRA", "JPN", "AUS", "COL", "MNE", "SRB", "CRO", "NGA"],
+    fracaoEstrangeiros: 0.12,
+    fimDeContrato: "12-31",
+  },
+  QAT: {
+    clubes: catar.CLUBES,
+    competicoes: catar.COMPETICOES,
+    estrangeiros: ["BRA", "ALG", "MAR", "TUN", "ESP", "POR", "FRA", "SEN", "IRN", "COL"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
   },

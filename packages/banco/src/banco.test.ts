@@ -486,3 +486,28 @@ describe("Américas: nível 2", () => {
     expect(banco.clubes.find((c) => c.id === "usa-loudoun-united")!.filialDe).toBe("usa-dc-united");
   });
 });
+
+describe("Ásia: nível 2", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+
+  it("Japão, Coreia do Sul e Catar têm 1ª e 2ª divisão com o número real de clubes", () => {
+    const tamanhos: [string, number][] = [
+      ["jpn-j1", 20],
+      ["jpn-j2", 20],
+      ["kor-k-league-1", 12],
+      ["kor-k-league-2", 17],
+      ["qat-stars-league", 12],
+      ["qat-qsl-2", 12],
+    ];
+    for (const [id, n] of tamanhos) expect(liga(id).participantes.fixos, id).toHaveLength(n);
+  });
+
+  it("a J.League joga no calendário europeu desde 2026/27", () => {
+    expect(liga("jpn-j1").calendario).toEqual({ inicio: "08-07", fim: "06-06" });
+  });
+
+  it("o Lusail estreia na Stars League e o Umm Salal joga a QSL 2", () => {
+    expect(liga("qat-stars-league").participantes.fixos).toContain("qat-lusail");
+    expect(liga("qat-qsl-2").participantes.fixos).toContain("qat-umm-salal");
+  });
+});
