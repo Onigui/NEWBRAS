@@ -79,7 +79,11 @@ importers:
         specifier: ^1.0.0
         version: 1.3.0(vite@8.3.8(@types/node@22.20.5)(jiti@2.7.0)(terser@5.51.4))(workbox-build@7.4.1)(workbox-window@7.4.1)
 
-  packages/data: {}
+  packages/data:
+    dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   packages/engine:
     dependencies:

@@ -17,15 +17,15 @@ export const MENU: readonly MenuItem[] = [
     label: "Novo jogo",
     key: "n",
     description:
-      "Escolha a liga, o formato das divisões, quantos técnicos humanos vão jogar e o time de cada um.",
-    fase: 7,
+      "Escolha os países e ligas, quantos técnicos humanos vão jogar e o time de cada um.",
+    fase: 8,
   },
   {
     id: "carregar",
     label: "Carregar jogo",
     key: "c",
     description: "Continue uma carreira salva com F2 durante o jogo.",
-    fase: 7,
+    fase: 8,
   },
   {
     id: "editor",
@@ -33,7 +33,7 @@ export const MENU: readonly MenuItem[] = [
     key: "e",
     description:
       "Crie e edite times e jogadores antes de começar: nome, posição, força, características, estrelas, escudos e camisas.",
-    fase: 3,
+    fase: 4,
   },
   {
     id: "opcoes",
@@ -41,7 +41,7 @@ export const MENU: readonly MenuItem[] = [
     key: "o",
     description:
       "Velocidade das partidas, avisos de contrato, sons e regras como o renascimento de lendas.",
-    fase: 13,
+    fase: 16,
   },
 ];
 

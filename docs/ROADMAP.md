@@ -2,30 +2,34 @@
 
 Documento vivo com os detalhes: [NewBras — Plano e Cronograma](https://claude.ai/artifact/1pWmj5R5pvgSiqD5saRDTD). Este arquivo espelha o status de cada fase.
 
-Marcos: **A** amistoso jogável (Fase 6), **B** temporada completa (Fase 8), **C** v1.0 cópia completa (Fase 13).
+Marcos: **A** amistoso jogável (Fase 7), **B** mundo completo com ligas, copas e seleções (Fase 11), **C** v1.0 cópia completa (Fase 16).
 
-| Fase                     | Entregas principais                                                                                                                  | Tamanho   | Status    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | --------- | --------- |
-| 0. Pesquisa e plano      | Pesquisa do Brasfoot, arquitetura, cronograma                                                                                        | P         | Concluída |
-| 1. Fundação              | Monorepo, lint, testes, CI, publicação como PWA, tela inicial, documentação                                                          | P         | Concluída |
-| 2. Modelo de dados       | Esquemas de país, estado, clube, jogador, liga, copa, seleção e técnico; validação; banco inicial; importar e exportar JSON e CSV    | M         | A fazer   |
-| 3. Editor de Equipes     | Listar, adicionar, editar, deletar e procurar times e jogadores; transferir com botão direito; validação; escudos e camisas; patches | G         | A fazer   |
-| 4. Motor: núcleo         | Semente, posicionamento, posse, ações e disputas, eventos, energia, substituições, notas, estatísticas                               | GG        | A fazer   |
-| 5. Realismo e calibração | Forma do dia, dia iluminado, dia do time, moral, mando, placar, táticas; 10.000 jogos contra as metas                                | G         | A fazer   |
-| 6. Tela de partida       | Mini-campo em tempo real, modo clássico, velocidades, substituições e tática ao vivo, placares da rodada (**Marco A**)               | G         | A fazer   |
-| 7. Novo jogo e plantel   | Configuração do novo jogo, calendário, tela do plantel, escalação, salvar e carregar                                                 | G         | A fazer   |
-| 8. Competições           | Ligas, estaduais, copas nacionais e continentais, seleções, amistosos (**Marco B**)                                                  | GG        | A fazer   |
-| 9. Elenco e evolução     | Evolução, aposentadoria e juniores, renascimento de lendas, moral, lesões, suspensões, contratos, empréstimos                        | G         | A fazer   |
-| 10. Mercado              | Mercado aquecido entre CPUs, propostas ao humano, leilões, renovação, passe livre; teste de 10 temporadas                            | GG        | A fazer   |
-| 11. Finanças e estádio   | Ingressos, patrocínio, salários, ampliação do estádio, amistosos                                                                     | M         | A fazer   |
-| 12. Carreira e prêmios   | Confiança, reputação, demissão, propostas, seleções, rankings, Bolas de Prata e de Ouro, notícias                                    | G         | A fazer   |
-| 13. Paridade e polimento | Checklist de paridade, opções, atalhos, sons, desempenho, testes de ponta a ponta (**Marco C**)                                      | M         | A fazer   |
-| 14. Melhorias NewBras    | Itens aprovados, um por vez                                                                                                          | A definir | A fazer   |
-| 15. Android e desktop    | Capacitor e Tauri                                                                                                                    | M         | A fazer   |
+| Fase                                       | Entregas principais                                                                                                                                                             | Tamanho   | Status    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | --------- |
+| 0. Pesquisa e plano                        | Pesquisa do Brasfoot, arquitetura, cronograma                                                                                                                                   | P         | Concluída |
+| 1. Fundação                                | Monorepo, testes, CI, publicação como PWA, tela inicial, sorteio com semente                                                                                                    | P         | Concluída |
+| 2. Modelo de dados                         | Esquemas do mundo (país, estado, datas FIFA, janelas, clube, jogador, competição, seleção, técnico), validação, planilhas CSV, patches, gerador de jogadores, curva de evolução | G         | Concluída |
+| 3. Banco mundial                           | Clubes reais dos países de nível 1, 2 e 3; jogadores reais nas primeiras divisões principais; gerados no resto; todas as seleções da FIFA                                       | GG        | A fazer   |
+| 4. Editor de Equipes                       | Listar, adicionar, editar, deletar e procurar times e jogadores; transferir; validação; escudos gerados; camisas; importação por planilha; patches                              | G         | A fazer   |
+| 5. Motor: núcleo                           | Semente, posicionamento, posse, ações e disputas, eventos, energia, substituições, notas, estatísticas                                                                          | GG        | A fazer   |
+| 6. Realismo e calibração                   | Forma do dia, dia iluminado, dia do time, moral, mando, placar, táticas; 10.000 jogos contra as metas                                                                           | G         | A fazer   |
+| 7. Tela de partida                         | Mini-campo em tempo real, modo clássico, velocidades, substituições e tática ao vivo (**Marco A**)                                                                              | G         | A fazer   |
+| 8. Calendário, novo jogo e plantel         | Calendário dia a dia com a temporada de cada país, datas FIFA e janelas; novo jogo; plantel; escalação; salvar e carregar                                                       | G         | A fazer   |
+| 9. Ligas e copas nacionais                 | Todas as divisões, estaduais, copas, supercopas e copas regionais, com desempates reais                                                                                         | GG        | A fazer   |
+| 10. Copas continentais e intercontinentais | CONMEBOL, UEFA, CONCACAF, AFC e CAF; Copa Intercontinental e Mundial de Clubes da FIFA                                                                                          | G         | A fazer   |
+| 11. Seleções                               | Eliminatórias, Copa do Mundo, Copa América, Eurocopa, Nations Leagues, Copa Ouro, Copa da Ásia, Copa Africana, amistosos (**Marco B**)                                          | GG        | A fazer   |
+| 12. Elenco e evolução                      | Curva por idade, potencial, aposentadoria e juniores, renascimento de lendas, moral, lesões, suspensões, contratos                                                              | G         | A fazer   |
+| 13. Mercado e janelas                      | Janelas reais, só livres fora da janela, pré-contrato, mercado aquecido entre CPUs, leilões, propostas                                                                          | GG        | A fazer   |
+| 14. Finanças e estádio                     | Ingressos, patrocínio, salários, premiações, ampliação do estádio, amistosos                                                                                                    | M         | A fazer   |
+| 15. Carreira e prêmios                     | Clube e seleção ao mesmo tempo, convites pela reputação, convocação, demissão, rankings, prêmios, notícias                                                                      | G         | A fazer   |
+| 16. Paridade e polimento                   | Checklist de paridade, opções, atalhos, sons, desempenho, testes de ponta a ponta (**Marco C**)                                                                                 | M         | A fazer   |
+| 17. Melhorias NewBras                      | Itens aprovados, um por vez                                                                                                                                                     | A definir | A fazer   |
+| 18. Android e desktop                      | Capacitor e Tauri                                                                                                                                                               | M         | A fazer   |
 
 ## Histórico
 
-| Data       | Fase                | O que mudou                                                             |
-| ---------- | ------------------- | ----------------------------------------------------------------------- |
-| 23/11/2026 | 1. Fundação         | Monorepo, CI, publicação no GitHub Pages, tela inicial, RNG com semente |
-| 23/11/2026 | 0. Pesquisa e plano | Pesquisa concluída, arquitetura e cronograma criados                    |
+| Data       | Fase                | O que mudou                                                                                               |
+| ---------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| 23/11/2026 | 2. Modelo de dados  | Esquemas, validação, planilhas, patches, gerador e curva de evolução; cronograma reorganizado em 19 fases |
+| 23/11/2026 | 1. Fundação         | Monorepo, CI, publicação no GitHub Pages, tela inicial, sorteio com semente                               |
+| 23/11/2026 | 0. Pesquisa e plano | Pesquisa concluída, arquitetura e cronograma criados                                                      |
