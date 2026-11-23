@@ -444,3 +444,45 @@ describe("países europeus de nível 2", () => {
     }
   });
 });
+
+describe("Américas: nível 2", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+
+  it("cada país tem 1ª e 2ª divisão com o número real de clubes", () => {
+    const tamanhos: [string, number][] = [
+      ["arg-liga-profesional", 30],
+      ["arg-primera-nacional", 36],
+      ["uru-primera", 16],
+      ["uru-segunda", 14],
+      ["chi-primera", 16],
+      ["chi-ascenso", 16],
+      ["col-primera-a", 20],
+      ["col-primera-b", 16],
+      ["mex-liga-mx", 18],
+      ["mex-liga-expansion", 16],
+      ["usa-usl-championship", 25],
+    ];
+    for (const [id, n] of tamanhos) expect(liga(id).participantes.fixos, id).toHaveLength(n);
+  });
+
+  it("Argentina joga em duas zonas, com o último de cada zona rebaixado", () => {
+    const lpf = liga("arg-liga-profesional");
+    expect(lpf.fases[0]).toMatchObject({ tipo: "grupos", grupos: 2 });
+    expect(lpf.movimentos).toEqual([
+      expect.objectContaining({ tipo: "rebaixamento", posicoes: [15], porGrupo: true }),
+    ]);
+    expect(lpf.participantes.fixos).toContain("arg-boca-juniors");
+    expect(lpf.participantes.fixos).toContain("arg-river-plate");
+  });
+
+  it("Liga MX e Liga de Expansión são fechadas", () => {
+    expect(liga("mex-liga-mx").movimentos).toEqual([]);
+    expect(liga("mex-liga-expansion").movimentos).toEqual([]);
+  });
+
+  it("a USL Championship fica abaixo da MLS, sem acesso, com o Loudoun ligado ao D.C. United", () => {
+    expect(liga("usa-usl-championship").divisao).toBe(2);
+    expect(liga("usa-usl-championship").movimentos).toEqual([]);
+    expect(banco.clubes.find((c) => c.id === "usa-loudoun-united")!.filialDe).toBe("usa-dc-united");
+  });
+});
