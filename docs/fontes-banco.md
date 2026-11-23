@@ -8,18 +8,21 @@ pnpm --filter @newbras/banco exportar   # gera packages/banco/saida/ (JSON e CSV
 
 ## Etapas da Fase 3
 
-| Etapa | Conteúdo                                                                                                                                                     | Status    |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| 3.1   | Pacote do banco, 211 países da FIFA (confederação, nível, nomes, temporada, janelas, cores), seleções, datas FIFA 2026, 27 estados e Séries A, B e C de 2026 | Concluída |
-| 3.2   | Brasil: Série D (96 clubes) e os 27 estaduais de 2026 (123 clubes que só jogam estadual)                                                                     | Concluída |
-| 3.3   | Inglaterra (4 divisões), Espanha, Itália, Alemanha e França (3 divisões cada) na temporada 2026/27: 384 clubes                                               | Concluída |
-| 3.4a  | EUA (MLS, 30 clubes) e Arábia Saudita (Pro League e First Division) com todos os jogadores reais da MLS e da Pro League; 22 ícones na base                   | Concluída |
-| 3.4b  | Portugal, Holanda, Bélgica, Escócia, Turquia, Áustria, Suíça (com o Vaduz), Grécia, Dinamarca e Suécia: 1ª e 2ª divisão, 303 clubes                          | Concluída |
-| 3.4c  | Argentina, Uruguai, Chile, Colômbia e México (1ª e 2ª divisão) e a USL Championship: 223 clubes                                                              | Concluída |
-| 3.4d  | Japão (J1 e J2 2026/27), Coreia do Sul (K League 1 e 2 de 2026) e Catar (Stars League e QSL 2 de 2026/27): 93 clubes                                         | Concluída |
-| 3.5   | Os países de nível 3                                                                                                                                         | A fazer   |
-| 3.6   | Jogadores reais nas primeiras divisões dos 6 países de nível 1                                                                                               | A fazer   |
-| 3.7   | Jogadores reais nas principais ligas de nível 2                                                                                                              | A fazer   |
+| Etapa | Conteúdo                                                                                                                                                        | Status    |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 3.1   | Pacote do banco, 211 países da FIFA (confederação, nível, nomes, temporada, janelas, cores), seleções, datas FIFA 2026, 27 estados e Séries A, B e C de 2026    | Concluída |
+| 3.2   | Brasil: Série D (96 clubes) e os 27 estaduais de 2026 (123 clubes que só jogam estadual)                                                                        | Concluída |
+| 3.3   | Inglaterra (4 divisões), Espanha, Itália, Alemanha e França (3 divisões cada) na temporada 2026/27: 384 clubes                                                  | Concluída |
+| 3.4a  | EUA (MLS, 30 clubes) e Arábia Saudita (Pro League e First Division) com todos os jogadores reais da MLS e da Pro League; 22 ícones na base                      | Concluída |
+| 3.4b  | Portugal, Holanda, Bélgica, Escócia, Turquia, Áustria, Suíça (com o Vaduz), Grécia, Dinamarca e Suécia: 1ª e 2ª divisão, 303 clubes                             | Concluída |
+| 3.4c  | Argentina, Uruguai, Chile, Colômbia e México (1ª e 2ª divisão) e a USL Championship: 223 clubes                                                                 | Concluída |
+| 3.4d  | Japão (J1 e J2 2026/27), Coreia do Sul (K League 1 e 2 de 2026) e Catar (Stars League e QSL 2 de 2026/27): 93 clubes                                            | Concluída |
+| 3.5a  | Nível 3 nas Américas: Paraguai, Peru, Bolívia, Venezuela, Equador, Canadá (CPL), Costa Rica, Honduras, Guatemala, El Salvador e Panamá (1ª divisão), 140 clubes | Concluída |
+| 3.5b  | Nível 3 na UEFA (1ª divisão dos demais países europeus)                                                                                                         | A fazer   |
+| 3.5c  | Nível 3 na AFC                                                                                                                                                  | A fazer   |
+| 3.5d  | Nível 3 na CAF, na OFC e no Caribe (com Jamaica e Nicarágua)                                                                                                    | A fazer   |
+| 3.6   | Jogadores reais nas primeiras divisões dos 6 países de nível 1                                                                                                  | A fazer   |
+| 3.7   | Jogadores reais nas principais ligas de nível 2                                                                                                                 | A fazer   |
 
 Enquanto não há jogadores reais, cada clube recebe um elenco gerado (25 jogadores) com nomes da nacionalidade e força coerente com o nível do clube. A semente é por clube: editar um clube não muda os outros.
 
@@ -51,3 +54,4 @@ Enquanto não há jogadores reais, cada clube recebe um elenco gerado (25 jogado
 - Ligas que se dividem em grupos de cima e de baixo no fim (Escócia, Áustria, Suíça, Dinamarca) e os playoffs da Super League grega ainda são aproximados por turnos extras ou pela temporada regular.
 - Américas de nível 2 (etapa 3.4c): clubes, cidades, estádios, capacidades, zonas e regras de acesso pelas páginas da temporada 2026 (2026/27 no México) na Wikipédia em inglês, incluindo a USL Championship 2026. Apertura e Clausura (Argentina, Colômbia, México), os três torneios uruguaios e os rebaixamentos por promedio ainda são aproximados por uma temporada única, com mata-mata no fim onde houver.
 - Ásia de nível 2 (etapa 3.4d): J.League e K League pelas páginas da temporada na Wikipédia em inglês (capacidades da K League 2 a conferir); Catar pelas notícias da QNA, The Peninsula e Gulf Times sobre o início da temporada 2026/27 e pela tabela de 2025/26 da [RSSSF](https://rsssf.org/tablesq/qat2026.html).
+- Nível 3 nas Américas (etapa 3.5a): páginas da temporada 2026 na Wikipédia em inglês para Paraguai, Peru, Bolívia, Venezuela, Equador, Canadá e El Salvador (2026/27). Costa Rica, Honduras, Guatemala e Panamá não tinham página da temporada nova: a lista vem da página da liga (2025/26; 2025 no Panamá) e pode ter uma troca de clube por acesso e rebaixamento. Jamaica e Nicarágua ficaram para a 3.5d por falta de lista atual. Sem segunda divisão no banco, essas ligas não têm acesso nem rebaixamento.
