@@ -1,0 +1,32 @@
+import { useState } from "react";
+import { Pitch } from "./components/Pitch";
+import type { ScreenId } from "./menu";
+import { MainMenu } from "./screens/MainMenu";
+import { ComingSoon } from "./screens/ComingSoon";
+
+export function App() {
+  const [screen, setScreen] = useState<ScreenId | null>(null);
+  const [lastOpened, setLastOpened] = useState<ScreenId | null>(null);
+
+  const open = (id: ScreenId) => {
+    setLastOpened(id);
+    setScreen(id);
+  };
+
+  return (
+    <div className="relative min-h-dvh overflow-hidden">
+      {/* Celular e tablet: o campo vira fundo. Desktop: o campo fica ao lado do painel. */}
+      <Pitch className="absolute inset-0 h-full w-full lg:hidden" />
+      <div className="absolute inset-y-10 right-10 left-[clamp(32rem,40%,42rem)] hidden lg:block">
+        <Pitch fit="meet" className="h-full w-full" />
+      </div>
+      <main className="relative flex min-h-dvh items-center px-5 py-10 sm:px-12 lg:px-20">
+        {screen === null ? (
+          <MainMenu onOpen={open} initialFocus={lastOpened} />
+        ) : (
+          <ComingSoon id={screen} onBack={() => setScreen(null)} />
+        )}
+      </main>
+    </div>
+  );
+}
