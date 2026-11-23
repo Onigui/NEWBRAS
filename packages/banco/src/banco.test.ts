@@ -60,6 +60,23 @@ describe("Brasil", () => {
     expect(new Set(series.flat()).size).toBe(60);
   });
 
+  it("Série D com 96 clubes, em 16 grupos de 6, sem repetir clubes das outras séries", () => {
+    const todas = ["bra-serie-a", "bra-serie-b", "bra-serie-c", "bra-serie-d"].flatMap(
+      (id) => banco.competicoes.find((c) => c.id === id)!.participantes.fixos,
+    );
+    const serieD = banco.competicoes.find((c) => c.id === "bra-serie-d")!;
+    expect(serieD.participantes.fixos).toHaveLength(96);
+    expect(new Set(todas).size).toBe(156);
+    const grupos = serieD.fases[0]!;
+    expect(grupos.tipo === "grupos" && grupos.grupos * 6).toBe(96);
+  });
+
+  it("clubes com dados ainda não confirmados ficam marcados para conferir", () => {
+    const marcados = banco.clubes.filter((c) => c.aConferir.length > 0);
+    expect(marcados.length).toBeGreaterThan(0);
+    expect(banco.clubes.find((c) => c.id === "bra-flamengo")!.aConferir).toEqual([]);
+  });
+
   it("a Série A 2026 tem os 4 promovidos de 2025 e não tem os 4 rebaixados", () => {
     const serieA = banco.competicoes.find((c) => c.id === "bra-serie-a")!.participantes.fixos;
     for (const id of ["bra-athletico-pr", "bra-chapecoense", "bra-coritiba", "bra-remo"])

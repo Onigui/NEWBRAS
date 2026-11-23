@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { CodigoPais, Cor, Id, NomeTexto } from "./comum";
 
+export const CAMPOS_A_CONFERIR = ["nome", "cidade", "estadio", "capacidade", "cores"] as const;
+
 export const Clube = z.object({
   id: Id,
   nome: NomeTexto,
@@ -31,6 +33,8 @@ export const Clube = z.object({
   rivais: z.array(Id).default([]),
   tecnico: NomeTexto.optional(),
   fundacao: z.int().min(1850).max(2100).optional(),
+  /** Campos ainda não confirmados em fonte; o editor destaca para correção. */
+  aConferir: z.array(z.enum(CAMPOS_A_CONFERIR)).default([]),
 });
 export type Clube = z.infer<typeof Clube>;
 export type ClubeEntrada = z.input<typeof Clube>;
