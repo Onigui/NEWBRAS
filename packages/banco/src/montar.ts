@@ -12,27 +12,33 @@ import * as brasil from "./paises/brasil";
 import { CLUBES_ESTADUAIS, COMPETICOES_ESTADUAIS } from "./paises/brasil-estaduais";
 import * as alemanha from "./paises/alemanha";
 import * as arabia from "./paises/arabia";
+import * as argentina from "./paises/argentina";
 import * as austria from "./paises/austria";
 import * as belgica from "./paises/belgica";
+import * as chile from "./paises/chile";
+import * as colombia from "./paises/colombia";
 import * as dinamarca from "./paises/dinamarca";
 import * as escocia from "./paises/escocia";
 import * as espanha from "./paises/espanha";
 import * as eua from "./paises/eua";
+import * as usl from "./paises/eua-usl";
 import * as franca from "./paises/franca";
 import * as grecia from "./paises/grecia";
 import * as holanda from "./paises/holanda";
 import * as inglaterra from "./paises/inglaterra";
 import * as italia from "./paises/italia";
+import * as mexico from "./paises/mexico";
 import * as portugal from "./paises/portugal";
 import * as suecia from "./paises/suecia";
 import * as suica from "./paises/suica";
 import * as turquia from "./paises/turquia";
+import * as uruguai from "./paises/uruguai";
 
 import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.6.0";
+export const VERSAO_BANCO = "0.7.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -247,9 +253,44 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     fracaoEstrangeiros: 0.2,
     fimDeContrato: "12-31",
   },
+  ARG: {
+    clubes: argentina.CLUBES,
+    competicoes: argentina.COMPETICOES,
+    estrangeiros: ["URU", "PAR", "COL", "CHI", "VEN", "ECU", "BRA", "PER", "BOL"],
+    fracaoEstrangeiros: 0.12,
+    fimDeContrato: "12-31",
+  },
+  URU: {
+    clubes: uruguai.CLUBES,
+    competicoes: uruguai.COMPETICOES,
+    estrangeiros: ["ARG", "BRA", "PAR", "COL", "VEN", "CHI"],
+    fracaoEstrangeiros: 0.12,
+    fimDeContrato: "12-31",
+  },
+  CHI: {
+    clubes: chile.CLUBES,
+    competicoes: chile.COMPETICOES,
+    estrangeiros: ["ARG", "URU", "COL", "PAR", "VEN", "ECU", "PER"],
+    fracaoEstrangeiros: 0.18,
+    fimDeContrato: "12-31",
+  },
+  COL: {
+    clubes: colombia.CLUBES,
+    competicoes: colombia.COMPETICOES,
+    estrangeiros: ["ARG", "URU", "VEN", "ECU", "PAR", "PAN", "CHI"],
+    fracaoEstrangeiros: 0.1,
+    fimDeContrato: "12-31",
+  },
+  MEX: {
+    clubes: mexico.CLUBES,
+    competicoes: mexico.COMPETICOES,
+    estrangeiros: ["ARG", "URU", "COL", "CHI", "PAR", "ECU", "BRA", "USA", "ESP", "VEN"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
   USA: {
-    clubes: eua.CLUBES,
-    competicoes: eua.COMPETICOES,
+    clubes: [...eua.CLUBES, ...usl.CLUBES],
+    competicoes: [...eua.COMPETICOES, ...usl.COMPETICOES],
     jogadores: eua.JOGADORES,
     fimDeContrato: "12-31",
   },
