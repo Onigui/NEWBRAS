@@ -73,6 +73,8 @@ export const FaseGrupos = BaseFase.extend({
   classificamPorGrupo: z.int().min(0).default(0),
   /** Melhores colocados extras entre os grupos (ex.: melhores terceiros). */
   melhores: z.object({ posicao: z.int().min(1), quantidade: z.int().min(1) }).optional(),
+  /** Faixa da tabela que segue para a próxima fase, quando não começa no 1º (ex.: 3º ao 6º no playoff da Série B). */
+  faixaClassificada: z.object({ de: z.int().min(1), ate: z.int().min(1) }).optional(),
 });
 
 /** Fase de liga com tabela única e adversários sorteados por potes (formato suíço da UEFA). */

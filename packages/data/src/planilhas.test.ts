@@ -35,6 +35,7 @@ describe("CSV", () => {
 describe("planilha de jogadores", () => {
   it("exporta e importa de volta os mesmos jogadores", () => {
     const banco = Banco.parse(bancoExemplo());
+    banco.jogadores[0]!.contrato!.multaRescisoria = 5_000_000;
     const csv = exportarJogadoresCsv(banco.jogadores, ";");
     const r = importarJogadoresCsv(csv);
     expect(r.problemas).toEqual([]);

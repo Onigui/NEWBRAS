@@ -1,0 +1,25 @@
+{
+  "name": "@newbras/banco",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Banco de dados mundial do NewBras: países, seleções, clubes, jogadores e competições.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
+    "exportar": "tsx scripts/exportar.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.20.0"
+  },
+  "dependencies": {
+    "@newbras/data": "workspace:*",
+    "@newbras/engine": "workspace:*"
+  }
+}
