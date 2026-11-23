@@ -27,6 +27,7 @@ pnpm check      # formato, lint, tipos, testes e build
 
 - [Pesquisa: como o Brasfoot funcionava](docs/PESQUISA.md)
 - [Decisões do projeto](docs/DECISOES.md)
+- [Formato dos dados](docs/DADOS.md)
 - [Cronograma](docs/ROADMAP.md)
 
 O NewBras não usa código, banco de dados, escudos nem imagens do Brasfoot. As mecânicas foram recriadas a partir de manuais e documentação pública.

@@ -1,3 +1,3 @@
-export const APP_VERSION = "0.1.0";
-export const FASE_ATUAL = 1;
-export const TOTAL_FASES = 15;
+export const APP_VERSION = "0.2.0";
+export const FASE_ATUAL = 2;
+export const TOTAL_FASES = 18;
