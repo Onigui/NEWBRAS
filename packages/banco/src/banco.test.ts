@@ -71,6 +71,24 @@ describe("Brasil", () => {
     expect(grupos.tipo === "grupos" && grupos.grupos * 6).toBe(96);
   });
 
+  it("tem os 27 estaduais, cada um com clubes que existem e sem repetir clube", () => {
+    const estaduais = banco.competicoes.filter((c) => c.tipo === "estadual");
+    expect(estaduais).toHaveLength(27);
+    const ids = new Set(banco.clubes.map((c) => c.id));
+    for (const e of estaduais) {
+      expect(new Set(e.participantes.fixos).size, e.id).toBe(e.participantes.fixos.length);
+      for (const c of e.participantes.fixos) expect(ids.has(c), `${e.id}: ${c}`).toBe(true);
+    }
+  });
+
+  it("cada clube de estadual é do estado do campeonato", () => {
+    const estadoDe = new Map(banco.clubes.map((c) => [c.id, c.estado]));
+    for (const e of banco.competicoes.filter((c) => c.tipo === "estadual")) {
+      const uf = e.escopo.tipo === "estado" ? e.escopo.estado : "";
+      for (const c of e.participantes.fixos) expect(estadoDe.get(c), `${e.id}: ${c}`).toBe(uf);
+    }
+  });
+
   it("clubes com dados ainda não confirmados ficam marcados para conferir", () => {
     const marcados = banco.clubes.filter((c) => c.aConferir.length > 0);
     expect(marcados.length).toBeGreaterThan(0);

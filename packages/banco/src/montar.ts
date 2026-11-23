@@ -9,6 +9,7 @@ import { Rng, gerarElenco } from "@newbras/engine";
 import { PAISES } from "./mundo/paises";
 import { DATAS_FIFA, SELECOES } from "./mundo/selecoes";
 import * as brasil from "./paises/brasil";
+import { CLUBES_ESTADUAIS, COMPETICOES_ESTADUAIS } from "./paises/brasil-estaduais";
 
 /** Data de referência do banco: idades e contratos são calculados a partir dela. */
 export const DATA_REFERENCIA = "2026-07-01";
@@ -28,8 +29,8 @@ interface PaisNoBanco {
 
 const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   BRA: {
-    clubes: brasil.CLUBES,
-    competicoes: brasil.COMPETICOES,
+    clubes: [...brasil.CLUBES, ...CLUBES_ESTADUAIS],
+    competicoes: [...brasil.COMPETICOES, ...COMPETICOES_ESTADUAIS],
     estados: brasil.ESTADOS,
     estrangeiros: ["ARG", "URU", "COL", "PAR", "ECU", "VEN", "CHI", "PER"],
     fracaoEstrangeiros: 0.12,
