@@ -31,7 +31,7 @@ O banco oficial é montado pelo pacote `packages/banco`; o progresso e as fontes
 | País       | código FIFA (BRA), nome, confederação, nível (0 a 3), grupo de nomes, temporada, janelas de transferência, cores da seleção                                                                                                                               |
 | Estado     | sigla, nome, país                                                                                                                                                                                                                                         |
 | Data FIFA  | nome, período (MM-DD a MM-DD)                                                                                                                                                                                                                             |
-| Clube      | id, nome, nome curto, abreviação (3 letras), país, estado, cidade, estádio e capacidade, cores, reputação (1 a 5), nível (1 a 100), rivais, técnico, fundação                                                                                             |
+| Clube      | id, nome, nome curto, abreviação (3 letras), país, estado, cidade, estádio e capacidade, cores, reputação (1 a 5), nível (1 a 100), rivais, filial de (equipe B), técnico, fundação                                                                       |
 | Jogador    | id, nome de camisa, nome completo, nascimento, nacionalidade (e segunda), posição (G, L, Z, M, A), lado (D, E, C), força e potencial (1 a 100), 1 ou 2 características, estrela, clube, contrato (fim, salário e multa rescisória), número, força do auge |
 | Competição | id, nome, tipo, categoria (clubes ou seleções), escopo (país, estado, confederação, mundial), divisão, periodicidade, calendário, participantes (fixos e vagas), fases, pontos, desempate, acesso e rebaixamento, vagas que distribui                     |
 | Seleção    | país, reputação, ranking, técnico                                                                                                                                                                                                                         |
@@ -47,13 +47,19 @@ O banco oficial é montado pelo pacote `packages/banco`; o progresso e as fontes
 
 Times podem entrar no meio da competição (`entramAqui`), como os classificados para a Libertadores que entram mais tarde na Copa do Brasil.
 
+Ligas com playoffs têm a temporada regular seguida de fases de mata-mata. Os melhores colocados podem entrar direto numa fase adiante: na Championship, 5º a 8º jogam a eliminatória e 3º e 4º entram nas semifinais.
+
+Acesso e rebaixamento (`movimentos`) usam as posições da tabela final. Em ligas divididas em grupos (Primera Federación, Serie C), `porGrupo` faz as posições valerem dentro de cada grupo. Repescagens entre divisões, como a da Bundesliga (16º contra o 3º da 2. Bundesliga), aparecem como `playoff-rebaixamento` na divisão de cima e `playoff-acesso` na de baixo.
+
+Clubes que jogam o sistema de outro país mantêm o próprio país: Cardiff, Swansea, Wrexham e Newport (País de Gales) na Inglaterra, e o FC Andorra na Espanha. O AS Monaco fica com país França, porque Mônaco não é membro da FIFA.
+
 ## Planilhas (CSV)
 
 Aceitam vírgula ou ponto e vírgula (o padrão do Excel em português) e nomes em português: "Meia" vira `M`, "Defesa de pênalti" vira `penalti`, `31/12/2027` vira `2027-12-31`, "sim" marca estrela.
 
 **Jogadores:** `id, nome, nome_completo, nascimento, nacionalidade, segunda_nacionalidade, posicao, lado, forca, potencial, caracteristica_1, caracteristica_2, estrela, clube, contrato_fim, salario, multa_rescisoria, numero`
 
-**Clubes:** `id, nome, nome_curto, abreviacao, pais, estado, cidade, estadio, capacidade, cor_primaria, cor_secundaria, cor_terciaria, reputacao, nivel, rivais, tecnico, fundacao` (rivais separados por `|`)
+**Clubes:** `id, nome, nome_curto, abreviacao, pais, estado, cidade, estadio, capacidade, cor_primaria, cor_secundaria, cor_terciaria, reputacao, nivel, rivais, filial_de, tecnico, fundacao` (rivais separados por `|`; `filial_de` é o id do clube principal de uma equipe B ou sub-23)
 
 Linhas com problema são apontadas pelo número da linha e não impedem a importação das outras.
 
@@ -63,5 +69,5 @@ Um patch muda um banco sem copiá-lo: itens com o mesmo id substituem os do banc
 
 ## Validação
 
-- **Erros** (impedem o uso): campo inválido, id repetido, referência a país, estado, clube ou competição que não existe.
-- **Avisos**: time inválido (menos de 1 goleiro e 11 de linha, a regra do Brasfoot), camisa repetida, rival inexistente, quantidade de participantes diferente da esperada.
+- **Erros** (impedem o uso): campo inválido, id repetido, referência a país, estado, clube ou competição que não existe, equipe B na mesma divisão do clube principal.
+- **Avisos**: time inválido (menos de 1 goleiro e 11 de linha, a regra do Brasfoot), camisa repetida, rival inexistente, quantidade de participantes diferente da esperada, clube em mais de uma liga.

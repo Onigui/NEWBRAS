@@ -31,6 +31,8 @@ export const Clube = z.object({
   nivel: z.int().min(1).max(100),
   /** Clássicos: ids dos rivais. */
   rivais: z.array(Id).default([]),
+  /** Equipe B ou sub-23 de outro clube. Não pode jogar a mesma divisão do clube principal. */
+  filialDe: Id.optional(),
   tecnico: NomeTexto.optional(),
   fundacao: z.int().min(1850).max(2100).optional(),
   /** Campos ainda não confirmados em fonte; o editor destaca para correção. */

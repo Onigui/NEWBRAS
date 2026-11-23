@@ -27,6 +27,14 @@ describe("validarIntegridade", () => {
     return validarIntegridade(Banco.parse(dados));
   };
 
+  it("não deixa a equipe B jogar a mesma divisão do clube principal", () => {
+    const p = problemas((b) => {
+      const [a, c] = b.clubes!;
+      c!.filialDe = a!.id;
+    });
+    expect(p.some((x) => x.nivel === "erro" && x.mensagem.includes("é filial de"))).toBe(true);
+  });
+
   it("detecta jogador em clube que não existe", () => {
     const p = problemas((b) => {
       b.jogadores![0]!.clube = "bra-inexistente";

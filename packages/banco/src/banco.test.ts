@@ -132,3 +132,149 @@ describe("banco montado", () => {
     expect(media("bra-serie-a")).toBeGreaterThan(media("bra-serie-c") + 12);
   });
 });
+
+describe("Inglaterra", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!.participantes.fixos;
+
+  it("tem as 92 equipes da Premier League e da EFL, sem repetir", () => {
+    const todas = [
+      "eng-premier-league",
+      "eng-championship",
+      "eng-league-one",
+      "eng-league-two",
+    ].flatMap(liga);
+    expect(todas).toHaveLength(92);
+    expect(new Set(todas).size).toBe(92);
+    expect(liga("eng-premier-league")).toHaveLength(20);
+  });
+
+  it("2026/27: Coventry, Ipswich e Hull subiram; West Ham, Burnley e Wolves caíram", () => {
+    for (const c of ["eng-coventry", "eng-ipswich", "eng-hull"])
+      expect(liga("eng-premier-league")).toContain(c);
+    for (const c of ["eng-west-ham", "eng-burnley", "eng-wolves"])
+      expect(liga("eng-championship")).toContain(c);
+  });
+
+  it("clubes galeses jogam no sistema inglês com país País de Gales", () => {
+    expect(liga("eng-championship")).toContain("wal-cardiff");
+    expect(banco.clubes.find((c) => c.id === "wal-wrexham")?.pais).toBe("WAL");
+  });
+});
+
+describe("Espanha", () => {
+  const comp = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+  const liga = (id: string) => comp(id).participantes.fixos;
+
+  it("tem LaLiga (20), LaLiga 2 (22) e Primera Federación (2 grupos de 20)", () => {
+    expect(liga("esp-laliga")).toHaveLength(20);
+    expect(liga("esp-laliga-2")).toHaveLength(22);
+    expect(liga("esp-primera-federacion")).toHaveLength(40);
+    expect(comp("esp-primera-federacion").fases[0]).toMatchObject({ grupos: 2 });
+  });
+
+  it("2026/27: Racing, Deportivo e Málaga subiram; Girona e Mallorca caíram", () => {
+    for (const c of ["esp-racing-santander", "esp-deportivo", "esp-malaga"])
+      expect(liga("esp-laliga")).toContain(c);
+    for (const c of ["esp-girona", "esp-mallorca"]) expect(liga("esp-laliga-2")).toContain(c);
+  });
+
+  it("marca equipes B com o clube principal", () => {
+    const castilla = banco.clubes.find((c) => c.id === "esp-real-madrid-castilla");
+    expect(castilla?.filialDe).toBe("esp-real-madrid");
+    expect(banco.clubes.filter((c) => c.pais === "ESP" && c.filialDe)).toHaveLength(7);
+  });
+
+  it("o rebaixamento e o acesso da Primera Federación contam por grupo", () => {
+    expect(comp("esp-primera-federacion").movimentos.every((m) => m.porGrupo)).toBe(true);
+  });
+});
+
+describe("Itália", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!.participantes.fixos;
+
+  it("tem Serie A (20), Serie B (20) e Serie C (3 grupos de 20)", () => {
+    expect(liga("ita-serie-a")).toHaveLength(20);
+    expect(liga("ita-serie-b")).toHaveLength(20);
+    expect(liga("ita-serie-c")).toHaveLength(60);
+  });
+
+  it("2026/27: Venezia, Frosinone e Monza subiram; Cremonese, Verona e Pisa caíram", () => {
+    for (const c of ["ita-venezia", "ita-frosinone", "ita-monza"])
+      expect(liga("ita-serie-a")).toContain(c);
+    for (const c of ["ita-cremonese", "ita-hellas-verona", "ita-pisa"])
+      expect(liga("ita-serie-b")).toContain(c);
+  });
+
+  it("as três Under 23 jogam a Serie C, uma em cada grupo", () => {
+    const serieC = liga("ita-serie-c");
+    const posicoes = ["ita-juventus-next-gen", "ita-atalanta-u23", "ita-inter-u23"].map((c) =>
+      Math.floor(serieC.indexOf(c) / 20),
+    );
+    expect(posicoes).toEqual([0, 1, 2]);
+  });
+});
+
+describe("Alemanha", () => {
+  const comp = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+  const liga = (id: string) => comp(id).participantes.fixos;
+
+  it("tem Bundesliga (18), 2. Bundesliga (18) e 3. Liga (20)", () => {
+    expect(liga("ger-bundesliga")).toHaveLength(18);
+    expect(liga("ger-2-bundesliga")).toHaveLength(18);
+    expect(liga("ger-3-liga")).toHaveLength(20);
+  });
+
+  it("2026/27: Schalke e Elversberg subiram; St. Pauli, Heidenheim e Wolfsburg caíram", () => {
+    for (const c of ["ger-schalke", "ger-elversberg"]) expect(liga("ger-bundesliga")).toContain(c);
+    for (const c of ["ger-st-pauli", "ger-heidenheim", "ger-wolfsburg"])
+      expect(liga("ger-2-bundesliga")).toContain(c);
+  });
+
+  it("o 16º da Bundesliga disputa a repescagem com o 3º da 2. Bundesliga", () => {
+    expect(comp("ger-bundesliga").movimentos).toContainEqual(
+      expect.objectContaining({ tipo: "playoff-rebaixamento", posicoes: [16] }),
+    );
+    expect(comp("ger-2-bundesliga").movimentos).toContainEqual(
+      expect.objectContaining({ tipo: "playoff-acesso", posicoes: [3] }),
+    );
+  });
+});
+
+describe("França", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!.participantes.fixos;
+
+  it("tem Ligue 1, Ligue 2 e Ligue 3 com 18 clubes cada", () => {
+    for (const id of ["fra-ligue-1", "fra-ligue-2", "fra-ligue-3"])
+      expect(liga(id)).toHaveLength(18);
+  });
+
+  it("2026/27: Troyes e Le Mans subiram; Metz e Nantes caíram", () => {
+    for (const c of ["fra-troyes", "fra-le-mans"]) expect(liga("fra-ligue-1")).toContain(c);
+    for (const c of ["fra-metz", "fra-nantes"]) expect(liga("fra-ligue-2")).toContain(c);
+  });
+});
+
+describe("Europa (nível 1)", () => {
+  it("todo clube europeu de liga joga exatamente uma divisão", () => {
+    const ligas = banco.competicoes.filter(
+      (c) =>
+        c.tipo === "liga" &&
+        ["ENG", "ESP", "ITA", "GER", "FRA"].includes((c.escopo as { pais: string }).pais),
+    );
+    const ids = ligas.flatMap((c) => c.participantes.fixos);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(92 + 82 + 100 + 56 + 54);
+  });
+
+  it("abreviações não se repetem dentro do mesmo país", () => {
+    for (const pais of ["ENG", "ESP", "ITA", "GER", "FRA"]) {
+      const abrevs = banco.clubes.filter((c) => c.pais === pais).map((c) => c.abreviacao);
+      expect(new Set(abrevs).size, pais).toBe(abrevs.length);
+    }
+  });
+
+  it("contratos europeus vencem em 30 de junho", () => {
+    const j = banco.jogadores.find((x) => x.clube === "eng-arsenal" && x.contrato);
+    expect(j?.contrato?.fim.slice(5)).toBe("06-30");
+  });
+});

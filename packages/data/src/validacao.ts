@@ -94,6 +94,11 @@ export function validarIntegridade(banco: BancoT): Problema[] {
       if (r === c.id) erro(onde, "o clube não pode ser rival de si mesmo");
       else if (!clubes.has(r)) aviso(onde, `rival ${r} não existe no banco`);
     }
+    if (c.filialDe !== undefined) {
+      if (c.filialDe === c.id) erro(onde, "o clube não pode ser filial de si mesmo");
+      else if (!clubes.has(c.filialDe))
+        erro(onde, `clube principal ${c.filialDe} não existe no banco`);
+    }
   }
 
   const elencos = new Map<string, Jogador[]>();
@@ -161,6 +166,26 @@ export function validarIntegridade(banco: BancoT): Problema[] {
         onde,
         `espera ${comp.participantes.quantidade} participantes e tem ${comp.participantes.fixos.length}`,
       );
+    }
+  }
+
+  // Ligas nacionais: cada clube joga uma só divisão, e a equipe B não divide divisão com o principal.
+  const filialDe = new Map(banco.clubes.flatMap((c) => (c.filialDe ? [[c.id, c.filialDe]] : [])));
+  const ligaDoClube = new Map<string, string>();
+  for (const comp of banco.competicoes) {
+    if (comp.tipo !== "liga") continue;
+    const nesta = new Set(comp.participantes.fixos);
+    for (const f of nesta) {
+      const outra = ligaDoClube.get(f);
+      if (outra) aviso(`competicoes > ${comp.id}`, `${f} também joga ${outra}`);
+      ligaDoClube.set(f, comp.id);
+      const principal = filialDe.get(f);
+      if (principal && nesta.has(principal)) {
+        erro(
+          `competicoes > ${comp.id}`,
+          `${f} é filial de ${principal} e não pode jogar a mesma divisão`,
+        );
+      }
     }
   }
 
