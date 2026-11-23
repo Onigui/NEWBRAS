@@ -11,7 +11,7 @@ pnpm --filter @newbras/banco exportar   # gera packages/banco/saida/ (JSON e CSV
 | Etapa | Conteúdo                                                                                                                                                     | Status    |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
 | 3.1   | Pacote do banco, 211 países da FIFA (confederação, nível, nomes, temporada, janelas, cores), seleções, datas FIFA 2026, 27 estados e Séries A, B e C de 2026 | Concluída |
-| 3.2   | Brasil: Série D (96 clubes) e os 27 estaduais de 2026 (128 clubes que só jogam estadual)                                                                     | Concluída |
+| 3.2   | Brasil: Série D (96 clubes) e os 27 estaduais de 2026 (123 clubes que só jogam estadual)                                                                     | Concluída |
 | 3.3   | Inglaterra, Espanha, Itália, Alemanha e França, todas as divisões previstas                                                                                  | A fazer   |
 | 3.4   | Os 20 países de nível 2                                                                                                                                      | A fazer   |
 | 3.5   | Os países de nível 3                                                                                                                                         | A fazer   |
