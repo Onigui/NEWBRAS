@@ -83,4 +83,12 @@ describe("planilha de clubes", () => {
     expect(r.problemas).toEqual([]);
     expect(r.itens).toEqual(banco.clubes);
   });
+
+  it("leva a coluna filial_de das equipes B", () => {
+    const dados = bancoExemplo();
+    dados.clubes![1]!.filialDe = "bra-santos";
+    const banco = Banco.parse(dados);
+    const r = importarClubesCsv(exportarClubesCsv(banco.clubes));
+    expect(r.itens[1]?.filialDe).toBe("bra-santos");
+  });
 });

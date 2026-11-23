@@ -59,3 +59,14 @@ export function clubesDe(pais: string, linhas: readonly ClubeLinha[]): ClubeEntr
     }),
   );
 }
+
+/** Marca equipes B e sub-23: { "esp-real-madrid-castilla": "esp-real-madrid" }. */
+export function comFiliais(
+  clubes: readonly ClubeEntrada[],
+  filiais: Readonly<Record<string, string>>,
+): ClubeEntrada[] {
+  return clubes.map((c) => {
+    const principal = filiais[c.id];
+    return principal ? { ...c, filialDe: principal } : c;
+  });
+}

@@ -112,6 +112,8 @@ export const MovimentoTabela = z.object({
   /** Competição de destino (a divisão de cima ou de baixo). */
   para: Id,
   posicoes: z.array(z.int().min(1)).min(1),
+  /** As posições valem dentro de cada grupo da primeira fase (ex.: os 5 últimos de cada grupo caem). */
+  porGrupo: z.boolean().default(false),
 });
 
 export const Competicao = z

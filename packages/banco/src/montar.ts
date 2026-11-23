@@ -10,10 +10,15 @@ import { PAISES } from "./mundo/paises";
 import { DATAS_FIFA, SELECOES } from "./mundo/selecoes";
 import * as brasil from "./paises/brasil";
 import { CLUBES_ESTADUAIS, COMPETICOES_ESTADUAIS } from "./paises/brasil-estaduais";
+import * as alemanha from "./paises/alemanha";
+import * as espanha from "./paises/espanha";
+import * as franca from "./paises/franca";
+import * as inglaterra from "./paises/inglaterra";
+import * as italia from "./paises/italia";
 
 /** Data de referência do banco: idades e contratos são calculados a partir dela. */
 export const DATA_REFERENCIA = "2026-07-01";
-export const VERSAO_BANCO = "0.3.0";
+export const VERSAO_BANCO = "0.4.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -36,6 +41,128 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     fracaoEstrangeiros: 0.12,
     fimDeContrato: "12-31",
   },
+  ENG: {
+    clubes: inglaterra.CLUBES,
+    competicoes: inglaterra.COMPETICOES,
+    estrangeiros: [
+      "FRA",
+      "ESP",
+      "POR",
+      "BRA",
+      "NED",
+      "BEL",
+      "GER",
+      "IRL",
+      "SCO",
+      "NOR",
+      "DEN",
+      "ARG",
+      "NGA",
+      "SEN",
+      "CIV",
+      "GHA",
+      "JAM",
+      "USA",
+    ],
+    fracaoEstrangeiros: 0.35,
+    fimDeContrato: "06-30",
+  },
+  ESP: {
+    clubes: espanha.CLUBES,
+    competicoes: espanha.COMPETICOES,
+    estrangeiros: [
+      "FRA",
+      "POR",
+      "ARG",
+      "URU",
+      "BRA",
+      "COL",
+      "MAR",
+      "SEN",
+      "NED",
+      "BEL",
+      "ITA",
+      "GER",
+      "CRO",
+      "SRB",
+      "VEN",
+      "MEX",
+    ],
+    fracaoEstrangeiros: 0.22,
+    fimDeContrato: "06-30",
+  },
+  ITA: {
+    clubes: italia.CLUBES,
+    competicoes: italia.COMPETICOES,
+    estrangeiros: [
+      "FRA",
+      "ARG",
+      "BRA",
+      "ESP",
+      "NED",
+      "BEL",
+      "SRB",
+      "CRO",
+      "POR",
+      "DEN",
+      "NGA",
+      "SEN",
+      "URU",
+      "ALB",
+      "POL",
+      "SUI",
+    ],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  GER: {
+    clubes: alemanha.CLUBES,
+    competicoes: alemanha.COMPETICOES,
+    estrangeiros: [
+      "AUT",
+      "SUI",
+      "NED",
+      "DEN",
+      "FRA",
+      "POL",
+      "CRO",
+      "TUR",
+      "JPN",
+      "KOR",
+      "USA",
+      "BEL",
+      "CZE",
+      "SWE",
+      "GHA",
+      "BRA",
+    ],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  FRA: {
+    clubes: franca.CLUBES,
+    competicoes: franca.COMPETICOES,
+    estrangeiros: [
+      "SEN",
+      "CIV",
+      "MLI",
+      "CMR",
+      "ALG",
+      "MAR",
+      "TUN",
+      "BEL",
+      "POR",
+      "BRA",
+      "NED",
+      "DEN",
+      "GHA",
+      "COD",
+      "GUI",
+      "USA",
+    ],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
 };
 
 export interface OpcoesBanco {
@@ -53,7 +180,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
   const competicoes: CompeticaoEntrada[] = [];
   const estados: BancoT["estados"] = [];
 
-  for (const [codigo, dados] of Object.entries(PAISES_NO_BANCO)) {
+  for (const dados of Object.values(PAISES_NO_BANCO)) {
     clubes.push(...dados.clubes);
     competicoes.push(...dados.competicoes);
     estados.push(...(dados.estados ?? []));
@@ -67,8 +194,9 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       const rng = new Rng(`${semente}:${clube.id}`);
       jogadores.push(
         ...gerarElenco(rng, clube, {
-          nacionalidade: codigo,
-          grupoNomes: grupoDe.get(codigo) ?? "en",
+          // A nacionalidade segue o país do clube (ex.: galeses no sistema inglês).
+          nacionalidade: clube.pais,
+          grupoNomes: grupoDe.get(clube.pais) ?? "en",
           hoje: DATA_REFERENCIA,
           estrangeiros: (dados.estrangeiros ?? []).map((n) => ({
             nacionalidade: n,

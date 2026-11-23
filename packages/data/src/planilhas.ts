@@ -52,6 +52,7 @@ export const COLUNAS_CLUBES = [
   "reputacao",
   "nivel",
   "rivais",
+  "filial_de",
   "tecnico",
   "fundacao",
 ] as const;
@@ -205,6 +206,7 @@ export function importarClubesCsv(conteudo: string): ResultadoPlanilha<ClubeT> {
         .split("|")
         .map((r) => r.trim())
         .filter(Boolean),
+      filialDe: texto(l.filial_de),
       tecnico: texto(l.tecnico),
       fundacao: numero(l.fundacao ?? ""),
     };
@@ -239,6 +241,7 @@ export function exportarClubesCsv(clubes: readonly ClubeT[], separador: Separado
     String(c.reputacao),
     String(c.nivel),
     c.rivais.join("|"),
+    c.filialDe ?? "",
     c.tecnico ?? "",
     c.fundacao ? String(c.fundacao) : "",
   ]);
