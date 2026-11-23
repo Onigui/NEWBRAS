@@ -12,17 +12,27 @@ import * as brasil from "./paises/brasil";
 import { CLUBES_ESTADUAIS, COMPETICOES_ESTADUAIS } from "./paises/brasil-estaduais";
 import * as alemanha from "./paises/alemanha";
 import * as arabia from "./paises/arabia";
+import * as austria from "./paises/austria";
+import * as belgica from "./paises/belgica";
+import * as dinamarca from "./paises/dinamarca";
+import * as escocia from "./paises/escocia";
 import * as espanha from "./paises/espanha";
 import * as eua from "./paises/eua";
 import * as franca from "./paises/franca";
+import * as grecia from "./paises/grecia";
+import * as holanda from "./paises/holanda";
 import * as inglaterra from "./paises/inglaterra";
 import * as italia from "./paises/italia";
+import * as portugal from "./paises/portugal";
+import * as suecia from "./paises/suecia";
+import * as suica from "./paises/suica";
+import * as turquia from "./paises/turquia";
 
 import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.5.0";
+export const VERSAO_BANCO = "0.6.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -166,6 +176,76 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     ],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
+  },
+  POR: {
+    clubes: portugal.CLUBES,
+    competicoes: portugal.COMPETICOES,
+    estrangeiros: ["BRA", "ESP", "ANG", "CPV", "URU", "ARG", "FRA", "GNB", "COL", "SRB"],
+    fracaoEstrangeiros: 0.35,
+    fimDeContrato: "06-30",
+  },
+  NED: {
+    clubes: holanda.CLUBES,
+    competicoes: holanda.COMPETICOES,
+    estrangeiros: ["BEL", "GER", "SUR", "DEN", "NOR", "SWE", "MAR", "CUW", "ENG", "JPN"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  BEL: {
+    clubes: belgica.CLUBES,
+    competicoes: belgica.COMPETICOES,
+    estrangeiros: ["FRA", "NED", "COD", "MAR", "SEN", "CIV", "NGA", "GHA", "DEN", "JPN"],
+    fracaoEstrangeiros: 0.35,
+    fimDeContrato: "06-30",
+  },
+  SCO: {
+    clubes: escocia.CLUBES,
+    competicoes: escocia.COMPETICOES,
+    estrangeiros: ["ENG", "IRL", "NIR", "WAL", "AUS", "NOR", "DEN", "NED", "JPN", "USA"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "05-31",
+  },
+  TUR: {
+    clubes: turquia.CLUBES,
+    competicoes: turquia.COMPETICOES,
+    estrangeiros: ["BRA", "NGA", "SEN", "POR", "FRA", "SRB", "BIH", "CRO", "ALB", "NED"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  AUT: {
+    clubes: austria.CLUBES,
+    competicoes: austria.COMPETICOES,
+    estrangeiros: ["GER", "CRO", "BIH", "SRB", "SVN", "HUN", "SUI", "GHA", "NGA", "MLI"],
+    fracaoEstrangeiros: 0.25,
+    fimDeContrato: "05-31",
+  },
+  SUI: {
+    clubes: suica.CLUBES,
+    competicoes: suica.COMPETICOES,
+    estrangeiros: ["FRA", "GER", "ITA", "KVX", "ALB", "POR", "SRB", "AUT", "CIV", "SEN"],
+    fracaoEstrangeiros: 0.3,
+    fimDeContrato: "06-30",
+  },
+  GRE: {
+    clubes: grecia.CLUBES,
+    competicoes: grecia.COMPETICOES,
+    estrangeiros: ["POR", "ESP", "SRB", "ARG", "BRA", "CRO", "CYP", "ALB", "FRA", "NOR"],
+    fracaoEstrangeiros: 0.35,
+    fimDeContrato: "06-30",
+  },
+  DEN: {
+    clubes: dinamarca.CLUBES,
+    competicoes: dinamarca.COMPETICOES,
+    estrangeiros: ["SWE", "NOR", "ISL", "FRO", "GHA", "NGA", "FIN", "GER", "NED", "BRA"],
+    fracaoEstrangeiros: 0.25,
+    fimDeContrato: "06-30",
+  },
+  SWE: {
+    clubes: suecia.CLUBES,
+    competicoes: suecia.COMPETICOES,
+    estrangeiros: ["NOR", "DEN", "FIN", "ISL", "GHA", "NGA", "GAM", "USA", "BIH", "KVX"],
+    fracaoEstrangeiros: 0.2,
+    fimDeContrato: "12-31",
   },
   USA: {
     clubes: eua.CLUBES,

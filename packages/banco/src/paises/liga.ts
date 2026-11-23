@@ -16,6 +16,12 @@ export interface OpcoesLiga {
   desempate: Desempate;
   /** Grupos regionais da temporada regular (padrão: 1, pontos corridos). */
   grupos?: number;
+  /**
+   * Quantas vezes cada clube enfrenta os outros (padrão: 2). Ligas pequenas que se dividem em
+   * grupos de cima e de baixo no fim (Escócia, Suíça, Áustria, Dinamarca) usam 3 ou 4 turnos até a
+   * divisão ser modelada.
+   */
+  turnos?: number;
   /** Faixa que segue para os playoffs (por grupo, quando houver grupos). */
   playoff?: { de: number; ate: number; fases: readonly Fase[] };
   movimentos: readonly Movimento[];
@@ -40,7 +46,7 @@ export function liga(o: OpcoesLiga): CompeticaoEntrada {
         nome: "Temporada regular",
         tipo: "grupos",
         grupos,
-        turnos: 2,
+        turnos: o.turnos ?? 2,
         ...(grupos > 1 ? { divisaoGrupos: "ordem-da-lista" as const } : {}),
         ...(o.playoff ? { faixaClassificada: { de: o.playoff.de, ate: o.playoff.ate } } : {}),
       },

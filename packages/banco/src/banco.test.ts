@@ -357,3 +357,90 @@ describe("ícones na base", () => {
     expect(outro.map((j) => j.clube)).not.toEqual(icones.map((j) => j.clube));
   });
 });
+
+describe("países europeus de nível 2", () => {
+  const tamanhos: Record<string, readonly [string, number][]> = {
+    POR: [
+      ["por-liga-portugal", 18],
+      ["por-liga-portugal-2", 18],
+    ],
+    NED: [
+      ["ned-eredivisie", 18],
+      ["ned-eerste-divisie", 20],
+    ],
+    BEL: [
+      ["bel-pro-league", 18],
+      ["bel-challenger-pro-league", 15],
+    ],
+    SCO: [
+      ["sco-premiership", 12],
+      ["sco-championship", 10],
+    ],
+    TUR: [
+      ["tur-super-lig", 18],
+      ["tur-1-lig", 20],
+    ],
+    AUT: [
+      ["aut-bundesliga", 12],
+      ["aut-2-liga", 16],
+    ],
+    SUI: [
+      ["sui-super-league", 12],
+      ["sui-challenge-league", 10],
+    ],
+    GRE: [
+      ["gre-super-league", 14],
+      ["gre-super-league-2", 16],
+    ],
+    DEN: [
+      ["den-superliga", 12],
+      ["den-1-division", 12],
+    ],
+    SWE: [
+      ["swe-allsvenskan", 16],
+      ["swe-superettan", 16],
+    ],
+  };
+
+  it("cada país tem 1ª e 2ª divisão com o número real de clubes", () => {
+    for (const [pais, ligas] of Object.entries(tamanhos)) {
+      for (const [id, n] of ligas) {
+        const c = banco.competicoes.find((x) => x.id === id);
+        expect(c, id).toBeDefined();
+        expect(c!.escopo).toEqual({ tipo: "pais", pais });
+        expect(c!.participantes.fixos, id).toHaveLength(n);
+      }
+    }
+  });
+
+  it("o Vaduz, de Liechtenstein, joga a Super League suíça", () => {
+    const vaduz = banco.clubes.find((c) => c.id === "lie-vaduz")!;
+    expect(vaduz.pais).toBe("LIE");
+    const sui = banco.competicoes.find((c) => c.id === "sui-super-league")!;
+    expect(sui.participantes.fixos).toContain("lie-vaduz");
+  });
+
+  it("equipes B e sub-23 apontam para o clube principal", () => {
+    const filial = (id: string) => banco.clubes.find((c) => c.id === id)!.filialDe;
+    expect(filial("por-benfica-b")).toBe("por-benfica");
+    expect(filial("ned-jong-ajax")).toBe("ned-ajax");
+    expect(filial("bel-club-nxt")).toBe("bel-club-brugge");
+    expect(filial("aut-liefering")).toBe("aut-salzburg");
+    expect(filial("gre-paok-b")).toBe("gre-paok");
+  });
+
+  it("os grandes de cada país são os mais fortes da liga", () => {
+    const nivel = (id: string) => banco.clubes.find((c) => c.id === id)!.nivel;
+    for (const [grande, liga] of [
+      ["por-sporting", "por-liga-portugal"],
+      ["ned-psv", "ned-eredivisie"],
+      ["tur-galatasaray", "tur-super-lig"],
+      ["gre-olympiacos", "gre-super-league"],
+    ] as const) {
+      const outros = banco.competicoes
+        .find((c) => c.id === liga)!
+        .participantes.fixos.filter((id) => id !== grande);
+      for (const outro of outros) expect(nivel(grande), outro).toBeGreaterThanOrEqual(nivel(outro));
+    }
+  });
+});
