@@ -34,6 +34,8 @@ export const COLUNAS_JOGADORES = [
   "salario",
   "multa_rescisoria",
   "numero",
+  "forca_auge",
+  "base",
 ] as const;
 
 export const COLUNAS_CLUBES = [
@@ -141,6 +143,8 @@ export function importarJogadoresCsv(conteudo: string): ResultadoPlanilha<Jogado
           }
         : undefined,
       numero: numero(l.numero ?? ""),
+      forcaAuge: numero(l.forca_auge ?? ""),
+      base: simNao(l.base ?? ""),
     };
     const r = Jogador.safeParse(JSON.parse(JSON.stringify(bruto)));
     if (r.success) itens.push(r.data);
@@ -176,6 +180,8 @@ export function exportarJogadoresCsv(
     j.contrato ? String(j.contrato.salario) : "",
     j.contrato?.multaRescisoria !== undefined ? String(j.contrato.multaRescisoria) : "",
     j.numero ? String(j.numero) : "",
+    j.forcaAuge !== undefined ? String(j.forcaAuge) : "",
+    j.base ? "sim" : "nao",
   ]);
   return escreverCsv([[...COLUNAS_JOGADORES], ...linhas], separador);
 }

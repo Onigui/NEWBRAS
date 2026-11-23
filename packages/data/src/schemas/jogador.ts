@@ -11,6 +11,9 @@ import { CodigoPais, Data, Id, NomeTexto } from "./comum";
 
 const Forca = z.int().min(FORCA_MIN).max(FORCA_MAX);
 
+/** Campos que podem vir marcados para conferência num jogador real. */
+export const CAMPOS_A_CONFERIR_JOGADOR = ["nascimento", "posicao", "numero"] as const;
+
 export const Contrato = z.object({
   /** Último dia do contrato. */
   fim: Data,
@@ -43,12 +46,16 @@ export const Jogador = z
       .max(2),
     /** Craque. Estrelas ficam fora dos leilões automáticos e podem renascer como lenda. */
     estrela: z.boolean().default(false),
+    /** Está na categoria de base do clube (ainda não promovido ao elenco profissional). */
+    base: z.boolean().default(false),
     /** Clube atual; ausente = jogador livre. */
     clube: Id.optional(),
     contrato: Contrato.optional(),
     numero: z.int().min(1).max(99).optional(),
     /** Maior força já atingida; guia o potencial quando a lenda renasce. */
     forcaAuge: Forca.optional(),
+    /** Campos de jogador real que a fonte não trouxe com precisão (o editor destaca). */
+    aConferir: z.array(z.enum(CAMPOS_A_CONFERIR_JOGADOR)).default([]),
   })
   .superRefine((j, ctx) => {
     if (j.potencial < j.forca) {

@@ -1,7 +1,8 @@
 import { CONFEDERACOES, elencoValido, validarIntegridade } from "@newbras/data";
-import { gruposDeNomes } from "@newbras/engine";
+import { gruposDeNomes, idadeEm } from "@newbras/engine";
 import { describe, expect, it } from "vitest";
-import { montarBanco } from "./montar";
+import { TOTAL_ICONES } from "./lendas/icones";
+import { DATA_REFERENCIA, montarBanco } from "./montar";
 import { PAISES } from "./mundo/paises";
 
 const banco = montarBanco();
@@ -276,5 +277,83 @@ describe("Europa (nível 1)", () => {
   it("contratos europeus vencem em 30 de junho", () => {
     const j = banco.jogadores.find((x) => x.clube === "eng-arsenal" && x.contrato);
     expect(j?.contrato?.fim.slice(5)).toBe("06-30");
+  });
+});
+
+describe("MLS e Saudi Pro League com jogadores reais", () => {
+  const liga = (id: string) => banco.competicoes.find((c) => c.id === id)!.participantes.fixos;
+  const jogador = (nome: string) => banco.jogadores.find((j) => j.nome === nome)!;
+
+  it("MLS tem 30 clubes em duas conferências, 3 deles do Canadá", () => {
+    const mls = liga("usa-mls");
+    expect(mls).toHaveLength(30);
+    expect(mls.filter((c) => c.startsWith("can-"))).toHaveLength(3);
+  });
+
+  it("Saudi Pro League tem 18 clubes e a First Division mais 18", () => {
+    expect(liga("ksa-pro-league")).toHaveLength(18);
+    expect(liga("ksa-first-division")).toHaveLength(18);
+  });
+
+  it("todo clube da MLS e da Saudi Pro League tem elenco real (com ao menos 2 goleiros)", () => {
+    for (const clube of [...liga("usa-mls"), ...liga("ksa-pro-league")]) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube && !j.base);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(22);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+      expect(elenco.some((j) => j.id.includes("-goleiro-gerado-")) || elenco.length > 22).toBe(
+        true,
+      );
+    }
+  });
+
+  it("as lendas estão nos clubes certos, com a força do auge guardada para o renascimento", () => {
+    const messi = jogador("Lionel Messi");
+    expect(messi.clube).toBe("usa-inter-miami");
+    expect(messi.forcaAuge).toBe(99);
+    expect(messi.estrela).toBe(true);
+    expect(jogador("Cristiano Ronaldo").clube).toBe("ksa-al-nassr");
+    expect(jogador("Cristiano Ronaldo").forcaAuge).toBe(98);
+    expect(jogador("Robert Lewandowski").clube).toBe("usa-chicago-fire");
+    expect(jogador("Antoine Griezmann").clube).toBe("usa-orlando-city");
+    expect(jogador("Thomas Müller").clube).toBe("can-vancouver-whitecaps");
+  });
+
+  it("veteranos estão em declínio: força atual bem abaixo do auge", () => {
+    for (const nome of ["Lionel Messi", "Cristiano Ronaldo", "Luis Suárez", "Marco Reus"]) {
+      const j = jogador(nome);
+      expect(j.forcaAuge! - j.forca, nome).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it("dados que a fonte não trouxe ficam marcados para conferir", () => {
+    const semData = banco.jogadores.filter((j) => j.aConferir.includes("nascimento"));
+    expect(semData.length).toBeGreaterThan(1000);
+    expect(jogador("Lionel Messi").aConferir).not.toContain("nascimento");
+  });
+});
+
+describe("ícones na base", () => {
+  const icones = banco.jogadores.filter((j) => j.id.startsWith("icone-"));
+
+  it("Gareth Bale e os outros ícones começam na base, com 15 ou 16 anos e o potencial do auge", () => {
+    expect(icones).toHaveLength(TOTAL_ICONES);
+    const bale = icones.find((j) => j.nome === "Gareth Bale")!;
+    expect(bale.base).toBe(true);
+    expect(bale.nacionalidade).toBe("WAL");
+    expect(bale.potencial).toBe(90);
+    for (const j of icones) {
+      const idade = idadeEm(j.nascimento, DATA_REFERENCIA);
+      expect(idade, j.nome).toBeGreaterThanOrEqual(15);
+      expect(idade, j.nome).toBeLessThanOrEqual(16);
+      expect(j.forca, j.nome).toBeLessThan(j.potencial - 30);
+      expect(j.contrato).toBeUndefined();
+    }
+  });
+
+  it("o clube de cada ícone depende da semente do mundo", () => {
+    const outro = montarBanco({ semente: "outra" }).jogadores.filter((j) =>
+      j.id.startsWith("icone-"),
+    );
+    expect(outro.map((j) => j.clube)).not.toEqual(icones.map((j) => j.clube));
   });
 });
