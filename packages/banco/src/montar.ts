@@ -35,6 +35,7 @@ import { PAISES_NIVEL_3_AMERICAS } from "./paises/nivel3-americas";
 import { PAISES_NIVEL_3_UEFA } from "./paises/nivel3-uefa";
 import { PAISES_NIVEL_3_AFC } from "./paises/nivel3-afc";
 import { PAISES_NIVEL_3_CAF } from "./paises/nivel3-caf";
+import { PAISES_NIVEL_3_OCEANIA_CARIBE } from "./paises/nivel3-oceania-caribe";
 import * as portugal from "./paises/portugal";
 import * as suecia from "./paises/suecia";
 import * as suica from "./paises/suica";
@@ -45,7 +46,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.12.0";
+export const VERSAO_BANCO = "0.13.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -64,6 +65,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   ...PAISES_NIVEL_3_UEFA,
   ...PAISES_NIVEL_3_AFC,
   ...PAISES_NIVEL_3_CAF,
+  ...PAISES_NIVEL_3_OCEANIA_CARIBE,
   BRA: {
     clubes: [...brasil.CLUBES, ...CLUBES_ESTADUAIS],
     competicoes: [...brasil.COMPETICOES, ...COMPETICOES_ESTADUAIS],

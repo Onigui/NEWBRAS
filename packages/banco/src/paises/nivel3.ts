@@ -67,8 +67,10 @@ function semAcento(texto: string): string {
 }
 
 /** Gera abreviações de três letras sem repetir dentro do país. */
-export function abreviacoes(nomes: readonly string[]): string[] {
-  const usadas = new Set<string>();
+export function abreviacoes(
+  nomes: readonly string[],
+  usadas: Set<string> = new Set<string>(),
+): string[] {
   return nomes.map((nome) => {
     const palavras = semAcento(nome)
       .toUpperCase()
@@ -108,8 +110,11 @@ function nomeCurto(nome: string): string {
   return curto || nome.slice(0, 20);
 }
 
-export function linhasDe(clubes: readonly ClubeSimples[]): ClubeLinha[] {
-  const abrevs = abreviacoes(clubes.map((c) => c[1]));
+export function linhasDe(clubes: readonly ClubeSimples[], usadas?: Set<string>): ClubeLinha[] {
+  const abrevs = abreviacoes(
+    clubes.map((c) => c[1]),
+    usadas,
+  );
   return clubes.map(
     ([slug, nome, cidade, estadio, capacidade, cores, reputacao, nivel, rivais], i) => {
       const incerto = cores.trim().endsWith("?");
@@ -152,6 +157,8 @@ export interface LigaNivel3 {
   fracaoEstrangeiros?: number;
   /** Clubes de outro país que jogam nesta liga (Auckland e Wellington na A-League, por exemplo). */
   visitantes?: readonly { pais: string; clubes: readonly ClubeSimples[] }[];
+  /** Abreviações já usadas no país, quando os clubes dele aparecem em mais de uma liga. */
+  abreviacoesUsadas?: Set<string>;
 }
 
 /** Monta o país: clubes, a liga (sem acesso nem rebaixamento) e os dados de elenco. */
@@ -177,7 +184,7 @@ export function paisNivel3(l: LigaNivel3) {
   });
   return {
     clubes: [
-      ...clubesDe(l.pais, linhasDe(l.clubes)),
+      ...clubesDe(l.pais, linhasDe(l.clubes, l.abreviacoesUsadas)),
       ...(l.visitantes ?? []).flatMap((v) => clubesDe(v.pais, linhasDe(v.clubes))),
     ],
     competicoes: [competicao],
