@@ -118,7 +118,7 @@ const AUSTRALIA: ClubeSimples[] = [
   ],
 ];
 
-const NZ_NA_A_LEAGUE: ClubeSimples[] = [
+export const NZ_NA_A_LEAGUE: ClubeSimples[] = [
   ["auckland-fc", "Auckland FC", "Auckland", "Go Media Stadium", 25_000, "#003DA5 #FFFFFF", 2, 61],
   [
     "wellington-phoenix",

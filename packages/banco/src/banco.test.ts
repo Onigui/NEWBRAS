@@ -730,3 +730,66 @@ describe("nível 3: CAF", () => {
     }
   });
 });
+
+describe("nível 3: OFC, Caribe e Ilhas Faroé", () => {
+  const ligasDe = (pais: string) =>
+    banco.competicoes.filter(
+      (c) => c.divisao === 1 && c.escopo.tipo === "pais" && c.escopo.pais === pais,
+    );
+
+  it("os últimos 38 países ganham a primeira divisão", () => {
+    const paises = [
+      "NZL",
+      "FIJ",
+      "NCL",
+      "TAH",
+      "PNG",
+      "SAM",
+      "ASA",
+      "COK",
+      "SOL",
+      "TGA",
+      "VAN",
+      "JAM",
+      "TRI",
+      "HAI",
+      "CUB",
+      "DOM",
+      "PUR",
+      "SUR",
+      "GUY",
+      "CUW",
+      "NCA",
+      "BLZ",
+      "ARU",
+      "BAH",
+      "BRB",
+      "BER",
+      "CAY",
+      "ATG",
+      "GRN",
+      "LCA",
+      "VIN",
+      "DMA",
+      "SKN",
+      "AIA",
+      "VGB",
+      "TCA",
+      "VIR",
+      "FRO",
+    ];
+    for (const pais of paises) {
+      const [liga] = ligasDe(pais);
+      expect(liga, pais).toBeDefined();
+      expect(liga!.participantes.fixos.length, pais).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it("a Nova Zelândia tem as três ligas regionais", () => {
+    expect(ligasDe("NZL").map((c) => c.id)).toEqual([
+      "nzl-northern-league",
+      "nzl-central-league",
+      "nzl-southern-league",
+    ]);
+  });
+});
