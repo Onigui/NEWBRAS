@@ -663,3 +663,70 @@ describe("nível 3: AFC", () => {
     expect(banco.clubes.find((c) => c.id === "bru-dpmm")?.pais).toBe("BRU");
   });
 });
+
+describe("nível 3: CAF", () => {
+  it("53 países africanos ganham a primeira divisão", () => {
+    const paises = [
+      "ALG",
+      "ANG",
+      "BEN",
+      "BOT",
+      "BFA",
+      "BDI",
+      "CMR",
+      "CPV",
+      "CTA",
+      "CHA",
+      "CGO",
+      "COD",
+      "DJI",
+      "EGY",
+      "EQG",
+      "ERI",
+      "SWZ",
+      "ETH",
+      "GAB",
+      "GAM",
+      "GHA",
+      "GUI",
+      "GNB",
+      "CIV",
+      "KEN",
+      "LES",
+      "LBR",
+      "LBY",
+      "MAD",
+      "MWI",
+      "MLI",
+      "MTN",
+      "MRI",
+      "MAR",
+      "MOZ",
+      "NAM",
+      "NIG",
+      "NGA",
+      "RWA",
+      "STP",
+      "SEN",
+      "SEY",
+      "SLE",
+      "SOM",
+      "RSA",
+      "SSD",
+      "SDN",
+      "TAN",
+      "TOG",
+      "TUN",
+      "UGA",
+      "ZAM",
+      "ZIM",
+    ];
+    for (const pais of paises) {
+      const liga = banco.competicoes.find(
+        (c) => c.divisao === 1 && c.escopo.tipo === "pais" && c.escopo.pais === pais,
+      );
+      expect(liga, pais).toBeDefined();
+      expect(liga!.participantes.fixos.length, pais).toBeGreaterThanOrEqual(8);
+    }
+  });
+});
