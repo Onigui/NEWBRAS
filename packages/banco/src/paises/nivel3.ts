@@ -150,6 +150,8 @@ export interface LigaNivel3 {
   turnos?: number;
   estrangeiros: readonly string[];
   fracaoEstrangeiros?: number;
+  /** Clubes de outro país que jogam nesta liga (Auckland e Wellington na A-League, por exemplo). */
+  visitantes?: readonly { pais: string; clubes: readonly ClubeSimples[] }[];
 }
 
 /** Monta o país: clubes, a liga (sem acesso nem rebaixamento) e os dados de elenco. */
@@ -162,14 +164,22 @@ export function paisNivel3(l: LigaNivel3) {
     nome: l.nome,
     nomeCurto: l.nomeCurto,
     divisao: 1,
-    clubes: l.clubes.map((c) => `${prefixo}-${c[0]}`),
+    clubes: [
+      ...l.clubes.map((c) => `${prefixo}-${c[0]}`),
+      ...(l.visitantes ?? []).flatMap((v) =>
+        v.clubes.map((c) => `${v.pais.toLowerCase()}-${c[0]}`),
+      ),
+    ],
     calendario: l.calendario,
     ...(l.turnos ? { turnos: l.turnos } : {}),
     desempate: ["pontos", "saldo", "gols-pro", "confronto-direto", "sorteio"],
     movimentos: [],
   });
   return {
-    clubes: clubesDe(l.pais, linhasDe(l.clubes)),
+    clubes: [
+      ...clubesDe(l.pais, linhasDe(l.clubes)),
+      ...(l.visitantes ?? []).flatMap((v) => clubesDe(v.pais, linhasDe(v.clubes))),
+    ],
     competicoes: [competicao],
     estrangeiros: l.estrangeiros,
     fracaoEstrangeiros: l.fracaoEstrangeiros ?? 0.15,
