@@ -46,7 +46,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.13.0";
+export const VERSAO_BANCO = "0.14.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -70,6 +70,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
     clubes: [...brasil.CLUBES, ...CLUBES_ESTADUAIS],
     competicoes: [...brasil.COMPETICOES, ...COMPETICOES_ESTADUAIS],
     estados: brasil.ESTADOS,
+    jogadores: brasil.JOGADORES,
     estrangeiros: ["ARG", "URU", "COL", "PAR", "ECU", "VEN", "CHI", "PER"],
     fracaoEstrangeiros: 0.12,
     fimDeContrato: "12-31",
@@ -407,7 +408,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       nome: "NewBras: Mundo 2026",
       versao: VERSAO_BANCO,
       descricao:
-        "Banco oficial do NewBras. Clubes reais; jogadores reais na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
+        "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
       atualizadoEm: "2026-11-23",
     },
     paises: PAISES,

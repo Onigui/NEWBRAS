@@ -1,3 +1,5 @@
+import { ELENCOS_BRA } from "../reais/elencos-bra";
+import { jogadoresReais } from "../reais/fotmob";
 import type { CompeticaoEntrada, Estado } from "@newbras/data";
 import { clubesDe, type ClubeLinha } from "../tipos";
 
@@ -2665,3 +2667,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   },
 ];
+
+/** Jogadores reais da Série A 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_BRA, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "bra-2026",
+});
