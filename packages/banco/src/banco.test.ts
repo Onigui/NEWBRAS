@@ -861,3 +861,27 @@ describe("jogadores reais: LaLiga 2026/27", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: Serie A 2026/27", () => {
+  const serieA = banco.competicoes.find((c) => c.id === "ita-serie-a")!;
+
+  it("os 20 clubes da Serie A italiana têm elenco real e jogável", () => {
+    expect(serieA.participantes.fixos).toHaveLength(20);
+    for (const clube of serieA.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(25);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const inter = banco.jogadores.filter((j) => j.clube === "ita-inter").map((j) => j.nome);
+    expect(inter).toContain("Lautaro Martínez");
+    const debruyne = banco.jogadores.find((j) => j.nome === "Kevin De Bruyne")!;
+    expect(debruyne.clube).toBe("ita-napoli");
+    expect(debruyne.nacionalidade).toBe("BEL");
+  });
+
+  it("a Serie B segue com elencos gerados", () => {
+    const serieB = banco.competicoes.find((c) => c.id === "ita-serie-b")!;
+    const clube = serieB.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});
