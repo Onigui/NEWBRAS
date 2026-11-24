@@ -837,3 +837,27 @@ describe("jogadores reais: Premier League 2026/27", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: LaLiga 2026/27", () => {
+  const laliga = banco.competicoes.find((c) => c.id === "esp-laliga")!;
+
+  it("os 20 clubes da LaLiga têm elenco real e jogável", () => {
+    expect(laliga.participantes.fixos).toHaveLength(20);
+    for (const clube of laliga.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(23);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const barca = banco.jogadores.filter((j) => j.clube === "esp-barcelona").map((j) => j.nome);
+    expect(barca).toContain("Lamine Yamal");
+    const mbappe = banco.jogadores.find((j) => j.nome === "Kylian Mbappé")!;
+    expect(mbappe.clube).toBe("esp-real-madrid");
+    expect(mbappe.nacionalidade).toBe("FRA");
+  });
+
+  it("a LaLiga 2 segue com elencos gerados", () => {
+    const segunda = banco.competicoes.find((c) => c.id === "esp-laliga-2")!;
+    const clube = segunda.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});
