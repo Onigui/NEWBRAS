@@ -601,3 +601,65 @@ describe("nível 3: UEFA", () => {
     for (const c of semEstadio) expect(c.aConferir, c.id).toContain("estadio");
   });
 });
+
+describe("nível 3: AFC", () => {
+  const ligaDe = (pais: string) =>
+    banco.competicoes.find(
+      (c) => c.divisao === 1 && c.escopo.tipo === "pais" && c.escopo.pais === pais,
+    );
+
+  it("39 países asiáticos ganham a primeira divisão", () => {
+    const paises = [
+      "AUS",
+      "CHN",
+      "IRN",
+      "UAE",
+      "UZB",
+      "IRQ",
+      "JOR",
+      "OMA",
+      "BHR",
+      "KUW",
+      "SYR",
+      "LBN",
+      "PLE",
+      "YEM",
+      "IND",
+      "IDN",
+      "THA",
+      "VIE",
+      "MAS",
+      "SGP",
+      "PHI",
+      "MYA",
+      "CAM",
+      "LAO",
+      "BRU",
+      "TLS",
+      "HKG",
+      "MAC",
+      "TPE",
+      "PRK",
+      "MNG",
+      "KGZ",
+      "TJK",
+      "TKM",
+      "AFG",
+      "BAN",
+      "NEP",
+      "BHU",
+      "MDV",
+    ];
+    for (const pais of paises) {
+      const liga = ligaDe(pais);
+      expect(liga, pais).toBeDefined();
+      expect(liga!.participantes.fixos.length, pais).toBeGreaterThanOrEqual(8);
+    }
+  });
+
+  it("clubes estrangeiros jogam na liga do país vizinho", () => {
+    expect(ligaDe("AUS")!.participantes.fixos).toContain("nzl-auckland-fc");
+    expect(ligaDe("MAS")!.participantes.fixos).toContain("bru-dpmm");
+    expect(banco.clubes.find((c) => c.id === "bru-dpmm")?.pais).toBe("BRU");
+  });
+});
