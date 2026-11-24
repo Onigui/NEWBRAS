@@ -793,3 +793,23 @@ describe("nível 3: OFC, Caribe e Ilhas Faroé", () => {
     ]);
   });
 });
+
+describe("jogadores reais: Série A 2026", () => {
+  const serieA = banco.competicoes.find((c) => c.id === "bra-serie-a")!;
+
+  it("os 20 clubes da Série A têm elenco real e jogável", () => {
+    for (const clube of serieA.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(30);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const flamengo = banco.jogadores.filter((j) => j.clube === "bra-flamengo").map((j) => j.nome);
+    expect(flamengo).toContain("Giorgian De Arrascaeta");
+  });
+
+  it("as outras divisões seguem com elencos gerados", () => {
+    const serieB = banco.competicoes.find((c) => c.id === "bra-serie-b")!;
+    const clube = serieB.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});
