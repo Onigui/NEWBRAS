@@ -46,7 +46,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.14.0";
+export const VERSAO_BANCO = "0.15.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -78,6 +78,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   ENG: {
     clubes: inglaterra.CLUBES,
     competicoes: inglaterra.COMPETICOES,
+    jogadores: inglaterra.JOGADORES,
     estrangeiros: [
       "FRA",
       "ESP",
@@ -408,7 +409,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       nome: "NewBras: Mundo 2026",
       versao: VERSAO_BANCO,
       descricao:
-        "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
+        "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na Premier League, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
       atualizadoEm: "2026-11-23",
     },
     paises: PAISES,

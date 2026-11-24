@@ -813,3 +813,27 @@ describe("jogadores reais: Série A 2026", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: Premier League 2026/27", () => {
+  const premier = banco.competicoes.find((c) => c.id === "eng-premier-league")!;
+
+  it("os 20 clubes da Premier League têm elenco real e jogável", () => {
+    expect(premier.participantes.fixos).toHaveLength(20);
+    for (const clube of premier.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(21);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const liverpool = banco.jogadores.filter((j) => j.clube === "eng-liverpool").map((j) => j.nome);
+    expect(liverpool).toContain("Virgil van Dijk");
+    const city = banco.jogadores.find((j) => j.nome === "Erling Haaland")!;
+    expect(city.clube).toBe("eng-manchester-city");
+    expect(city.nacionalidade).toBe("NOR");
+  });
+
+  it("a Championship segue com elencos gerados", () => {
+    const championship = banco.competicoes.find((c) => c.id === "eng-championship")!;
+    const clube = championship.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});
