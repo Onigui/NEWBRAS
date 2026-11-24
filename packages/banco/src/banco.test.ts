@@ -885,3 +885,25 @@ describe("jogadores reais: Serie A 2026/27", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: Bundesliga 2026/27", () => {
+  const bundesliga = banco.competicoes.find((c) => c.id === "ger-bundesliga")!;
+  it("os 18 clubes da Bundesliga têm elenco real e jogável", () => {
+    expect(bundesliga.participantes.fixos).toHaveLength(18);
+    for (const clube of bundesliga.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(22);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const bayern = banco.jogadores.filter((j) => j.clube === "ger-bayern").map((j) => j.nome);
+    expect(bayern).toContain("Jamal Musiala");
+    const kane = banco.jogadores.find((j) => j.nome === "Harry Kane")!;
+    expect(kane.clube).toBe("ger-bayern");
+    expect(kane.nacionalidade).toBe("ENG");
+  });
+  it("a 2. Bundesliga segue com elencos gerados", () => {
+    const segunda = banco.competicoes.find((c) => c.id === "ger-2-bundesliga")!;
+    const clube = segunda.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});

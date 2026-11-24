@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_GER } from "../reais/elencos-ger";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -928,3 +930,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Bundesliga 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_GER, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "ger-2026",
+});
