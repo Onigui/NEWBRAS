@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_FRA } from "../reais/elencos-fra";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { faixa, liga, rodadaUnica } from "./liga";
 
@@ -929,3 +931,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Ligue 1 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_FRA, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "fra-2026",
+});

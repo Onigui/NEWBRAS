@@ -907,3 +907,30 @@ describe("jogadores reais: Bundesliga 2026/27", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: Ligue 1 2026/27", () => {
+  const ligue1 = banco.competicoes.find((c) => c.id === "fra-ligue-1")!;
+  it("os 18 clubes da Ligue 1 têm elenco real e jogável", () => {
+    expect(ligue1.participantes.fixos).toHaveLength(18);
+    for (const clube of ligue1.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(21);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+    const psg = banco.jogadores.filter((j) => j.clube === "fra-psg").map((j) => j.nome);
+    expect(psg).toContain("Ousmane Dembélé");
+    const kvara = banco.jogadores.find((j) => j.nome === "Khvicha Kvaratskhelia")!;
+    expect(kvara.clube).toBe("fra-psg");
+    expect(kvara.nacionalidade).toBe("GEO");
+  });
+  it("sem país na fonte, o jogador fica com o país do clube e a conferir", () => {
+    const mesloub = banco.jogadores.find((j) => j.nome === "Mezian Mesloub")!;
+    expect(mesloub.nacionalidade).toBe("FRA");
+    expect(mesloub.aConferir).toContain("nacionalidade");
+  });
+  it("a Ligue 2 segue com elencos gerados", () => {
+    const ligue2 = banco.competicoes.find((c) => c.id === "fra-ligue-2")!;
+    const clube = ligue2.participantes.fixos[0]!;
+    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+  });
+});

@@ -27,7 +27,7 @@ pnpm --filter @newbras/banco exportar   # gera packages/banco/saida/ (JSON e CSV
 | 3.6c  | Jogadores reais na LaLiga (20 clubes, 504 jogadores)                                                                                                            | Concluída |
 | 3.6d  | Jogadores reais na Serie A italiana (20 clubes, 613 jogadores)                                                                                                  | Concluída |
 | 3.6e  | Jogadores reais na Bundesliga (18 clubes, 452 jogadores)                                                                                                        | Concluída |
-| 3.6f  | Jogadores reais na Ligue 1                                                                                                                                      | A fazer   |
+| 3.6f  | Jogadores reais na Ligue 1 (18 clubes, 440 jogadores)                                                                                                           | Concluída |
 | 3.7   | Jogadores reais nas principais ligas de nível 2                                                                                                                 | A fazer   |
 
 Clubes sem jogadores reais recebem um elenco gerado (25 jogadores) com nomes da nacionalidade e força coerente com o nível do clube. A semente é por clube: editar um clube não muda os outros.
@@ -70,3 +70,4 @@ Clubes sem jogadores reais recebem um elenco gerado (25 jogadores) com nomes da 
 - LaLiga 2026/27, elencos (etapa 3.6c): páginas de elenco do [FotMob](https://www.fotmob.com) de cada clube, consultadas em 24/11/2026 (nome, posições, número, idade, nacionalidade e valor de mercado). Só o elenco principal entra; contratos terminam em 30 de junho. Jogadores de territórios sem seleção na FIFA (Guadalupe) ficam com a França.
 - Serie A italiana 2026/27, elencos (etapa 3.6d): páginas de elenco do [FotMob](https://www.fotmob.com) de cada clube, consultadas em 24/11/2026 (nome, posições, número, idade, nacionalidade e valor de mercado). Só o elenco principal entra; contratos terminam em 30 de junho.
 - Bundesliga 2026/27, elencos (etapa 3.6e): páginas de elenco do [FotMob](https://www.fotmob.com) de cada clube, consultadas em 24/11/2026 (nome, posições, número, idade, nacionalidade e valor de mercado). Só o elenco principal entra; contratos terminam em 30 de junho.
+- Ligue 1 2026/27, elencos (etapa 3.6f): páginas de elenco do [FotMob](https://www.fotmob.com) de cada clube, consultadas em 24/11/2026. Só o elenco principal entra; contratos terminam em 30 de junho. Quem vem sem país na fonte fica com o país do clube e a nacionalidade marcada para conferir.

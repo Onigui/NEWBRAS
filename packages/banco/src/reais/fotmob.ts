@@ -206,13 +206,15 @@ export function jogadoresReais(
 
     for (const l of linhas) {
       const rng = new Rng(`${o.semente ?? "reais"}:${clube.id}:${l.nome}`);
-      const nacionalidade = PAIS_POR_NOME_EN[l.pais];
+      // Sem país na fonte, o jogador fica com o país do clube e a nacionalidade vai "a conferir".
+      const nacionalidade = l.pais ? PAIS_POR_NOME_EN[l.pais] : clube.pais;
       if (!nacionalidade) throw new Error(`país sem código: "${l.pais}" (${l.nome})`);
       const codigo = l.posicoes[0] ?? "Midfielder";
       const notavel = NOTAVEIS[l.nome];
       const [posicaoFonte, ladoFonte] = POSICAO[codigo] ?? ["M", "C"];
       const posicao = notavel?.posicao ?? posicaoFonte;
       const aConferir: NonNullable<JogadorEntrada["aConferir"]> = [];
+      if (!l.pais) aConferir.push("nacionalidade");
       if (GENERICAS.has(codigo) && !notavel?.posicao) aConferir.push("posicao");
 
       const idade = l.idade ?? 24;

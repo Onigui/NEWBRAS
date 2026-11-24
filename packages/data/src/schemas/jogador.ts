@@ -12,7 +12,12 @@ import { CodigoPais, Data, Id, NomeTexto } from "./comum";
 const Forca = z.int().min(FORCA_MIN).max(FORCA_MAX);
 
 /** Campos que podem vir marcados para conferência num jogador real. */
-export const CAMPOS_A_CONFERIR_JOGADOR = ["nascimento", "posicao", "numero"] as const;
+export const CAMPOS_A_CONFERIR_JOGADOR = [
+  "nascimento",
+  "posicao",
+  "numero",
+  "nacionalidade",
+] as const;
 
 export const Contrato = z.object({
   /** Último dia do contrato. */
