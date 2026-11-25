@@ -111,6 +111,17 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 - Quem sobra com até 20 anos vai para a base do próprio clube; o resto vai para um clube do mesmo país com vaga (até 28 no elenco), do nível mais perto da força do jogador. O clube que cede não perde força e ninguém é inventado.
 - A validação do banco avisa quando um clube passa de 30 profissionais.
 
+## Motor de partida: como o núcleo funciona (Fase 5, 25/11/2026)
+
+- **Relógio:** a partida anda de segundo em segundo, com acréscimos pelos gols, trocas, cartões e lesões do período. Prorrogação (2 × 15) e disputa de pênaltis existem para o mata-mata.
+- **Movimento:** cada jogador tem uma vaga da formação (9 formações) que se desloca com a bola e com a fase do jogo; sem a bola, o time recua, fecha o lado da bola e marca o adversário mais perto, entre ele e o gol; os 1 ou 2 mais próximos pressionam (2 com marcação pesada). Velocidade e condição física decidem quanto cada um corre.
+- **Decisão:** quem tem a bola escolhe entre passar, conduzir, driblar, cruzar e chutar, pela posição e pelos atributos (chute de longe só pesa de fora da área, cruzamento só pelas pontas no terço final). O passe pesa o avanço contra o risco de interceptação.
+- **Disputas:** cada ação enfrenta o adversário mais perto: drible contra desarme e velocidade, bote do marcador, cabeceio contra cabeceio e marcação, goleiro contra chute (reflexo, colocação, saída e defesa de pênalti). O chute tem probabilidade de gol (xG) pela distância, ângulo, pressão e habilidade.
+- **Cansaço:** a condição cai com a distância corrida, mais em quem tem pouca resistência, e corta os atributos físicos (até 30%) e técnicos (até 10%). A CPU troca os cansados a partir dos 58 minutos; o humano troca quando quiser (até 5 trocas em 3 paradas). Lesionado sai na hora.
+- **Saída:** registro de eventos (modo clássico), estatísticas por time e por jogador, notas de 0,5 a 10 e, para o jogo assistido, a posição dos 22 e da bola a cada segundo (mini-campo da Fase 7).
+- **Números de referência** (200 jogos entre times de força 70): 2,8 gols, 14 chutes e 5 no gol por time, 78% de passes certos, 21 faltas, 3,3 amarelos, 29% de empates, 10 km por jogador. Um time 15 pontos mais forte vence mais de 60%. Cerca de 20 ms por partida.
+- **Fica para a Fase 6:** mando de campo, humor, moral, dia iluminado, ajuste das táticas e a calibração com 10.000 jogos contra as metas.
+
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 
 Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).

@@ -4,6 +4,7 @@ import type { ScreenId } from "./menu";
 import { MainMenu } from "./screens/MainMenu";
 import { ComingSoon } from "./screens/ComingSoon";
 import { Editor } from "./screens/Editor";
+import { Amistoso } from "./screens/Amistoso";
 
 export function App() {
   const [screen, setScreen] = useState<ScreenId | null>(null);
@@ -15,6 +16,7 @@ export function App() {
   };
 
   if (screen === "editor") return <Editor onBack={() => setScreen(null)} />;
+  if (screen === "amistoso") return <Amistoso onBack={() => setScreen(null)} />;
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
