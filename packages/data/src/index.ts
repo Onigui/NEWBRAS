@@ -11,3 +11,5 @@ export * from "./patch";
 export * from "./csv";
 export * from "./planilhas";
 export * from "./periodos";
+export * from "./editor";
+export * from "./visual";

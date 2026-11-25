@@ -8,6 +8,8 @@ const base = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
   base,
+  // O banco mundial é montado num Web Worker em módulo (ver src/editor/banco.worker.ts).
+  worker: { format: "es" },
   plugins: [
     react(),
     tailwindcss(),

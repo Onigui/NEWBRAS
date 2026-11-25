@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Mensagens padrão de validação em português do Brasil (as próprias do NewBras já são).
+z.config(z.locales.ptBR());
+
 /** Identificador em minúsculas, com letras, números e hífens (ex.: "bra-flamengo"). */
 export const Id = z
   .string()

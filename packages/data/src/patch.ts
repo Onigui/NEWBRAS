@@ -15,7 +15,7 @@ function mesclar<T>(
 /**
  * Aplica um patch a um banco e devolve um banco novo (o original não muda).
  * Itens com o mesmo id são substituídos; os novos são acrescentados; `remover` tira pelo id.
- * Jogadores de um clube removido ficam livres.
+ * Jogadores de um clube removido ficam livres, e ele sai das competições.
  */
 export function aplicarPatch(banco: Banco, patch: Patch): Banco {
   const r = patch.remover;
@@ -43,7 +43,23 @@ export function aplicarPatch(banco: Banco, patch: Patch): Banco {
       rivais: c.rivais.filter((id) => !clubesRemovidos.has(id)),
     })),
     jogadores,
-    competicoes: mesclar(banco.competicoes, patch.competicoes, (c) => c.id, new Set(r.competicoes)),
+    // Clube deletado sai das competições em que jogava (a liga fica com um time a menos).
+    competicoes: mesclar(
+      banco.competicoes,
+      patch.competicoes,
+      (c) => c.id,
+      new Set(r.competicoes),
+    ).map((c) =>
+      clubesRemovidos.size && c.participantes.fixos.some((f) => clubesRemovidos.has(f))
+        ? {
+            ...c,
+            participantes: {
+              ...c.participantes,
+              fixos: c.participantes.fixos.filter((f) => !clubesRemovidos.has(f)),
+            },
+          }
+        : c,
+    ),
     selecoes: mesclar(banco.selecoes, patch.selecoes, (s) => s.pais, vazio),
     tecnicos: mesclar(banco.tecnicos, patch.tecnicos, (t) => t.id, new Set(r.tecnicos)).map((t) => {
       if (!t.clube || !clubesRemovidos.has(t.clube)) return t;
