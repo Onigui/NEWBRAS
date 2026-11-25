@@ -1,4 +1,4 @@
-import type { ClubeEntrada, JogadorEntrada } from "@newbras/data";
+import { gerarAtributos, type ClubeEntrada, type JogadorEntrada } from "@newbras/data";
 import { Rng, gerarJogador, salarioBase } from "@newbras/engine";
 import { pais } from "../mundo/paises";
 import { DATA_FONTE_ELENCOS, DATA_REFERENCIA } from "../referencia";
@@ -55,7 +55,7 @@ export function lerValor(valor: string): number | undefined {
 
 type Posicao = JogadorEntrada["posicao"];
 type Lado = JogadorEntrada["lado"];
-type Caracteristica = JogadorEntrada["caracteristicas"][number];
+type Caracteristica = NonNullable<JogadorEntrada["caracteristicas"]>[number];
 
 /** Código de posição da fonte → posição e lado do jogo. Posição genérica fica para conferir. */
 const POSICAO: Readonly<Record<string, readonly [Posicao, Lado]>> = {
@@ -81,15 +81,15 @@ const GENERICAS = new Set(["Defender", "Midfielder", "Attacker"]);
 
 /** O que costuma se destacar em cada função; a posição detalhada da fonte escolhe o perfil. */
 const PERFIL: Readonly<Record<string, Partial<Record<Caracteristica, number>>>> = {
-  GK: { reflexo: 4, colocacao: 4, saida: 3, penalti: 1 },
+  GK: { reflexo: 4, colocacao: 4, saida: 3, penalti: 1, reposicao: 1 },
   LATERAL: { velocidade: 5, cruzamento: 5, marcacao: 3, resistencia: 3, desarme: 2 },
-  CB: { desarme: 5, marcacao: 5, cabeceio: 5, passe: 1 },
-  DM: { desarme: 5, marcacao: 4, passe: 3, resistencia: 3 },
-  CM: { passe: 5, resistencia: 4, armacao: 3, desarme: 2 },
-  AM: { armacao: 5, passe: 4, drible: 4, finalizacao: 3 },
+  CB: { desarme: 5, marcacao: 5, cabeceio: 5, forcaFisica: 3, passe: 1 },
+  DM: { desarme: 5, marcacao: 4, passe: 3, resistencia: 3, forcaFisica: 1 },
+  CM: { passe: 5, resistencia: 4, armacao: 3, desarme: 2, chuteLonge: 1 },
+  AM: { armacao: 5, passe: 4, drible: 4, finalizacao: 3, chuteLonge: 2 },
   MEIA_ABERTO: { cruzamento: 4, velocidade: 4, drible: 3, passe: 2, resistencia: 2 },
   PONTA: { drible: 5, velocidade: 5, cruzamento: 3, finalizacao: 3 },
-  ST: { finalizacao: 6, cabeceio: 4, velocidade: 3, drible: 2 },
+  ST: { finalizacao: 6, cabeceio: 4, velocidade: 3, drible: 2, forcaFisica: 2, chuteLonge: 1 },
 };
 const PERFIL_DO_CODIGO: Readonly<Record<string, string>> = {
   GK: "GK",
@@ -111,7 +111,7 @@ const PERFIL_DO_CODIGO: Readonly<Record<string, string>> = {
   Attacker: "ST",
 };
 
-function caracteristicas(rng: Rng, codigo: string): JogadorEntrada["caracteristicas"] {
+function caracteristicas(rng: Rng, codigo: string): NonNullable<JogadorEntrada["caracteristicas"]> {
   const pesos = PERFIL[PERFIL_DO_CODIGO[codigo] ?? "CM"] ?? {};
   const opcoes = Object.keys(pesos) as Caracteristica[];
   const primeira = rng.weighted(opcoes, (c) => pesos[c] ?? 0);
@@ -249,6 +249,18 @@ export function jogadoresReais(
         forca,
         potencial,
         caracteristicas: notavel?.caracteristicas ?? caracteristicas(rng, codigo),
+        ...(notavel?.destaques
+          ? {
+              atributos: gerarAtributos({
+                semente: id,
+                posicao,
+                forca,
+                ...(notavel.caracteristicas ? { caracteristicas: notavel.caracteristicas } : {}),
+                destaques: notavel.destaques,
+                ...(forcaAuge !== undefined ? { forcaAuge: Math.max(forcaAuge, forca) } : {}),
+              }),
+            }
+          : {}),
         estrela: (forcaAuge ?? 0) >= 85 || forca >= 82,
         clube: clube.id,
         contrato: { fim: fimContrato, salario: salarioBase(forca) },

@@ -13,7 +13,15 @@ import { gerarNome } from "./nomes";
 /** Peso de cada característica por posição: o que é comum ver num zagueiro, num meia... */
 const PESOS_LINHA: Record<Exclude<Posicao, "G">, Partial<Record<CaracteristicaLinha, number>>> = {
   L: { cruzamento: 5, velocidade: 5, marcacao: 3, resistencia: 3, desarme: 2, passe: 2, drible: 2 },
-  Z: { desarme: 5, marcacao: 5, cabeceio: 5, resistencia: 2, passe: 1, velocidade: 1 },
+  Z: {
+    desarme: 5,
+    marcacao: 5,
+    cabeceio: 5,
+    forcaFisica: 3,
+    resistencia: 2,
+    passe: 1,
+    velocidade: 1,
+  },
   M: {
     passe: 5,
     armacao: 4,
@@ -21,10 +29,20 @@ const PESOS_LINHA: Record<Exclude<Posicao, "G">, Partial<Record<CaracteristicaLi
     resistencia: 3,
     drible: 2,
     marcacao: 2,
+    chuteLonge: 2,
     finalizacao: 1,
     cruzamento: 1,
   },
-  A: { finalizacao: 6, velocidade: 4, drible: 4, cabeceio: 3, armacao: 1, passe: 1 },
+  A: {
+    finalizacao: 6,
+    velocidade: 4,
+    drible: 4,
+    cabeceio: 3,
+    forcaFisica: 2,
+    chuteLonge: 2,
+    armacao: 1,
+    passe: 1,
+  },
 };
 
 const PESOS_GOLEIRO: Record<CaracteristicaGoleiro, number> = {
@@ -32,6 +50,7 @@ const PESOS_GOLEIRO: Record<CaracteristicaGoleiro, number> = {
   colocacao: 4,
   saida: 3,
   penalti: 1,
+  reposicao: 1,
 };
 
 function sortearCaracteristicas(rng: Rng, posicao: Posicao): JogadorEntrada["caracteristicas"] {

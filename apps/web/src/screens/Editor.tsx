@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { novoId, type Clube, type Jogador } from "@newbras/data";
+import { gerarAtributos, novoId, type Clube, type Jogador } from "@newbras/data";
 import { Arquivos } from "../editor/Arquivos";
 import { FichaClube } from "../editor/FichaClube";
 import { FormClube } from "../editor/FormClube";
@@ -83,6 +83,12 @@ export function Editor({ onBack }: { onBack: () => void }) {
       forca: Math.max(1, Math.min(100, c.nivel)),
       potencial: Math.max(1, Math.min(100, c.nivel + 8)),
       caracteristicas: ["passe"],
+      atributos: gerarAtributos({
+        semente: `${c.id}-novo`,
+        posicao: "M",
+        forca: Math.max(1, Math.min(100, c.nivel)),
+        caracteristicas: ["passe"],
+      }),
       estrela: false,
       base: false,
       clube: c.id,

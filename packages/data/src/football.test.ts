@@ -12,9 +12,9 @@ describe("vocabulário do futebol", () => {
     expect(POSICOES).toEqual(["G", "L", "Z", "M", "A"]);
   });
 
-  it("tem 4 características de goleiro e 10 de linha", () => {
-    expect(CARACTERISTICAS_GOLEIRO).toHaveLength(4);
-    expect(CARACTERISTICAS_LINHA).toHaveLength(10);
+  it("tem 5 atributos de goleiro e 12 de linha", () => {
+    expect(CARACTERISTICAS_GOLEIRO).toHaveLength(5);
+    expect(CARACTERISTICAS_LINHA).toHaveLength(12);
   });
 
   it("toda característica tem nome em português", () => {

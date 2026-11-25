@@ -1,19 +1,27 @@
 import { useState, type FormEvent } from "react";
 import {
-  caracteristicasDaPosicao,
+  atributosDaPosicao,
+  caracteristicasDosAtributos,
+  escalarAtributos,
+  forcaDosAtributos,
+  gerarAtributos,
   Jogador,
+  PESOS,
   LADOS,
   NOME_CARACTERISTICA,
   NOME_POSICAO,
   POSICOES,
   problemasDoZod,
-  type Caracteristica,
+  type Atributo,
+  type Atributos,
   type Jogador as JogadorT,
   type Posicao,
   type Problema,
 } from "@newbras/data";
 import { idade, nascimentoParaIdade } from "./datas";
 import { Botao, Campo, Dialogo, ListaProblemas, estiloCampo } from "./ui";
+
+const estiloAtributo = `${estiloCampo.replace("w-full", "w-[4.5rem]")} shrink-0 py-1 text-right`;
 
 const NOME_LADO = { D: "Direito", E: "Esquerdo", C: "Centro" } as const;
 
@@ -29,25 +37,45 @@ interface Props {
 export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, onFechar }: Props) {
   const [j, setJ] = useState<JogadorT>(jogador);
   const [problemas, setProblemas] = useState<Problema[]>([]);
-  const validas = caracteristicasDaPosicao(j.posicao);
+  // A força digitada só vale ao sair do campo: escalar a cada tecla (4, depois 40) achataria o perfil.
+  const [forcaDigitada, setForcaDigitada] = useState<string>();
 
   const mudar = (parcial: Partial<JogadorT>) => setJ((atual) => ({ ...atual, ...parcial }));
 
-  const mudarPosicao = (posicao: Posicao) => {
-    const novas = caracteristicasDaPosicao(posicao);
-    const mantidas = j.caracteristicas.filter((c) => novas.includes(c));
-    mudar({
+  /** Atributos mandam: força e características são recalculadas a cada mudança. */
+  const comAtributos = (atual: JogadorT, posicao: Posicao, atributos: Atributos): JogadorT => {
+    const forca = forcaDosAtributos(posicao, atributos);
+    return {
+      ...atual,
       posicao,
-      caracteristicas: mantidas.length ? mantidas : [novas[0]!],
-      ...(posicao !== "L" && j.lado !== "C" ? { lado: "C" as const } : {}),
-    });
+      atributos,
+      forca,
+      potencial: Math.max(atual.potencial, forca),
+      caracteristicas: caracteristicasDosAtributos(posicao, atributos),
+    };
   };
 
-  const mudarCaracteristica = (indice: 0 | 1, valor: string) => {
-    const lista = [...j.caracteristicas] as string[];
-    if (indice === 1 && !valor) lista.splice(1, 1);
-    else lista[indice] = valor;
-    mudar({ caracteristicas: lista as JogadorT["caracteristicas"] });
+  const mudarPosicao = (posicao: Posicao) =>
+    setJ((atual) => {
+      const lado = posicao !== "L" && atual.lado !== "C" ? ("C" as const) : atual.lado;
+      // Goleiro e linha têm atributos diferentes: ao trocar entre eles, o perfil é gerado de novo.
+      const trocouGrupo = (posicao === "G") !== (atual.posicao === "G");
+      const atributos = trocouGrupo
+        ? gerarAtributos({ semente: atual.id, posicao, forca: atual.forca })
+        : atual.atributos;
+      return comAtributos({ ...atual, lado }, posicao, atributos);
+    });
+
+  const mudarAtributo = (a: Atributo, texto: string) => {
+    const valor = Math.max(1, Math.min(100, Math.round(Number(texto) || 1)));
+    setJ((atual) => comAtributos(atual, atual.posicao, { ...atual.atributos, [a]: valor }));
+  };
+
+  const mudarForca = (texto: string) => {
+    const forca = Math.max(1, Math.min(100, Math.round(Number(texto) || 1)));
+    setJ((atual) =>
+      comAtributos(atual, atual.posicao, escalarAtributos(atual.posicao, atual.atributos, forca)),
+    );
   };
 
   const numero = (texto: string) => (texto === "" ? undefined : Number(texto));
@@ -152,17 +180,24 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
           />
         </Campo>
 
-        <Campo rotulo="Força (1 a 100)">
+        <Campo rotulo="Força (média dos atributos)">
           <input
             className={estiloCampo}
             type="number"
             min={1}
             max={100}
-            value={j.forca}
-            onChange={(e) => {
-              const forca = Number(e.target.value);
-              // O potencial nunca fica abaixo da força.
-              mudar({ forca, potencial: Math.max(j.potencial, forca) });
+            value={forcaDigitada ?? j.forca}
+            title="Mudar a força sobe ou desce todos os atributos na mesma proporção"
+            onChange={(e) => setForcaDigitada(e.target.value)}
+            onBlur={() => {
+              if (forcaDigitada !== undefined && forcaDigitada !== "") mudarForca(forcaDigitada);
+              setForcaDigitada(undefined);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
             }}
           />
         </Campo>
@@ -176,35 +211,49 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             onChange={(e) => mudar({ potencial: Number(e.target.value) })}
           />
         </Campo>
-        <Campo rotulo="Característica 1">
-          <select
-            className={estiloCampo}
-            value={j.caracteristicas[0]}
-            onChange={(e) => mudarCaracteristica(0, e.target.value)}
-          >
-            {validas.map((c) => (
-              <option key={c} value={c}>
-                {NOME_CARACTERISTICA[c]}
-              </option>
-            ))}
-          </select>
+        <Campo rotulo="Características" className="col-span-2">
+          <p className="py-2 text-sm text-cal">
+            {j.caracteristicas.map((c) => NOME_CARACTERISTICA[c]).join(" e ")}
+            <span className="text-suave/70"> (os atributos mais altos)</span>
+          </p>
         </Campo>
-        <Campo rotulo="Característica 2">
-          <select
-            className={estiloCampo}
-            value={j.caracteristicas[1] ?? ""}
-            onChange={(e) => mudarCaracteristica(1, e.target.value)}
-          >
-            <option value="">Nenhuma</option>
-            {validas
-              .filter((c: Caracteristica) => c !== j.caracteristicas[0])
-              .map((c) => (
-                <option key={c} value={c}>
-                  {NOME_CARACTERISTICA[c]}
-                </option>
-              ))}
-          </select>
-        </Campo>
+
+        <fieldset className="col-span-full rounded-lg border border-placar-borda p-3">
+          <legend className="px-1 text-sm text-suave">
+            Atributos (1 a 100). Os marcados com ● pesam na força desta posição.
+          </legend>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+            {atributosDaPosicao(j.posicao).map((a) => {
+              const valor = j.atributos[a] ?? 1;
+              const pesa = (PESOS[j.posicao][a] ?? 0) > 0;
+              return (
+                <label key={a} className="flex items-center gap-2 text-sm">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">
+                      {pesa ? "● " : ""}
+                      {NOME_CARACTERISTICA[a]}
+                    </span>
+                    <span className="mt-1 block h-1 rounded bg-placar-borda">
+                      <span
+                        className="block h-full rounded bg-canarinho"
+                        style={{ width: `${valor}%` }}
+                      />
+                    </span>
+                  </span>
+                  <input
+                    className={estiloAtributo}
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={valor}
+                    aria-label={NOME_CARACTERISTICA[a]}
+                    onChange={(e) => mudarAtributo(a, e.target.value)}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
 
         <Campo rotulo="Nacionalidade" className="col-span-2">
           <select

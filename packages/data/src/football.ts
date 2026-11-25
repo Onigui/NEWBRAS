@@ -17,10 +17,18 @@ export const NOME_POSICAO: Record<Posicao, string> = {
 export const LADOS = ["D", "E", "C"] as const;
 export type Lado = (typeof LADOS)[number];
 
-/** Características de goleiro (o Brasfoot mostra as 2 principais). */
-export const CARACTERISTICAS_GOLEIRO = ["colocacao", "saida", "reflexo", "penalti"] as const;
+/**
+ * Atributos de goleiro. As características (as 2 que o Brasfoot mostra) são os atributos mais altos.
+ */
+export const CARACTERISTICAS_GOLEIRO = [
+  "colocacao",
+  "saida",
+  "reflexo",
+  "penalti",
+  "reposicao",
+] as const;
 
-/** Características de jogador de linha. */
+/** Atributos de jogador de linha: os 10 do Brasfoot, mais chute de longe e força física. */
 export const CARACTERISTICAS_LINHA = [
   "armacao",
   "cabeceio",
@@ -32,6 +40,8 @@ export const CARACTERISTICAS_LINHA = [
   "passe",
   "resistencia",
   "velocidade",
+  "chuteLonge",
+  "forcaFisica",
 ] as const;
 
 export type CaracteristicaGoleiro = (typeof CARACTERISTICAS_GOLEIRO)[number];
@@ -43,6 +53,7 @@ export const NOME_CARACTERISTICA: Record<Caracteristica, string> = {
   saida: "Saída do gol",
   reflexo: "Reflexo",
   penalti: "Defesa de pênalti",
+  reposicao: "Reposição",
   armacao: "Armação",
   cabeceio: "Cabeceio",
   cruzamento: "Cruzamento",
@@ -53,6 +64,8 @@ export const NOME_CARACTERISTICA: Record<Caracteristica, string> = {
   passe: "Passe",
   resistencia: "Resistência",
   velocidade: "Velocidade",
+  chuteLonge: "Chute de longe",
+  forcaFisica: "Força física",
 };
 
 /** Força vai de 1 a 100, como no Brasfoot. */
