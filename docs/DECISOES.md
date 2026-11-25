@@ -86,11 +86,13 @@ Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 
 
 | Humor   | Chance base | Efeito no rendimento |
 | ------- | ----------- | -------------------- |
-| Ótimo   | 10%         | +6%                  |
-| Bom     | 30%         | +3%                  |
-| Normal  | 45%         | 0                    |
-| Ruim    | 12%         | −5%                  |
-| Péssimo | 3%          | −10%                 |
+| Ótimo   | 8%          | +5%                  |
+| Bom     | 22%         | +2%                  |
+| Normal  | 50%         | 0                    |
+| Ruim    | 15%         | −10%                 |
+| Péssimo | 5%          | −20%                 |
+
+O dia ruim pesa mais que o dia bom ajuda (ajuste de 25/11/2026): quem está mal precisa ser poupado, e a boa fase não transforma um jogador mediano em craque.
 
 - O humor dura alguns dias (sequências boas e ruins) e é puxado pela moral, pelo cansaço acumulado e pela adaptação de quem chegou ao clube. Aparece na escalação; o "dia iluminado" continua escondido.
 - Condição física de 0 a 100%: cai durante o jogo conforme os minutos, a intensidade e a resistência; recupera a cada dia. Abaixo de certo ponto, corta os atributos físicos e aumenta o risco de lesão.
