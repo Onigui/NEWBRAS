@@ -1,5 +1,6 @@
 import {
   CARACTERISTICAS_GOLEIRO,
+  FORCA_TETO,
   type CaracteristicaGoleiro,
   type CaracteristicaLinha,
   type JogadorEntrada,
@@ -98,7 +99,8 @@ export interface OpcoesJogador {
   fimDeContrato?: string;
 }
 
-const limitar = (v: number) => Math.min(99, Math.max(1, Math.round(v)));
+/** Ninguém gerado passa do teto do jogo (só o CR7 tem 99). */
+const limitar = (v: number) => Math.min(FORCA_TETO, Math.max(1, Math.round(v)));
 
 /** Gera um jogador fictício coerente com o nível do clube e a curva de idade. */
 export function gerarJogador(rng: Rng, o: OpcoesJogador): JogadorEntrada {

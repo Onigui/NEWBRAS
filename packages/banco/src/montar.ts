@@ -46,7 +46,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.21.0";
+export const VERSAO_BANCO = "0.21.1";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];

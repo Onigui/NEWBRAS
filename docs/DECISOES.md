@@ -80,6 +80,14 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 - No editor, mexer num atributo recalcula força e características; mexer na força escala todos os atributos na mesma proporção. Nas planilhas, cada atributo tem sua coluna.
 - Evolução (Fase 12): atributos físicos (velocidade, resistência, força física) chegam ao auge por volta dos 25 a 28 anos e caem primeiro; técnicos e mentais caem mais tarde.
 
+## Teto de força: CR7 99, Messi 97 (25/11/2026)
+
+- Só o Cristiano Ronaldo chega a 99 (no auge): é o jogador mais completo da história, com quase todos os atributos no máximo, inclusive cabeceio e força física.
+- Messi é o segundo, com 97: gênio com a bola (drible 100, finalização, passe e chute de longe 99), mas sem a altura, o cabeceio e o corpo do CR7 (cabeceio 86 e força física 87 no auge).
+- Nenhum outro jogador passa de 97 em força, potencial ou força do auge (`FORCA_TETO` e `FORCA_RECORDE` em `packages/data/src/football.ts`). Vale para o banco, para os gerados e, na Fase 12, para a evolução e os renascidos.
+- Os perfis dos dois no auge são feitos à mão (`atributosAuge` em `notaveis.ts`) e a força de hoje segue a idade (CR7 com 41 anos, Messi com 39).
+- Para o atacante, cabeceio e passe pesam 1 e força física 0,5 na força: cabeceio fraco puxa a força para baixo, mas não impede um craque de técnica.
+
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 
 Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).
