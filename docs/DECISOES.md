@@ -134,7 +134,7 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 | Normal     | cerca de 5 minutos (padrão) |
 | Lenta      | cerca de 10 minutos         |
 
-Os lances de perigo andam mais devagar e o chute é mostrado como foi: a bola voa até a rede, a trave, a linha de fundo ou as mãos do goleiro e só então aparece o destaque ("GOL!"). A placa de acréscimo aparece nos lances e no placar ("+4 de acréscimo"); jogos de outros campos da rodada correm juntos no placar ao lado. A tela Amistoso de hoje é só a prévia do motor.
+Os lances de perigo andam mais devagar e o chute é mostrado como foi: a bola voa até a rede, a trave, a linha de fundo ou as mãos do goleiro e só então aparece o destaque ("GOL!"). A placa de acréscimo aparece nos lances e no placar ("+4 de acréscimo"); jogos de outros campos da rodada correm juntos no placar ao lado. Durante o jogo, abas trocam o painel de baixo entre lance a lance, estatísticas e notas parciais de cada jogador (com passes, fôlego e cartões, cores de verde a vermelho); a lista de troca mostra fôlego e nota de agora, para o técnico achar quem não está rendendo sem tirar os olhos do mini-campo.
 
 **Régua relativa:** passe, chute, decisão e goleiro comparam o jogador com quem o marca e com o próprio nível, não com uma régua fixa. Assim um jogo entre dois times fortes tem números parecidos com o de dois times fracos (cerca de 2,6 a 2,9 gols de 55 a 85 de força), e a diferença de força entre os times é o que decide.
 

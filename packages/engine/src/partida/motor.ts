@@ -1831,6 +1831,55 @@ export class Partida {
     this.quadros.push(this.montarQuadro());
   }
 
+  /**
+   * Estatísticas e notas até o momento, sem mexer na partida: é o que a tela mostra durante o jogo
+   * para o técnico ver quem está rendendo. A nota parcial considera o placar de agora.
+   */
+  parcial(): {
+    estatisticas: Record<LadoCampo, EstatisticasTime>;
+    jogadores: EstatisticasJogador[];
+  } {
+    if (this.encerrada) {
+      const r = this.resultado();
+      return {
+        estatisticas: { casa: { ...r.estatisticas.casa }, fora: { ...r.estatisticas.fora } },
+        jogadores: [...r.jogadores],
+      };
+    }
+    const total = this.times.casa.est.posse + this.times.fora.est.posse || 1;
+    const posseCasa = Math.round((this.times.casa.est.posse / total) * 100);
+    const estatisticas = {
+      casa: {
+        ...this.times.casa.est,
+        posse: posseCasa,
+        xg: Math.round(this.times.casa.est.xg * 100) / 100,
+      },
+      fora: {
+        ...this.times.fora.est,
+        posse: 100 - posseCasa,
+        xg: Math.round(this.times.fora.est.xg * 100) / 100,
+      },
+    };
+    const jogadores: EstatisticasJogador[] = [];
+    for (const time of Object.values(this.times)) {
+      const sofridos = this.placarAtual[time.lado === "casa" ? 1 : 0];
+      const feitos = this.placarAtual[time.lado === "casa" ? 0 : 1];
+      for (const a of time.atletas) {
+        if (!a.usado) continue;
+        const saiu = a.saiuEm ?? this.t;
+        const e: EstatisticasJogador = {
+          ...a.est,
+          minutos: Math.max(0, Math.round((saiu - Math.max(0, a.entrouEm)) / 60)),
+          condicaoFinal: Math.round(a.condicao),
+          distancia: Math.round(a.est.distancia),
+        };
+        e.nota = this.nota(a, feitos, sofridos, e);
+        jogadores.push(e);
+      }
+    }
+    return { estatisticas, jogadores };
+  }
+
   private fecharEstatisticas(): void {
     const total = this.times.casa.est.posse + this.times.fora.est.posse || 1;
     const posseCasa = Math.round((this.times.casa.est.posse / total) * 100);
@@ -1852,8 +1901,12 @@ export class Partida {
   }
 
   /** Nota de 0,5 a 10: parte de 6 e soma o que o jogador fez. */
-  private nota(a: Atleta, feitos: number, sofridos: number): number {
-    const e = a.est;
+  private nota(
+    a: Atleta,
+    feitos: number,
+    sofridos: number,
+    e: EstatisticasJogador = a.est,
+  ): number {
     const posicao = a.j.posicao;
     let n = 6;
     n += 1.1 * e.gols + 0.7 * e.assistencias + 0.2 * e.chutesNoGol + 0.25 * e.passesDecisivos;

@@ -21,6 +21,7 @@ import { EditorFormacao } from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { MiniCampo, type CorTime } from "./MiniCampo";
+import { NotasAoVivo } from "./NotasAoVivo";
 import { Estatisticas, LanceALance, Notas } from "./Resumo";
 import { NOME_VELOCIDADE, usePartidaAoVivo, type Velocidade } from "./usePartidaAoVivo";
 
@@ -88,6 +89,7 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
   const { controle: estado, partida } = ao;
   const [classico, setClassico] = useState(false);
   const [todos, setTodos] = useState(false);
+  const [aba, setAba] = useState<"lances" | "estatisticas" | "notas">("lances");
   const times: Record<LadoCampo, TimePartida> = { casa: opcoes.casa, fora: opcoes.fora };
   const porId = useMemo(
     () => new Map([...opcoes.casa.jogadores, ...opcoes.fora.jogadores].map((j) => [j.id, j])),
@@ -117,6 +119,9 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
   }, [ao, ao.rodando]);
 
   const fim = estado.resultado;
+  // Números de agora: só calculados quando alguém vai olhar (aba aberta ou painel de trocas).
+  const parcial = !fim && (aba !== "lances" || humano) ? partida.parcial() : null;
+  const notas = new Map(parcial?.jogadores.map((j) => [j.id, j.nota]) ?? []);
   const exibicao = estado.exibicao();
   const acrescimo = partida.acrescimoDado;
   const relogio = fim
@@ -191,14 +196,59 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
               {estado.aviso}
             </p>
           )}
-          <LanceALance
-            eventos={estado.eventos}
-            contexto={contexto}
-            todos={todos}
-            onTodos={() => setTodos((t) => !t)}
-            recentesPrimeiro={!fim}
-            altura={classico ? "max-h-[36rem]" : "max-h-72"}
-          />
+          {!fim && (
+            <div className="flex gap-1" role="tablist" aria-label="O que ver durante o jogo">
+              {(
+                [
+                  ["lances", "Lance a lance"],
+                  ["estatisticas", "Estatísticas"],
+                  ["notas", "Notas dos jogadores"],
+                ] as const
+              ).map(([id, rotulo]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={aba === id}
+                  className={`rounded-t-md border-2 border-b-0 px-3 py-1.5 text-sm font-bold ${
+                    aba === id
+                      ? "border-placar-borda bg-placar text-cal"
+                      : "border-transparent text-suave hover:text-cal"
+                  }`}
+                  onClick={() => setAba(id)}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+          )}
+          {(fim || aba === "lances") && (
+            <LanceALance
+              eventos={estado.eventos}
+              contexto={contexto}
+              todos={todos}
+              onTodos={() => setTodos((t) => !t)}
+              recentesPrimeiro={!fim}
+              altura={classico ? "max-h-[36rem]" : "max-h-72"}
+            />
+          )}
+          {!fim && aba === "estatisticas" && parcial && (
+            <Estatisticas estatisticas={parcial.estatisticas} />
+          )}
+          {!fim && aba === "notas" && parcial && (
+            <section className="rounded-md border-2 border-placar-borda bg-placar p-4">
+              <NotasAoVivo
+                jogadores={parcial.jogadores}
+                times={times}
+                emCampo={{ casa: partida.emCampo("casa"), fora: partida.emCampo("fora") }}
+                destacar={humano}
+              />
+              <p className="mt-2 text-xs text-suave">
+                Nota parcial, considerando o placar de agora: verde acima de 7, amarela de 6 a 7,
+                vermelha abaixo de 6. Fôlego em vermelho: abaixo de 60%.
+              </p>
+            </section>
+          )}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-3">
@@ -245,6 +295,7 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
               time={times[humano]}
               partida={partida}
               porId={porId}
+              notas={notas}
               onMudou={ao.atualizar}
             />
           )}
@@ -270,12 +321,14 @@ function Comando({
   time,
   partida,
   porId,
+  notas,
   onMudou,
 }: {
   lado: LadoCampo;
   time: TimePartida;
   partida: ReturnType<typeof usePartidaAoVivo>["partida"];
   porId: Map<string, TimePartida["jogadores"][number]>;
+  notas: ReadonlyMap<string, number>;
   onMudou: () => void;
 }) {
   const emCampo = partida.emCampo(lado);
@@ -299,7 +352,7 @@ function Comando({
           {restantes > 0
             ? `Pode fazer mais ${restantes} ${restantes === 1 ? "troca" : "trocas"}.`
             : "Sem trocas disponíveis."}{" "}
-          Fôlego entre parênteses.
+          Fôlego e nota de agora entre parênteses.
         </p>
         <Campo rotulo="Sai">
           <select className={estiloCampo} value={sai} onChange={(e) => setSai(e.target.value)}>
@@ -307,7 +360,8 @@ function Comando({
             {emCampo.map((id, i) =>
               id ? (
                 <option key={id} value={id}>
-                  {nome(id)} ({condicoes[i]}%)
+                  {nome(id)} (fôlego {condicoes[i]}%
+                  {notas.has(id) ? `, nota ${notas.get(id)?.toFixed(1)}` : ""})
                 </option>
               ) : null,
             )}

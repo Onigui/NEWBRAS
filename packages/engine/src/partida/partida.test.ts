@@ -308,6 +308,24 @@ describe("partida", () => {
     },
   );
 
+  it("estatísticas e notas parciais durante o jogo, sem mudar a partida", () => {
+    const opcoes = { semente: "parcial", casa: timeDeTeste("A", 70), fora: timeDeTeste("B", 70) };
+    const p = new Partida(opcoes);
+    p.avancar(60 * 40);
+    const agora = p.parcial();
+    expect(agora.estatisticas.casa.posse + agora.estatisticas.fora.posse).toBe(100);
+    expect(agora.jogadores.filter((j) => j.time === "casa").length).toBeGreaterThanOrEqual(11);
+    for (const j of agora.jogadores) {
+      expect(j.minutos).toBeLessThanOrEqual(41);
+      expect(j.nota).toBeGreaterThanOrEqual(0.5);
+      expect(j.nota).toBeLessThanOrEqual(10);
+    }
+    p.parcial();
+    // Consultar no meio do jogo não altera o resultado final.
+    expect(p.simular()).toEqual(simularPartida(opcoes));
+    expect(p.parcial().jogadores).toEqual(p.resultado().jogadores);
+  });
+
   it("expulsão deixa a vaga vazia nos quadros do mini-campo", () => {
     for (let i = 0; i < 300; i++) {
       const r = simularPartida({
