@@ -46,7 +46,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.19.0";
+export const VERSAO_BANCO = "0.20.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -205,6 +205,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   POR: {
     clubes: portugal.CLUBES,
     competicoes: portugal.COMPETICOES,
+    jogadores: portugal.JOGADORES,
     estrangeiros: ["BRA", "ESP", "ANG", "CPV", "URU", "ARG", "FRA", "GNB", "COL", "SRB"],
     fracaoEstrangeiros: 0.35,
     fimDeContrato: "06-30",
@@ -212,6 +213,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   NED: {
     clubes: holanda.CLUBES,
     competicoes: holanda.COMPETICOES,
+    jogadores: holanda.JOGADORES,
     estrangeiros: ["BEL", "GER", "SUR", "DEN", "NOR", "SWE", "MAR", "CUW", "ENG", "JPN"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
@@ -219,6 +221,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   BEL: {
     clubes: belgica.CLUBES,
     competicoes: belgica.COMPETICOES,
+    jogadores: belgica.JOGADORES,
     estrangeiros: ["FRA", "NED", "COD", "MAR", "SEN", "CIV", "NGA", "GHA", "DEN", "JPN"],
     fracaoEstrangeiros: 0.35,
     fimDeContrato: "06-30",
@@ -226,6 +229,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   SCO: {
     clubes: escocia.CLUBES,
     competicoes: escocia.COMPETICOES,
+    jogadores: escocia.JOGADORES,
     estrangeiros: ["ENG", "IRL", "NIR", "WAL", "AUS", "NOR", "DEN", "NED", "JPN", "USA"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "05-31",
@@ -233,6 +237,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   TUR: {
     clubes: turquia.CLUBES,
     competicoes: turquia.COMPETICOES,
+    jogadores: turquia.JOGADORES,
     estrangeiros: ["BRA", "NGA", "SEN", "POR", "FRA", "SRB", "BIH", "CRO", "ALB", "NED"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
@@ -240,6 +245,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   AUT: {
     clubes: austria.CLUBES,
     competicoes: austria.COMPETICOES,
+    jogadores: austria.JOGADORES,
     estrangeiros: ["GER", "CRO", "BIH", "SRB", "SVN", "HUN", "SUI", "GHA", "NGA", "MLI"],
     fracaoEstrangeiros: 0.25,
     fimDeContrato: "05-31",
@@ -247,6 +253,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   SUI: {
     clubes: suica.CLUBES,
     competicoes: suica.COMPETICOES,
+    jogadores: suica.JOGADORES,
     estrangeiros: ["FRA", "GER", "ITA", "KVX", "ALB", "POR", "SRB", "AUT", "CIV", "SEN"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
@@ -254,6 +261,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   GRE: {
     clubes: grecia.CLUBES,
     competicoes: grecia.COMPETICOES,
+    jogadores: grecia.JOGADORES,
     estrangeiros: ["POR", "ESP", "SRB", "ARG", "BRA", "CRO", "CYP", "ALB", "FRA", "NOR"],
     fracaoEstrangeiros: 0.35,
     fimDeContrato: "06-30",
@@ -261,6 +269,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   DEN: {
     clubes: dinamarca.CLUBES,
     competicoes: dinamarca.COMPETICOES,
+    jogadores: dinamarca.JOGADORES,
     estrangeiros: ["SWE", "NOR", "ISL", "FRO", "GHA", "NGA", "FIN", "GER", "NED", "BRA"],
     fracaoEstrangeiros: 0.25,
     fimDeContrato: "06-30",
@@ -268,6 +277,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   SWE: {
     clubes: suecia.CLUBES,
     competicoes: suecia.COMPETICOES,
+    jogadores: suecia.JOGADORES,
     estrangeiros: ["NOR", "DEN", "FIN", "ISL", "GHA", "NGA", "GAM", "USA", "BIH", "KVX"],
     fracaoEstrangeiros: 0.2,
     fimDeContrato: "12-31",
@@ -275,6 +285,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   ARG: {
     clubes: argentina.CLUBES,
     competicoes: argentina.COMPETICOES,
+    jogadores: argentina.JOGADORES,
     estrangeiros: ["URU", "PAR", "COL", "CHI", "VEN", "ECU", "BRA", "PER", "BOL"],
     fracaoEstrangeiros: 0.12,
     fimDeContrato: "12-31",
@@ -289,6 +300,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   CHI: {
     clubes: chile.CLUBES,
     competicoes: chile.COMPETICOES,
+    jogadores: chile.JOGADORES,
     estrangeiros: ["ARG", "URU", "COL", "PAR", "VEN", "ECU", "PER"],
     fracaoEstrangeiros: 0.18,
     fimDeContrato: "12-31",
@@ -296,6 +308,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   COL: {
     clubes: colombia.CLUBES,
     competicoes: colombia.COMPETICOES,
+    jogadores: colombia.JOGADORES,
     estrangeiros: ["ARG", "URU", "VEN", "ECU", "PAR", "PAN", "CHI"],
     fracaoEstrangeiros: 0.1,
     fimDeContrato: "12-31",
@@ -303,6 +316,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   MEX: {
     clubes: mexico.CLUBES,
     competicoes: mexico.COMPETICOES,
+    jogadores: mexico.JOGADORES,
     estrangeiros: ["ARG", "URU", "COL", "CHI", "PAR", "ECU", "BRA", "USA", "ESP", "VEN"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
@@ -310,6 +324,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   JPN: {
     clubes: japao.CLUBES,
     competicoes: japao.COMPETICOES,
+    jogadores: japao.JOGADORES,
     estrangeiros: ["BRA", "KOR", "AUS", "THA", "ESP", "NED", "SWE", "SRB", "NGA", "USA"],
     fracaoEstrangeiros: 0.12,
     fimDeContrato: "06-30",
@@ -317,6 +332,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   KOR: {
     clubes: coreia.CLUBES,
     competicoes: coreia.COMPETICOES,
+    jogadores: coreia.JOGADORES,
     estrangeiros: ["BRA", "JPN", "AUS", "COL", "MNE", "SRB", "CRO", "NGA"],
     fracaoEstrangeiros: 0.12,
     fimDeContrato: "12-31",
@@ -324,6 +340,7 @@ const PAISES_NO_BANCO: Readonly<Record<string, PaisNoBanco>> = {
   QAT: {
     clubes: catar.CLUBES,
     competicoes: catar.COMPETICOES,
+    jogadores: catar.JOGADORES,
     estrangeiros: ["BRA", "ALG", "MAR", "TUN", "ESP", "POR", "FRA", "SEN", "IRN", "COL"],
     fracaoEstrangeiros: 0.3,
     fimDeContrato: "06-30",
@@ -413,7 +430,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       nome: "NewBras: Mundo 2026",
       versao: VERSAO_BANCO,
       descricao:
-        "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na Premier League, na LaLiga, na Serie A italiana, na Bundesliga, na Ligue 1, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
+        "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na Premier League, na LaLiga, na Serie A italiana, na Bundesliga, na Ligue 1, nas primeiras divisões de 17 países de nível 2, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
       atualizadoEm: "2026-11-23",
     },
     paises: PAISES,

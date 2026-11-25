@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_TUR } from "../reais/elencos-tur";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { faixa, liga, rodadaUnica } from "./liga";
 
@@ -636,3 +638,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Süper Lig 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_TUR, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "tur-2026",
+});

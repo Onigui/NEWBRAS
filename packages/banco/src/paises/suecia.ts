@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_SWE } from "../reais/elencos-swe";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -537,3 +539,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Allsvenskan 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_SWE, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "swe-2026",
+});

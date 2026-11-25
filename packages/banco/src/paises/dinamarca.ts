@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_DEN } from "../reais/elencos-den";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -413,3 +415,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [{ tipo: "acesso", para: "den-superliga", posicoes: [1, 2] }],
   }),
 ];
+
+/** Jogadores reais da Superliga dinamarquesa 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_DEN, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "den-2026",
+});

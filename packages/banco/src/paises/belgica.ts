@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_BEL } from "../reais/elencos-bel";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { faixa, liga, playoffIdaEVolta } from "./liga";
 
@@ -566,3 +568,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Pro League belga 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_BEL, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "bel-2026",
+});

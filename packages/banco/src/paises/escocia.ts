@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_SCO } from "../reais/elencos-sco";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -384,3 +386,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Premiership escocesa 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_SCO, CLUBES, {
+  fimDeContrato: "05-31",
+  semente: "sco-2026",
+});

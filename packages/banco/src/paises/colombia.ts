@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_COL } from "../reais/elencos-col";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { liga, playoffIdaEVolta } from "./liga";
 
@@ -608,3 +610,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [{ tipo: "acesso", para: "col-primera-a", posicoes: [1, 2] }],
   }),
 ];
+
+/** Jogadores reais da Primera A colombiana 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_COL, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "col-2026",
+});

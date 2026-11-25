@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_JPN } from "../reais/elencos-jpn";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { faixa, liga, rodadaUnica } from "./liga";
 
@@ -657,3 +659,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da J1 League 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_JPN, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "jpn-2026",
+});

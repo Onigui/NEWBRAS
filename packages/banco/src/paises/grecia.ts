@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_GRE } from "../reais/elencos-gre";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -520,3 +522,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [{ tipo: "acesso", para: "gre-super-league", posicoes: [1, 2] }],
   }),
 ];
+
+/** Jogadores reais da Super League grega 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_GRE, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "gre-2026",
+});

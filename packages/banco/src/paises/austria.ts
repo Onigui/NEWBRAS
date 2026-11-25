@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_AUT } from "../reais/elencos-aut";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -478,3 +480,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [{ tipo: "acesso", para: "aut-bundesliga", posicoes: [1] }],
   }),
 ];
+
+/** Jogadores reais da Bundesliga austríaca 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_AUT, CLUBES, {
+  fimDeContrato: "05-31",
+  semente: "aut-2026",
+});

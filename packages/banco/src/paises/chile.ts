@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_CHI } from "../reais/elencos-chi";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { faixa, liga, playoffIdaEVolta, rodadaUnica } from "./liga";
 
@@ -547,3 +549,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Primera División chilena 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_CHI, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "chi-2026",
+});
