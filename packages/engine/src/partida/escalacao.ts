@@ -38,13 +38,20 @@ export interface OpcoesEscalacao {
   reservas?: number;
 }
 
+/** Vagas de uma escalação: as personalizadas, se houver, ou as da formação pronta. */
+export function vagasDaEscalacao(e: Escalacao): readonly Vaga[] {
+  if (e.vagas) return e.vagas;
+  return FORMACOES[e.formacao === "personalizada" ? "4-4-2" : e.formacao];
+}
+
 /** Monta os 11 mais fortes para a formação, vaga por vaga, e o banco com os melhores que sobram. */
 export function escalacaoAutomatica(
   jogadores: readonly JogadorPartida[],
-  formacao: Formacao,
+  formacao: Formacao | readonly Vaga[],
   opcoes: OpcoesEscalacao = {},
 ): Escalacao {
-  const vagas = FORMACOES[formacao];
+  const personalizada = typeof formacao !== "string";
+  const vagas: readonly Vaga[] = personalizada ? formacao : FORMACOES[formacao];
   const disponiveis = jogadores.filter((j) => !opcoes.indisponiveis?.has(j.id));
   const usados = new Set<string>();
   const titulares: string[] = new Array<string>(vagas.length).fill("");
@@ -74,5 +81,7 @@ export function escalacaoAutomatica(
     if (reservas.length < tamanho && !reservas.includes(j.id)) reservas.push(j.id);
 
   // Vaga sem ninguém fica com "" (elenco curto): o time joga com menos.
-  return { formacao, titulares, reservas };
+  return personalizada
+    ? { formacao: "personalizada", vagas, titulares, reservas }
+    : { formacao, titulares, reservas };
 }

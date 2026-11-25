@@ -43,7 +43,6 @@ export function Pitch({
   className?: string;
   fit?: "slice" | "meet";
 }) {
-  const stripes = Array.from({ length: 10 }, (_, i) => i).filter((i) => i % 2 === 1);
   return (
     <svg
       className={className}
@@ -51,6 +50,38 @@ export function Pitch({
       preserveAspectRatio={`xMidYMid ${fit}`}
       aria-hidden="true"
     >
+      <MarcacoesCampo />
+      {MANDANTE_442.map(([x, y], i) => (
+        <circle key={`m${i}`} cx={x} cy={y} r={1.5} fill="var(--color-canarinho)" />
+      ))}
+      {VISITANTE_433.map(([x, y], i) => (
+        <circle
+          key={`v${i}`}
+          cx={x}
+          cy={y}
+          r={1.5}
+          fill="var(--color-cal)"
+          stroke="var(--color-placar)"
+          strokeWidth={0.3}
+        />
+      ))}
+      <circle
+        cx={L / 2 + 1.6}
+        cy={W / 2 + 0.6}
+        r={0.7}
+        fill="#ffffff"
+        stroke="#1d2b3a"
+        strokeWidth={0.2}
+      />
+    </svg>
+  );
+}
+
+/** Gramado e linhas do campo (105 x 68 m), para usar dentro de um SVG com o mesmo sistema. */
+export function MarcacoesCampo() {
+  const stripes = Array.from({ length: 10 }, (_, i) => i).filter((i) => i % 2 === 1);
+  return (
+    <>
       <rect x={-6} y={-6} width={L + 12} height={W + 12} fill="var(--color-gramado)" />
       {stripes.map((i) => (
         <rect key={i} x={i * (L / 10)} y={0} width={L / 10} height={W} fill="var(--color-faixa)" />
@@ -78,29 +109,6 @@ export function Pitch({
         <circle cx={11} cy={W / 2} r={0.4} />
         <circle cx={L - 11} cy={W / 2} r={0.4} />
       </g>
-
-      {MANDANTE_442.map(([x, y], i) => (
-        <circle key={`m${i}`} cx={x} cy={y} r={1.5} fill="var(--color-canarinho)" />
-      ))}
-      {VISITANTE_433.map(([x, y], i) => (
-        <circle
-          key={`v${i}`}
-          cx={x}
-          cy={y}
-          r={1.5}
-          fill="var(--color-cal)"
-          stroke="var(--color-placar)"
-          strokeWidth={0.3}
-        />
-      ))}
-      <circle
-        cx={L / 2 + 1.6}
-        cy={W / 2 + 0.6}
-        r={0.7}
-        fill="#ffffff"
-        stroke="#1d2b3a"
-        strokeWidth={0.2}
-      />
-    </svg>
+    </>
   );
 }

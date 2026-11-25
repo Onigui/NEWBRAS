@@ -6,4 +6,4 @@ export { gerarElenco, type OpcoesElenco } from "./gerador/elenco";
 export * from "./partida";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.5.0";
+export const ENGINE_VERSION = "0.6.0";

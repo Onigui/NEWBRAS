@@ -3,7 +3,7 @@
  * estatísticas, notas e, se pedido, os quadros para o mini-campo).
  */
 import type { Atributos, Lado, Posicao } from "@newbras/data";
-import type { Formacao } from "./formacoes";
+import type { Formacao, Vaga } from "./formacoes";
 
 export type LadoCampo = "casa" | "fora";
 
@@ -37,7 +37,10 @@ export const TATICA_PADRAO: Tatica = {
 };
 
 export interface Escalacao {
-  formacao: Formacao;
+  /** Formação pronta, ou "personalizada" com as vagas desenhadas pelo técnico. */
+  formacao: Formacao | "personalizada";
+  /** Vagas da formação personalizada (11, a primeira é o goleiro). Se vierem, mandam. */
+  vagas?: readonly Vaga[];
   /** Os 11 titulares, na ordem das vagas da formação (o primeiro é o goleiro; "" = vaga vazia). */
   titulares: readonly string[];
   /** Reservas disponíveis para substituições. */

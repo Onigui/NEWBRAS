@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { FORMACOES, NOMES_FORMACOES } from "./formacoes";
+import {
+  classificarVaga,
+  desenhoDaFormacao,
+  FORMACOES,
+  formacaoPersonalizada,
+  NOMES_FORMACOES,
+  validarFormacao,
+} from "./formacoes";
 import { escalacaoAutomatica } from "./escalacao";
 import { Partida, simularPartida } from "./motor";
 import { textoDoEvento } from "./narracao";
@@ -12,6 +19,58 @@ const jogo = (semente: string, forcaCasa = 70, forcaFora = 70) =>
 function lote(n: number, criar: (i: number) => ResultadoPartida) {
   return Array.from({ length: n }, (_, i) => criar(i));
 }
+
+describe("formações", () => {
+  it("tem muitas formações prontas, todas válidas e com o desenho do nome", () => {
+    expect(NOMES_FORMACOES.length).toBeGreaterThanOrEqual(25);
+    for (const nome of NOMES_FORMACOES) {
+      const vagas = FORMACOES[nome];
+      expect(validarFormacao(vagas), nome).toEqual([]);
+      const numeros = nome.match(/^\d(-\d)+/)?.[0];
+      // O desenho só bate quando o nome conta defesa-meio-ataque (4-2-3-1 junta meias).
+      if (numeros && numeros.split("-").length === 3)
+        expect(desenhoDaFormacao(vagas), nome).toBe(numeros);
+    }
+  });
+
+  it("a função da vaga vem do lugar no campo", () => {
+    expect(classificarVaga(20, 34).posicao).toBe("Z");
+    expect(classificarVaga(25, 6)).toMatchObject({ posicao: "L", lado: "D" });
+    expect(classificarVaga(25, 62)).toMatchObject({ posicao: "L", lado: "E" });
+    expect(classificarVaga(50, 34).posicao).toBe("M");
+    expect(classificarVaga(75, 60)).toMatchObject({ posicao: "A", lado: "E" });
+    expect(classificarVaga(70, 34, true).posicao).toBe("G");
+  });
+
+  it("formação personalizada: valida e o jogo respeita o lugar de cada um", () => {
+    const pontos = FORMACOES["4-4-2"].map((v) => ({ x: v.x, y: v.y }));
+    pontos[10] = { x: 80, y: 60 }; // um atacante bem aberto pela esquerda, colado na área
+    pontos[9] = { x: 40, y: 34 }; // o outro recua para o meio
+    const vagas = formacaoPersonalizada(pontos);
+    expect(validarFormacao(vagas)).toEqual([]);
+    expect(vagas[10]).toMatchObject({ posicao: "A", lado: "E" });
+    expect(vagas[9]?.posicao).toBe("M");
+    expect(
+      validarFormacao(formacaoPersonalizada([...pontos.slice(0, 10), pontos[1]!])),
+    ).not.toEqual([]);
+
+    const casa = timeDeTeste("A", 70);
+    casa.escalacao = escalacaoAutomatica(casa.jogadores, vagas);
+    expect(casa.escalacao.formacao).toBe("personalizada");
+    const r = simularPartida({
+      semente: "livre",
+      casa,
+      fora: timeDeTeste("B", 70),
+      gravarQuadros: true,
+    });
+    // No 1º tempo a casa ataca para a direita: o campo já é o quadro de ataque dela.
+    const primeiro = r.quadros!.filter((q) => q.t < 2700);
+    const media = (vaga: number, eixo: 0 | 1) =>
+      primeiro.reduce((s, q) => s + (q.posicoes[vaga * 2 + eixo] ?? 0), 0) / primeiro.length;
+    expect(media(10, 1)).toBeGreaterThan(48);
+    expect(media(10, 0)).toBeGreaterThan(media(9, 0) + 12);
+  });
+});
 
 describe("escalação automática", () => {
   it("goleiro na primeira vaga, 11 diferentes e goleiro no banco", () => {

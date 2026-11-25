@@ -122,6 +122,22 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 - **Números de referência** (200 jogos entre times de força 70): 2,8 gols, 14 chutes e 5 no gol por time, 78% de passes certos, 21 faltas, 3,3 amarelos, 29% de empates, 10 km por jogador. Um time 15 pontos mais forte vence mais de 60%. Cerca de 20 ms por partida.
 - **Fica para a Fase 6:** mando de campo, humor, moral, dia iluminado, ajuste das táticas e a calibração com 10.000 jogos contra as metas.
 
+## Formações e partida assistida (25/11/2026)
+
+**Formações:** 27 prontas (do 4-4-2 ao WM e à pirâmide 2-3-5) e a **formação personalizada**: o técnico arrasta cada jogador para onde quiser no campo. A função da vaga vem do lugar (até 36 m do próprio gol é defesa, lateral se aberto e zagueiro se no meio; até 62 m é meio-campo; depois é ataque) e o motor usa esse desenho como referência de posicionamento na partida. Jogador fora da posição da vaga rende menos (nome em amarelo). As formações guardadas ficam no navegador por enquanto; a carreira guarda as suas na Fase 8.
+
+**Partida assistida (Fase 7):** o jogo não é instantâneo. O técnico acompanha pelo mini-campo, pausa para trocar jogadores, mudar a formação e dar instruções, e pode pular para o fim se quiser.
+
+| Velocidade | Duração real dos 90 minutos |
+| ---------- | --------------------------- |
+| Rápida     | cerca de 3 minutos          |
+| Normal     | cerca de 4 minutos (padrão) |
+| Lenta      | cerca de 5 minutos          |
+
+Os lances de perigo e os gols ganham um instante a mais na tela; jogos de outros campos da rodada correm juntos no placar ao lado. A tela Amistoso de hoje é só a prévia do motor.
+
+**Régua relativa:** passe, chute, decisão e goleiro comparam o jogador com quem o marca e com o próprio nível, não com uma régua fixa. Assim um jogo entre dois times fortes tem números parecidos com o de dois times fracos (cerca de 2,6 a 2,9 gols de 55 a 85 de força), e a diferença de força entre os times é o que decide.
+
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 
 Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).
