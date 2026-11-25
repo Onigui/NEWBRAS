@@ -1,5 +1,5 @@
 /**
- * Tela da carreira (Fase 8): data e próximo jogo no topo, abas de início, plantel, escalação,
+ * Tela da carreira (Fases 8 e 9): data e próximo jogo no topo, abas de início, plantel, escalação,
  * calendário e jogos, e o dia de jogo (escalação e partida ao vivo).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,6 +17,7 @@ import {
   FORMACOES,
   nomeTemporada,
   partidaDoCompromisso,
+  plantaoDoCompromisso,
   proximoCompromisso,
   registrarJogo,
   agendaCompleta,
@@ -27,6 +28,7 @@ import {
   type Compromisso,
   type Concentracao,
   type Estilo,
+  type JogoSimulado,
   type Marcacao,
   type OpcoesPartida,
 } from "@newbras/engine";
@@ -37,6 +39,7 @@ import { AoVivo } from "../partida/AoVivo";
 import { Calendario } from "./Calendario";
 import { Competicoes } from "./Competicoes";
 import { Jogos } from "./Jogos";
+import { Plantao } from "./Plantao";
 import { Plantel } from "./Plantel";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
@@ -82,7 +85,13 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const { mundo } = montado;
   const [aba, setAba] = useState<Aba>("inicio");
   const [dia, setDia] = useState<"hub" | "pre-jogo" | "jogo">("hub");
-  const [jogo, setJogo] = useState<{ opcoes: OpcoesPartida; x: Compromisso } | null>(null);
+  const [jogo, setJogo] = useState<{
+    opcoes: OpcoesPartida;
+    x: Compromisso;
+    /** A carreira e os outros jogos do dia no começo da partida, para o plantão. */
+    antes: CarreiraT;
+    plantao: JogoSimulado[];
+  } | null>(null);
 
   const clube = mundo.clube(c.clube);
   const pais = clube ? mundo.pais(clube.pais) : undefined;
@@ -153,6 +162,9 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
           humano={lado}
           rotuloNovo="Voltar à carreira"
           onTerminou={(r) => mudar((x) => registrarJogo(x, mundo, jogo.x.id, r))}
+          plantao={(agora) => (
+            <Plantao c={jogo.antes} mundo={mundo} x={jogo.x} jogos={jogo.plantao} agora={agora} />
+          )}
           onNovo={() => {
             setJogo(null);
             setDia("hub");
@@ -223,7 +235,12 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
               <Botao
                 variante="primario"
                 onClick={() => {
-                  setJogo({ opcoes: partidaDoCompromisso(c, mundo, hoje), x: hoje });
+                  setJogo({
+                    opcoes: partidaDoCompromisso(c, mundo, hoje),
+                    x: hoje,
+                    antes: c,
+                    plantao: plantaoDoCompromisso(c, mundo, hoje),
+                  });
                   setDia("jogo");
                 }}
               >

@@ -2,7 +2,7 @@
  * Tela de partida (Fase 7): placar, mini-campo ao vivo ou modo clássico, controles de ritmo,
  * trocas e instruções do técnico durante o jogo, e o resumo no fim.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { camisasDoClube, corDeTexto, NOME_POSICAO, type Clube } from "@newbras/data";
 import {
   FORMACOES,
@@ -68,6 +68,8 @@ interface Props {
   rotuloNovo?: string;
   /** Chamado uma vez, quando o jogo termina (a carreira lança o resultado). */
   onTerminou?: (resultado: ResultadoPartida) => void;
+  /** Painel ao lado do jogo que acompanha o relógio (o plantão de gols da carreira). */
+  plantao?: (agora: { minuto: number; placar: [number, number]; fim: boolean }) => ReactNode;
 }
 
 /** Cores dos times no mini-campo; se as camisas titulares forem parecidas, o visitante usa a reserva. */
@@ -94,7 +96,7 @@ function distanciaDeCor(a: string, b: string): number {
   return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
 }
 
-export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou }: Props) {
+export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou, plantao }: Props) {
   const ao = usePartidaAoVivo(opcoes);
   const { controle: estado, partida } = ao;
   const [classico, setClassico] = useState(false);
@@ -305,6 +307,12 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou 
               </Campo>
             )}
           </section>
+
+          {plantao?.({
+            minuto: partida.relogio.minuto,
+            placar: [partida.placar[0], partida.placar[1]],
+            fim: !!fim,
+          })}
 
           {humano && !fim && (
             <Comando

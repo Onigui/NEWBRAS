@@ -258,3 +258,9 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Temporada do país:** passa a conter todas as competições dele. Onde a liga não cabia na temporada da região (Índia, J1 de agosto a junho, Uzbequistão, Caribe, Argentina e outros), a temporada se ajusta à liga. Antes, a virada da temporada encerrava essas ligas no meio, sem campeão.
 - **Mando no pontos corridos:** a alternância de casa e fora estava errada (havia time com 19 jogos seguidos em casa). Agora ninguém joga mais de 3 seguidos em casa ou fora.
 - **Classificação de mata-mata:** a de uma fase única de mata-mata (a final de uma supercopa) agora sai do resultado, e não da ordem de entrada.
+
+## Copas regionais e plantão de gols (etapa 9c, 25/11/2026)
+
+- **Copas regionais:** Copa do Nordeste (16 clubes dos 9 estados, dois grupos de 8 em turno único, 4 de cada grupo no mata-mata, final em ida e volta) e Copa Verde (16 clubes do Norte, do Centro-Oeste e do Espírito Santo, mata-mata com semifinal e final em ida e volta). As vagas saem dos estaduais pela classificação da temporada anterior; se o clube já entrou, a vaga passa para o próximo do estado. Ficam no calendário logo depois dos estaduais e antes das ligas.
+- **Plantão de gols:** ao começar o jogo do técnico, os outros jogos do dia no país já saem simulados, pelo mesmo sorteio que o dia usa depois: o plantão mostra exatamente os placares que ficam registrados. Os gols aparecem no minuto em que saem, acompanhando o relógio da partida (o minuto vem de um sorteio à parte, que não muda os resultados). Primeiro a competição do jogo, com o jogo do técnico em destaque, depois as ligas da 1ª divisão para baixo, as copas e os estaduais dos outros estados. A lista de últimos gols fica só na competição do jogo.
+- **Tabela ao vivo:** em fase de pontos corridos, a tabela do grupo com os placares de agora, as zonas e setas de quem subiu ou caiu desde o começo da rodada.

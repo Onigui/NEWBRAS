@@ -49,7 +49,7 @@ Times podem entrar no meio da competição (`entramAqui`), como os classificados
 
 Ligas com playoffs têm a temporada regular seguida de fases de mata-mata. Os melhores colocados podem entrar direto numa fase adiante: na Championship, 5º a 8º jogam a eliminatória e 3º e 4º entram nas semifinais.
 
-Copas e supercopas não têm participantes fixos: as `vagas` dizem de onde vêm (`posicoes` de uma liga, `campeao` ou `vice` de uma competição). O jogo resolve as vagas a cada temporada pela classificação da anterior (na primeira, pela força do elenco). A temporada de cada país é ajustada ao montar o banco para conter todas as competições dele.
+Copas, supercopas e copas regionais não têm participantes fixos: as `vagas` dizem de onde vêm (`posicoes` de uma liga ou de um estadual, com `repassa` para a vaga passar ao próximo quando o clube já entrou; `campeao` ou `vice` de uma competição). O jogo resolve as vagas a cada temporada pela classificação da anterior (na primeira, pela força do elenco). A temporada de cada país é ajustada ao montar o banco para conter todas as competições dele.
 Acesso e rebaixamento (`movimentos`) usam as posições da tabela final. Em ligas divididas em grupos (Primera Federación, Serie C), `porGrupo` faz as posições valerem dentro de cada grupo. Repescagens entre divisões, como a da Bundesliga (16º contra o 3º da 2. Bundesliga), aparecem como `playoff-rebaixamento` na divisão de cima e `playoff-acesso` na de baixo.
 
 Clubes que jogam o sistema de outro país mantêm o próprio país: Cardiff, Swansea, Wrexham e Newport (País de Gales) na Inglaterra, e o FC Andorra na Espanha. O AS Monaco fica com país França, porque Mônaco não é membro da FIFA.

@@ -17,6 +17,7 @@ import type {
 import {
   avancarCompeticao,
   desempateDoJogo,
+  jogosDoDia,
   lancarResultado,
   nomeCurtoDaCompeticao,
   nomeDaRodada,
@@ -25,7 +26,10 @@ import {
   iniciarMundo,
   jogarDia,
   jogosDoClube,
+  paisDaCompeticao,
+  plantaoDoDia,
   virarTemporadas,
+  type JogoSimulado,
   type MundoCompeticoes,
 } from "../competicoes/mundo";
 import { idadeEm } from "../evolucao";
@@ -668,6 +672,39 @@ export function partidaDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso):
   if (!comp || !e || !j) return base;
   const d = desempateDoJogo(comp, e, j);
   return { ...base, desempate: d.desempate, ...(d.agregado ? { agregado: d.agregado } : {}) };
+}
+
+/**
+ * Os outros jogos do dia no país do técnico, já simulados, para o plantão de gols: primeiro os da
+ * competição do jogo, depois os das outras. São os mesmos placares que o dia vai registrar.
+ */
+export function plantaoDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): JogoSimulado[] {
+  const pais = mundo.clube(c.clube)?.pais;
+  // A competição do jogo, as ligas da 1ª divisão para baixo, as copas e, por último, os estaduais.
+  const peso = { liga: 1, supercopa: 2, copa: 2, regional: 3, estadual: 4 } as Record<
+    string,
+    number
+  >;
+  const ordem = (id: string) => {
+    if (id === x.competicao) return 0;
+    const comp = mundo.competicao(id);
+    return (peso[comp?.tipo ?? ""] ?? 5) * 10 + (comp?.divisao ?? 0);
+  };
+  const ids = Object.values(c.competicoes.competicoes)
+    .filter((e) => {
+      const comp = mundo.competicao(e.id);
+      return comp && paisDaCompeticao(comp) === pais && jogosDoDia(e, c.data).length > 0;
+    })
+    .map((e) => e.id)
+    .sort((a, b) => ordem(a) - ordem(b) || a.localeCompare(b));
+  return plantaoDoDia(
+    mundo,
+    c.competicoes,
+    c.data,
+    c.semente,
+    ids,
+    (id, i) => x.tipo === "oficial" && id === x.competicao && i === x.indice,
+  );
 }
 
 /** Lança o resultado do jogo: condição, humor, números dos jogadores, moral e notícia. */

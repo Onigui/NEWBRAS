@@ -58,6 +58,8 @@ export interface ResultadoRapido {
   placar: [number, number];
   penaltis?: [number, number];
   prorrogacao: boolean;
+  /** Placar ao fim dos 90 minutos (diferente do final quando houve gol na prorrogação). */
+  noTempoNormal: [number, number];
 }
 
 export function simularRapido(
@@ -83,6 +85,7 @@ export function simularRapido(
   const [ac, af] = o.agregado ?? [0, 0];
   const empatou = () => placar[0] + ac === placar[1] + af;
   let prorrogacao = false;
+  const noTempoNormal: [number, number] = [placar[0], placar[1]];
   if (empatou() && o.desempate === "prorrogacao") {
     prorrogacao = true;
     placar[0] += poisson(rng, mc / 3);
@@ -98,10 +101,11 @@ export function simularRapido(
     return {
       placar,
       prorrogacao,
+      noTempoNormal,
       penaltis: casaVence ? [Math.min(5, vencedor), perdedor] : [perdedor, Math.min(5, vencedor)],
     };
   }
-  return { placar, prorrogacao };
+  return { placar, prorrogacao, noTempoNormal };
 }
 
 export interface GolRapido {
