@@ -73,6 +73,19 @@ describe("tabela e jogos", () => {
     for (const r of rodadas) expect(new Set(r.flat()).size).toBe(20);
   });
 
+  it("todos contra todos: ninguém joga mais de três vezes seguidas em casa ou fora", () => {
+    for (const n of [8, 12, 18, 20, 24]) {
+      const rodadas = todosContraTodos(n, 2, new Rng(`t${n}`));
+      for (let t = 0; t < n; t++) {
+        const mandos = rodadas.map((r) =>
+          r.find(([a, b]) => a === t || b === t)?.[0] === t ? "C" : "F",
+        );
+        expect(mandos.join(""), `${n} times, time ${t}`).not.toMatch(/CCCC|FFFF/);
+        expect(mandos.filter((x) => x === "C")).toHaveLength(n - 1);
+      }
+    }
+  });
+
   it("desempata por vitórias, saldo e confronto direto", () => {
     const jogos = [
       { casa: "A", fora: "B", placar: [1, 0] as [number, number] },

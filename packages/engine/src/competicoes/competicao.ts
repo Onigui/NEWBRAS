@@ -517,30 +517,29 @@ function encerrar(c: Competicao, e: EstadoCompeticao): EstadoCompeticao {
  * Classificação final: a da primeira fase, reordenada por cada fase seguinte que não seja playoff
  * (quem chegou mais longe fica na frente; no mata-mata, quem caiu depois fica melhor).
  */
+/** Ordem de uma fase de mata-mata pela eliminatória em que cada um caiu; o campeão fica na frente. */
+function ordemDoMataMata(ef: EstadoFase, ordem: readonly string[]): string[] {
+  const nivel = new Map<string, number>();
+  (ef.chaves ?? []).forEach((rodada, x) =>
+    rodada.forEach((p) => {
+      for (const t of [p.a, p.b]) if (t) nivel.set(t, x);
+      if (p.vencedor) nivel.set(p.vencedor, x + 1);
+    }),
+  );
+  return [...nivel.keys()].sort(
+    (a, b) => (nivel.get(b) ?? 0) - (nivel.get(a) ?? 0) || ordem.indexOf(a) - ordem.indexOf(b),
+  );
+}
+
 export function classificacaoFinal(c: Competicao, e: EstadoCompeticao): string[] {
   const playoff = fasesDePlayoff(c);
-  let ordem = e.fases[0] ? classificacaoDosGrupos(c, e, 0) : [...e.participantes];
-  if (c.fases[0]?.tipo === "mata-mata") ordem = [...(e.fases[0]?.times ?? e.participantes)];
-  for (let f = 1; f < c.fases.length; f++) {
+  let ordem: string[] = [...e.participantes];
+  for (let f = 0; f < c.fases.length; f++) {
     const ef = e.fases[f];
-    if (!ef || playoff[f]) continue;
+    if (!ef || (f > 0 && playoff[f])) continue;
     const fase = c.fases[f] as Fase;
-    let daFase: string[];
-    if (fase.tipo === "mata-mata") {
-      // Pontua pela eliminatória em que caiu; o campeão fica com a maior.
-      const nivel = new Map<string, number>();
-      (ef.chaves ?? []).forEach((rodada, x) =>
-        rodada.forEach((p) => {
-          for (const t of [p.a, p.b]) if (t) nivel.set(t, x);
-          if (p.vencedor) nivel.set(p.vencedor, x + 1);
-        }),
-      );
-      daFase = [...nivel.keys()].sort(
-        (a, b) => (nivel.get(b) ?? 0) - (nivel.get(a) ?? 0) || ordem.indexOf(a) - ordem.indexOf(b),
-      );
-    } else {
-      daFase = classificacaoDosGrupos(c, e, f);
-    }
+    const daFase =
+      fase.tipo === "mata-mata" ? ordemDoMataMata(ef, ordem) : classificacaoDosGrupos(c, e, f);
     const ficam = new Set(daFase);
     ordem = [...daFase, ...ordem.filter((t) => !ficam.has(t))];
   }

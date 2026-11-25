@@ -18,6 +18,19 @@ import { Escudo } from "../components/Escudo";
 import { Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
 
+/** Ligas primeiro, depois as copas e as supercopas; estaduais e regionais no fim. */
+const ORDEM_TIPO: Record<Competicao["tipo"], number> = {
+  liga: 0,
+  copa: 1,
+  supercopa: 2,
+  regional: 3,
+  estadual: 4,
+  continental: 5,
+  intercontinental: 6,
+  selecoes: 7,
+  eliminatorias: 8,
+};
+
 export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado }) {
   const { mundo, banco } = montado;
   const clube = mundo.clube(c.clube);
@@ -26,8 +39,16 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
     () =>
       Object.values(estados)
         .filter((e) => e.participantes.includes(c.clube))
-        .map((e) => e.id),
-    [estados, c.clube],
+        .map((e) => e.id)
+        .sort((a, b) => {
+          const x = mundo.competicao(a);
+          const y = mundo.competicao(b);
+          return (
+            (x ? ORDEM_TIPO[x.tipo] : 9) - (y ? ORDEM_TIPO[y.tipo] : 9) ||
+            (x?.divisao ?? 9) - (y?.divisao ?? 9)
+          );
+        }),
+    [estados, c.clube, mundo],
   );
   const [pais, setPais] = useState(clube?.pais ?? "BRA");
   const [id, setId] = useState<string>(minhas[0] ?? Object.keys(estados)[0] ?? "");
@@ -38,7 +59,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
         .filter((x): x is Competicao => !!x && paisDaCompeticao(x) === pais)
         .sort(
           (a, b) =>
-            (a.tipo === "estadual" ? 1 : 0) - (b.tipo === "estadual" ? 1 : 0) ||
+            ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] ||
             (a.divisao ?? 9) - (b.divisao ?? 9) ||
             a.nome.localeCompare(b.nome, "pt-BR"),
         ),

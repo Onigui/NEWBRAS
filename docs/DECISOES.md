@@ -248,3 +248,13 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Cartões:** no elenco do técnico, 3 amarelos na mesma competição dão 1 jogo de suspensão; vermelho, o próximo jogo da competição. Suspenso fica fora da escalação daquele jogo e aparece nos avisos.
 - **Tela:** aba Competições com tabela (zonas de classificação, acesso, playoff e rebaixamento), mata-mata, jogos de cada rodada, artilharia, assistências e campeões anteriores; jogos oficiais na agenda, no calendário e no início, com o nome da competição e da rodada.
 - **Salvamento:** formato 2 (com as competições, cerca de 5 MB); os de formato 1 ganham as competições ao abrir.
+
+## Copas nacionais e supercopas (etapa 9b, 25/11/2026)
+
+- **Quais:** 27 copas nacionais nos 26 países de nível 1 e 2 (a Inglaterra tem FA Cup e EFL Cup) e 7 supercopas (Brasil, Inglaterra, Espanha, Itália, Alemanha, França e Portugal; a Supercopa de España e a Supercoppa com 4 times). Copa do Brasil com 64 times (Séries A, B e C e 4 da D), jogo único nas duas primeiras fases e ida e volta das oitavas à final, sem prorrogação.
+- **Participantes pelas vagas:** a cada temporada a copa monta a lista de novo: os primeiros de cada divisão pela classificação da temporada anterior (promovidos e rebaixados entram pela divisão em que estão agora); na primeira temporada, pela força do elenco. A supercopa junta o campeão da liga e o da copa da temporada anterior; se o mesmo time ganhou as duas, a vaga passa para o próximo.
+- **Formato:** uma fase de mata-mata por eliminatória, sorteio na primeira e chave fixa depois; folgas quando o número não fecha. Final em campo neutro onde é tradição (FA Cup, Copa del Rey, DFB-Pokal...); a DFL-Supercup é na casa do campeão.
+- **Datas:** a supercopa marca primeiro (janela curta) e os estaduais e ligas fogem dela; as copas vêm depois das ligas, nas datas livres. Continua sem clube com dois jogos no mesmo dia ou em dias seguidos.
+- **Temporada do país:** passa a conter todas as competições dele. Onde a liga não cabia na temporada da região (Índia, J1 de agosto a junho, Uzbequistão, Caribe, Argentina e outros), a temporada se ajusta à liga. Antes, a virada da temporada encerrava essas ligas no meio, sem campeão.
+- **Mando no pontos corridos:** a alternância de casa e fora estava errada (havia time com 19 jogos seguidos em casa). Agora ninguém joga mais de 3 seguidos em casa ou fora.
+- **Classificação de mata-mata:** a de uma fase única de mata-mata (a final de uma supercopa) agora sai do resultado, e não da ordem de entrada.
