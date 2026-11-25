@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_NED } from "../reais/elencos-ned";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { liga } from "./liga";
 
@@ -631,3 +633,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da Eredivisie 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_NED, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "ned-2026",
+});

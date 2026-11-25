@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_MEX } from "../reais/elencos-mex";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, comFiliais, type ClubeLinha } from "../tipos";
 import { liga, playoffIdaEVolta } from "./liga";
 
@@ -574,3 +576,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [],
   }),
 ];
+
+/** Jogadores reais da Liga MX 2026/27 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_MEX, CLUBES, {
+  fimDeContrato: "06-30",
+  semente: "mex-2026",
+});

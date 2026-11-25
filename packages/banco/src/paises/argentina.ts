@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_ARG } from "../reais/elencos-arg";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { liga, rodadaUnica } from "./liga";
 
@@ -1071,3 +1073,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [{ tipo: "acesso", para: "arg-liga-profesional", posicoes: [1], porGrupo: true }],
   }),
 ];
+
+/** Jogadores reais da Liga Profesional argentina 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_ARG, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "arg-2026",
+});

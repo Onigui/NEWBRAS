@@ -934,3 +934,45 @@ describe("jogadores reais: Ligue 1 2026/27", () => {
     expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
   });
 });
+
+describe("jogadores reais: ligas de nível 2", () => {
+  const LIGAS = [
+    "por-liga-portugal",
+    "ned-eredivisie",
+    "bel-pro-league",
+    "sco-premiership",
+    "tur-super-lig",
+    "aut-bundesliga",
+    "sui-super-league",
+    "gre-super-league",
+    "den-superliga",
+    "swe-allsvenskan",
+    "arg-liga-profesional",
+    "chi-primera",
+    "col-primera-a",
+    "mex-liga-mx",
+    "jpn-j1",
+    "kor-k-league-1",
+    "qat-stars-league",
+  ];
+  const MINIMO_ELENCO = 18;
+  it.each(LIGAS)("%s: todos os clubes têm elenco real e jogável", (id) => {
+    const liga = banco.competicoes.find((c) => c.id === id)!;
+    for (const clube of liga.participantes.fixos) {
+      const elenco = banco.jogadores.filter((j) => j.clube === clube);
+      expect(elenco.length, clube).toBeGreaterThanOrEqual(MINIMO_ELENCO);
+      expect(elenco.filter((j) => j.posicao === "G").length, clube).toBeGreaterThanOrEqual(2);
+    }
+  });
+  it("craques nos clubes certos", () => {
+    const clube = (nome: string) => banco.jogadores.find((j) => j.nome === nome)?.clube;
+    expect(clube("Diogo Costa")).toBe("por-porto");
+    expect(clube("Vangelis Pavlidis")).toBe("por-benfica");
+  });
+  it("as segundas divisões seguem com elencos gerados", () => {
+    for (const id of ["por-liga-portugal-2", "arg-primera-nacional", "jpn-j2"]) {
+      const clube = banco.competicoes.find((c) => c.id === id)!.participantes.fixos[0]!;
+      expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    }
+  });
+});

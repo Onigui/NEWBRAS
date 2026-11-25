@@ -1,4 +1,6 @@
 import type { CompeticaoEntrada } from "@newbras/data";
+import { ELENCOS_KOR } from "../reais/elencos-kor";
+import { jogadoresReais } from "../reais/fotmob";
 import { clubesDe, type ClubeLinha } from "../tipos";
 import { faixa, liga, rodadaUnica } from "./liga";
 
@@ -508,3 +510,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     ],
   }),
 ];
+
+/** Jogadores reais da K League 1 2026 (FotMob); as outras divisões seguem com elencos gerados. */
+export const JOGADORES = jogadoresReais(ELENCOS_KOR, CLUBES, {
+  fimDeContrato: "12-31",
+  semente: "kor-2026",
+});
