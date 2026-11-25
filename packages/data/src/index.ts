@@ -14,3 +14,4 @@ export * from "./periodos";
 export * from "./editor";
 export * from "./visual";
 export * from "./atributos";
+export * from "./funcoes";

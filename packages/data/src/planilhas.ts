@@ -25,6 +25,7 @@ export const COLUNAS_JOGADORES = [
   "segunda_nacionalidade",
   "posicao",
   "lado",
+  "posicoes_campo",
   "forca",
   "potencial",
   "caracteristica_1",
@@ -183,6 +184,15 @@ export interface ResultadoPlanilha<T> {
   problemas: Problema[];
 }
 
+/** "PD CA" ou "pd;ca" → posições de campo (as que não existem ficam para a validação acusar). */
+function posicoesDoTexto(t: string): string[] | undefined {
+  const lista = t
+    .split(/[\s;,/]+/)
+    .map((p) => p.trim().toUpperCase())
+    .filter(Boolean);
+  return lista.length ? lista : undefined;
+}
+
 export function importarJogadoresCsv(conteudo: string): ResultadoPlanilha<JogadorT> {
   const { linhas } = lerCsvComCabecalho(conteudo);
   const itens: JogadorT[] = [];
@@ -205,6 +215,7 @@ export function importarJogadoresCsv(conteudo: string): ResultadoPlanilha<Jogado
       segundaNacionalidade: texto(l.segunda_nacionalidade?.toUpperCase()),
       posicao: posicao ?? l.posicao,
       lado: (l.lado || (posicao === "L" ? "" : "C")).toUpperCase(),
+      posicoesCampo: posicoesDoTexto(l.posicoes_campo ?? ""),
       forca,
       potencial: numero(l.potencial ?? "") ?? forca,
       caracteristicas: caracteristicas.length ? caracteristicas : undefined,
@@ -246,6 +257,7 @@ export function exportarJogadoresCsv(
     j.segundaNacionalidade ?? "",
     j.posicao,
     j.lado,
+    j.posicoesCampo?.join(" ") ?? "",
     String(j.forca),
     String(j.potencial),
     j.caracteristicas[0] ?? "",

@@ -3,6 +3,7 @@
  * Uso: pnpm calibrar [quantidade]
  */
 import { writeFileSync } from "node:fs";
+import { format } from "prettier";
 import { ENGINE_VERSION } from "../src/index";
 import { METAS, foraDasMetas, medirCalibracao } from "../src/partida/calibracao";
 
@@ -34,6 +35,10 @@ ${fora.length ? `Fora das metas: ${fora.join("; ")}.` : "Todas as medidas dentro
 
 As metas vêm de médias de primeiras divisões (Brasileirão e grandes ligas europeias) e ficam em \`packages/engine/src/partida/calibracao.ts\`.
 `;
-writeFileSync(new URL("../../../docs/CALIBRACAO.md", import.meta.url), texto);
+// Já sai no formato do Prettier, para o `pnpm check` não reclamar da tabela.
+writeFileSync(
+  new URL("../../../docs/CALIBRACAO.md", import.meta.url),
+  await format(texto, { parser: "markdown" }),
+);
 console.log(texto);
 if (fora.length) process.exitCode = 1;

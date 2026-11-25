@@ -14,6 +14,7 @@ import {
   gerarAtributos,
   type Atributos,
 } from "../atributos";
+import { POSICOES_CAMPO } from "../funcoes";
 import { CodigoPais, Data, Id, NomeTexto } from "./comum";
 
 const Forca = z.int().min(FORCA_MIN).max(FORCA_MAX);
@@ -48,6 +49,11 @@ export const Jogador = z
     segundaNacionalidade: CodigoPais.optional(),
     posicao: z.enum(POSICOES),
     lado: z.enum(LADOS),
+    /**
+     * Posições de campo em que o jogador atua (ponta-direita, centroavante, volante...), da
+     * principal para as outras. Vêm dos jogadores reais; sem elas, vale a família da posição.
+     */
+    posicoesCampo: z.array(z.enum(POSICOES_CAMPO)).min(1).max(5).optional(),
     forca: Forca,
     /** Força máxima que o jogador pode atingir. */
     potencial: Forca,

@@ -8,7 +8,13 @@
  * O registro de eventos alimenta o modo clássico (linha de minutos) e os quadros alimentam o
  * mini-campo (Fase 7). A calibração fina e o mando ficam para a Fase 6.
  */
-import type { Atributo, Posicao } from "@newbras/data";
+import {
+  DADOS_FUNCAO,
+  familiaridade,
+  type Atributo,
+  type PapelEmCampo,
+  type Posicao,
+} from "@newbras/data";
 import { Rng } from "../rng";
 import {
   COMPRIMENTO,
@@ -23,7 +29,8 @@ import {
   noQuadro,
   type Ponto,
 } from "./campo";
-import { encaixe, vagasDaEscalacao } from "./escalacao";
+import { notaNaVaga, papelNaVaga, vagasDaEscalacao } from "./escalacao";
+import { COMPORTAMENTO, type Comportamento } from "./funcoes";
 import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
 import {
   CHANCE_HUMOR,
@@ -78,6 +85,10 @@ interface Atleta {
   marcado: Atleta | null;
   /** Forma do dia: humor e, raramente, o dia iluminado (escondido). */
   forma: number;
+  /** Posição e função em campo (null no banco). */
+  papel: PapelEmCampo | null;
+  /** Como a função joga (posicionamento e preferências). */
+  comp: Comportamento;
 }
 
 interface Time {
@@ -87,6 +98,8 @@ interface Time {
   atletas: Atleta[];
   vagas: (Atleta | null)[];
   formacao: readonly Vaga[];
+  /** Posição e função pedidas pelo técnico em cada vaga (null = a melhor de quem estiver lá). */
+  papeis: (PapelEmCampo | null)[];
   trocas: number;
   paradas: Set<number>;
   est: EstatisticasTime;
@@ -143,7 +156,7 @@ const AVANCO_DEFENDENDO: Readonly<Record<Estilo, number>> = {
 const LADOS_CAMPO: readonly LadoCampo[] = ["casa", "fora"];
 
 /** Quanto o mando de campo rende (torcida, gramado, viagem do adversário). */
-export const VANTAGEM_MANDO = 0.045;
+export const VANTAGEM_MANDO = 0.04;
 /** O raro dia em que tudo dá certo para um jogador (escondido, como no Brasfoot). */
 export const CHANCE_DIA_ILUMINADO = 0.02;
 export const EFEITO_DIA_ILUMINADO = 0.1;
@@ -213,7 +226,7 @@ export class Partida {
       emCampo: titular,
       usado: titular,
       amarelos: 0,
-      fator: vaga >= 0 ? encaixe(j, formacao[vaga] as Vaga) : 1,
+      fator: 1,
       entrouEm: titular ? 0 : -1,
       saiuEm: null,
       efetivos: {},
@@ -221,11 +234,14 @@ export class Partida {
       resistencia: j.atributos.resistencia ?? j.forca * 0.8,
       marcado: null,
       forma: 1,
+      papel: null,
+      comp: COMPORTAMENTO.goleiro,
       est: {
         id: j.id,
         time: lado,
         titular,
         humor: j.humor ?? "normal",
+        papel: null,
         minutos: 0,
         gols: 0,
         golsContra: 0,
@@ -250,10 +266,12 @@ export class Partida {
         nota: 6,
       },
     });
+    const papeis = formacao.map((_, i) => dados.escalacao.papeis?.[i] ?? null);
     dados.escalacao.titulares.forEach((id, vaga) => {
       const j = porId.get(id);
       if (!j || vaga >= formacao.length) return;
       const a = criar(j, vaga, true);
+      this.definirPapel(a, formacao[vaga] as Vaga, papeis[vaga]);
       atletas.push(a);
       vagas[vaga] = a;
     });
@@ -268,6 +286,7 @@ export class Partida {
       atletas,
       vagas,
       formacao,
+      papeis,
       trocas: 0,
       paradas: new Set(),
       est: estatisticasVazias(),
@@ -390,13 +409,64 @@ export class Partida {
    * Muda a formação durante o jogo: quem está na vaga i passa para a nova vaga i (o técnico
    * redesenha o time sem trocar ninguém). Vale também para a formação personalizada.
    */
-  mudarFormacao(lado: LadoCampo, vagas: readonly Vaga[]): boolean {
+  mudarFormacao(
+    lado: LadoCampo,
+    vagas: readonly Vaga[],
+    papeis?: readonly (PapelEmCampo | null)[],
+  ): boolean {
     const time = this.times[lado];
     if (vagas.length !== time.formacao.length || vagas[0]?.posicao !== "G") return false;
     time.formacao = vagas;
+    if (papeis) time.papeis = vagas.map((_, i) => papeis[i] ?? null);
     this.cacheEmCampo[lado] = null;
     for (const a of time.vagas) if (a) this.moverParaVaga(time, a, a.vaga);
     return true;
+  }
+
+  /** Posição e função de quem está em cada vaga agora (null = vaga vazia). */
+  papeis(lado: LadoCampo): readonly (PapelEmCampo | null)[] {
+    return this.times[lado].vagas.map((a) => a?.papel ?? null);
+  }
+
+  /** Posições e funções pedidas pelo técnico em cada vaga (null = automática). */
+  papeisEscolhidos(lado: LadoCampo): readonly (PapelEmCampo | null)[] {
+    return this.times[lado].papeis;
+  }
+
+  /** Troca dois jogadores em campo de vaga (sem gastar substituição). */
+  trocarVagas(lado: LadoCampo, i: number, j: number): boolean {
+    const time = this.times[lado];
+    const n = time.formacao.length;
+    if (i === j || i < 0 || j < 0 || i >= n || j >= n) return false;
+    const a = time.vagas[i] ?? null;
+    const b = time.vagas[j] ?? null;
+    if (!a && !b) return false;
+    time.vagas[i] = b;
+    time.vagas[j] = a;
+    this.cacheEmCampo[lado] = null;
+    for (const [atleta, vaga] of [
+      [b, i],
+      [a, j],
+    ] as const) {
+      if (!atleta) continue;
+      atleta.vaga = vaga;
+      atleta.marcado = null;
+      this.definirPapel(atleta, time.formacao[vaga] as Vaga, time.papeis[vaga]);
+      this.renovar(atleta);
+    }
+    return true;
+  }
+
+  /** O técnico pede outra posição ou função na vaga (null volta para a automática). */
+  mudarPapel(lado: LadoCampo, vaga: number, papel: PapelEmCampo | null): void {
+    const time = this.times[lado];
+    if (vaga < 0 || vaga >= time.formacao.length) return;
+    time.papeis[vaga] = papel;
+    const a = time.vagas[vaga];
+    if (a) {
+      this.definirPapel(a, time.formacao[vaga] as Vaga, papel);
+      this.renovar(a);
+    }
   }
 
   /** Posição atual dos 22 e da bola, com quem está com a bola (índice da vaga, casa primeiro). */
@@ -645,30 +715,40 @@ export class Partida {
           // Vaga deslocada pela bola e pela fase, no quadro de ataque do time.
           const vaga = time.formacao[a.vaga] as Vaga;
           const goleiro = vaga.posicao === "G";
+          const comp = a.comp;
           let avanco = 0;
           if (!goleiro) {
             avanco = avancoBase;
             const aberto = Math.abs(vaga.y - MEIO_Y) > 15;
             if (atacando && concentracao === "laterais" && aberto) avanco += 4;
             if (atacando && concentracao === "meio" && !aberto) avanco += 3;
-            if (atacando && vaga.posicao === "A" && bx > 65) avanco += 3;
           }
+          // A função mexe no posicionamento: o volante segura, o ala sobe, o meia-armador
+          // espera o contra-ataque mais à frente.
+          if (atacando) avanco += comp.avanco + (bx > 65 ? comp.avancoFinal : 0);
+          else avanco += comp.defesa;
           // Recua menos do que avança: a linha de defesa não se enterra na área com a bola no
           // meio-campo; só desce de vez quando a bola chega perto do gol.
           const recuo = bx < MEIO_X ? 0.85 : 1;
           let x = vaga.x + (bx - MEIO_X) * (ACOMPANHA[vaga.posicao] ?? 0.5) * recuo + avanco;
           let y = vaga.y + (by - MEIO_Y) * (goleiro ? 0.15 : 0.35);
           if (!atacando && !goleiro) y += (by - y) * 0.12;
+          // Atacando, o ponta abre e o ponta invertido (ou o meia por dentro) fecha para o meio.
+          if (atacando && comp.largura && bx > 50) {
+            const lado = vaga.y < MEIO_Y ? -1 : 1;
+            y += lado * comp.largura;
+          }
           const linhaMinima = vaga.posicao === "Z" || vaga.posicao === "L" ? (bx < 20 ? 5 : 8) : 3;
-          x = goleiro ? limitar(x, 1, 20) : limitar(x, linhaMinima, 101);
-          // Chegada de trás: com o ataque no terço final, o meia central passa da bola e entra
-          // na área (é de onde saem os gols de meio-campista).
-          if (atacando && vaga.posicao === "M" && Math.abs(vaga.y - MEIO_Y) <= 15 && bx > 72)
-            x = Math.max(x, Math.min(bx + 6, 91));
+          x = goleiro ? limitar(x, 1, comp.avanco > 0 ? 28 : 20) : limitar(x, linhaMinima, 101);
+          // Chegada de trás: com o ataque no terço final, quem tem a função de chegar passa da
+          // bola e entra na área (é de onde saem os gols de meio-campista).
+          if (atacando && comp.chegada && bx > 72) x = Math.max(x, Math.min(bx + 6, 91));
           // Atacando, ninguém espera a bola em impedimento: fica na linha do penúltimo defensor.
-          // Atacante arrisca ficar no limite (e às vezes passa: impedimento).
-          if (atacando && !goleiro)
-            x = Math.min(x, linhaImpedimento + (vaga.posicao === "A" ? 1.2 : -0.5));
+          // Quem joga no limite arrisca (e às vezes passa: impedimento); o falso 9 sai da área.
+          if (atacando && !goleiro) {
+            x = Math.min(x, linhaImpedimento + (comp.linha ? 1.2 : -0.5));
+            if (comp.recua) x = Math.min(x, linhaImpedimento - comp.recua);
+          }
           y = limitar(y, 2, LARGURA - 2);
           tx = direita ? x : COMPRIMENTO - x;
           ty = direita ? y : LARGURA - y;
@@ -718,7 +798,9 @@ export class Partida {
         // Cansaço: correr cansa mais quem tem pouca resistência.
         a.condicao = Math.max(
           0,
-          a.condicao - passo * 0.0046 * desgaste * (1.55 - a.resistencia / 100) - 0.0006,
+          a.condicao -
+            passo * 0.0046 * desgaste * a.comp.desgaste * (1.55 - a.resistencia / 100) -
+            0.0006,
         );
       }
     }
@@ -882,12 +964,13 @@ export class Partida {
     // Cadenciado: toca de lado, segura a bola e só arrisca o chute claro.
     if (estilo === "cadenciado") wPasse += 0.5;
 
+    const comp = dono.comp;
     const opcoes = [
-      { acao: "chute" as const, peso: wChute * 0.85 },
-      { acao: "cruzamento" as const, peso: wCruz },
-      { acao: "drible" as const, peso: wDrible },
-      { acao: "conducao" as const, peso: wConduz },
-      { acao: "passe" as const, peso: wPasse },
+      { acao: "chute" as const, peso: wChute * 0.85 * comp.chute },
+      { acao: "cruzamento" as const, peso: wCruz * comp.cruza },
+      { acao: "drible" as const, peso: wDrible * comp.drible },
+      { acao: "conducao" as const, peso: wConduz * comp.conduz },
+      { acao: "passe" as const, peso: wPasse * comp.passe },
     ];
     const escolha = this.rng.weighted(opcoes, (o) => o.peso).acao;
     if (escolha === "chute") this.chutar(dono, "pe", pertos);
@@ -1055,7 +1138,8 @@ export class Partida {
     if (espaco < 12) return null;
     let melhor: { alvo: Ponto; nota: number; receptor: Atleta; distancia: number } | null = null;
     for (const c of this.emCampoDe(dono.lado)) {
-      if (c === dono || c.vaga === 0 || c.j.posicao === "Z" || c.j.posicao === "G") continue;
+      const familia = c.papel ? DADOS_FUNCAO[c.papel.funcao].familia : c.j.posicao;
+      if (c === dono || c.vaga === 0 || familia === "Z" || familia === "G") continue;
       const rq = noQuadro(c.pos, direita);
       if (rq.x < q.x + 4 || rq.x < segundo - 6) continue;
       const alvoQ = {
@@ -1073,7 +1157,12 @@ export class Partida {
       }
       const vantagem = tempoDefesa - tempoReceptor;
       if (vantagem < -0.3) continue;
-      let nota = 1.2 * Math.exp((alvoQ.x - q.x) / 26) * (0.5 + Math.min(vantagem, 2) / 2.5);
+      let nota =
+        1.2 *
+        Math.exp((alvoQ.x - q.x) / 26) *
+        (0.5 + Math.min(vantagem, 2) / 2.5) *
+        dono.comp.profundidade *
+        c.comp.alvoProfundidade;
       if (estilo === "contra-ataque") nota *= 1.6;
       if (estilo === "cadenciado") nota *= 0.3;
       if (!melhor || nota > melhor.nota) melhor = { alvo, nota, receptor: c, distancia: dist };
@@ -1115,7 +1204,8 @@ export class Partida {
   private conduzir(dono: Atleta, q: Ponto): void {
     const direita = this.paraDireita(dono.lado);
     const avanco = this.rng.float(5, 9) * (0.8 + this.att(dono, "velocidade") / 250);
-    const y = q.y + (MEIO_Y - q.y) * this.rng.float(0.05, 0.25) + this.rng.float(-3, 3);
+    const [de, ate] = dono.comp.corta;
+    const y = q.y + (MEIO_Y - q.y) * this.rng.float(de, ate) + this.rng.float(-3, 3);
     this.conducao = noQuadro(
       { x: Math.min(COMPRIMENTO - 3, q.x + avanco), y: limitar(y, 2, LARGURA - 2) },
       direita,
@@ -1181,7 +1271,7 @@ export class Partida {
     if (!marcador) return false;
     const marcacao = this.times[marcador.lado].tatica.marcacao;
     const dureza = marcacao === "leve" ? 0.85 : marcacao === "pesada" ? 1.2 : 1.5;
-    if (!this.rng.chance(0.1 * dureza)) return false;
+    if (!this.rng.chance(0.1 * dureza * marcador.comp.bote)) return false;
     // Dentro da área o defensor se cuida: falta ali é pênalti.
     const area = naArea(noQuadro(dono.pos, this.paraDireita(dono.lado)));
     if (this.rng.chance(0.17 * dureza * (area ? 0.12 : 1))) {
@@ -1316,7 +1406,7 @@ export class Partida {
       this.ultimoPasse = null;
       return;
     }
-    const alvo = this.rng.weighted(alvos, (a) => this.att(a, "cabeceio") ** 2);
+    const alvo = this.rng.weighted(alvos, (a) => this.att(a, "cabeceio") ** 2 * a.comp.alvoArea);
     const zagueiros = this.emCampoDe(defesa).filter((a) => a.vaga !== 0);
     const marcador = zagueiros.sort(
       (a, b) => distancia(a.pos, alvo.pos) - distancia(b.pos, alvo.pos),
@@ -1410,7 +1500,7 @@ export class Partida {
       xg *= 0.78 ** Math.min(3, nafrente);
       // Habilidade contra a marcação de quem está perto: craque contra zaga forte vale menos.
       const defesaPerto = this.marcacaoPerto(dono, this.emCampoDe(defesa));
-      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.86;
+      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.9;
       // Quem já marcou passa a ser vigiado de perto: o terceiro gol do mesmo jogador é raro.
       xg *= 0.62 ** dono.est.gols;
     }
@@ -1610,8 +1700,17 @@ export class Partida {
     if (a.vaga >= 0 && time.vagas[a.vaga] === a) time.vagas[a.vaga] = null;
     a.vaga = vaga;
     time.vagas[vaga] = a;
-    a.fator = encaixe(a.j, time.formacao[vaga] as Vaga);
+    this.definirPapel(a, time.formacao[vaga] as Vaga, time.papeis[vaga]);
     this.renovar(a);
+  }
+
+  /** Posição, função e encaixe de quem está numa vaga. */
+  private definirPapel(a: Atleta, vaga: Vaga, escolhido: PapelEmCampo | null | undefined): void {
+    const papel = papelNaVaga(a.j, vaga, escolhido);
+    a.papel = papel;
+    a.comp = COMPORTAMENTO[papel.funcao];
+    a.fator = familiaridade(a.j, papel);
+    a.est.papel = papel;
   }
 
   private lesionar(a: Atleta): void {
@@ -1653,9 +1752,11 @@ export class Partida {
     const banco = time.atletas.filter(
       (a) => !a.usado && (vaga.posicao === "G" || a.j.posicao !== "G"),
     );
+    const escolhido = time.papeis[sai.vaga];
     return (
-      banco.sort((a, b) => b.j.forca * encaixe(b.j, vaga) - a.j.forca * encaixe(a.j, vaga))[0] ??
-      null
+      banco.sort(
+        (a, b) => notaNaVaga(b.j, vaga, escolhido) - notaNaVaga(a.j, vaga, escolhido),
+      )[0] ?? null
     );
   }
 
@@ -1807,19 +1908,19 @@ export class Partida {
     for (const { v, i } of ordem) {
       let melhor: Atleta | null = null;
       for (const a of livres)
-        if (!melhor || a.j.forca * encaixe(a.j, v) > melhor.j.forca * encaixe(melhor.j, v))
-          melhor = a;
+        if (!melhor || notaNaVaga(a.j, v) > notaNaVaga(melhor.j, v)) melhor = a;
       if (!melhor) continue;
       livres.delete(melhor);
       novas[i] = melhor;
     }
     time.formacao = vagas;
+    time.papeis = vagas.map(() => null);
     time.vagas = novas;
     this.cacheEmCampo[time.lado] = null;
     novas.forEach((a, i) => {
       if (!a) return;
       a.vaga = i;
-      a.fator = encaixe(a.j, vagas[i] as Vaga);
+      this.definirPapel(a, vagas[i] as Vaga, null);
       a.marcado = null;
       this.renovar(a);
     });
@@ -1983,7 +2084,7 @@ export class Partida {
     sofridos: number,
     e: EstatisticasJogador = a.est,
   ): number {
-    const posicao = a.j.posicao;
+    const posicao = a.papel ? DADOS_FUNCAO[a.papel.funcao].familia : a.j.posicao;
     let n = 5.9;
     n += 1.1 * e.gols + 0.7 * e.assistencias + 0.2 * e.chutesNoGol + 0.2 * e.passesDecisivos;
     n += 0.012 * e.passesCertos - 0.04 * (e.passes - e.passesCertos);

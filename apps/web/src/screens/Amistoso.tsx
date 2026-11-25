@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import type { Banco, Clube, Jogador } from "@newbras/data";
+import type { Banco, Clube, Jogador, PapelEmCampo } from "@newbras/data";
 import {
-  encaixe,
   escalacaoAutomatica,
   FORMACOES,
   NOMES_FORMACOES,
@@ -10,11 +9,12 @@ import {
   type JogadorPartida,
   type LadoCampo,
   type OpcoesPartida,
+  type Escalacao,
   type TimePartida,
   type Vaga,
 } from "@newbras/engine";
 import { AoVivo } from "../partida/AoVivo";
-import { EditorFormacao } from "../components/EditorFormacao";
+import { EditorFormacao, PainelVaga, type Candidato } from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { procurar, type Indices } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
@@ -33,6 +33,11 @@ interface Escolha {
   /** Vagas em uso: as da formação pronta ou as arrastadas pelo técnico. */
   vagas: Vaga[];
   estilo: Estilo;
+  /** Escalação mexida pelo técnico (sem ela, vale a automática). */
+  titulares?: string[];
+  reservas?: string[];
+  /** Posição e função pedidas em cada vaga. */
+  papeis?: (PapelEmCampo | null)[];
 }
 
 interface FormacaoSalva {
@@ -72,6 +77,7 @@ const paraPartida = (j: Jogador): JogadorPartida => ({
   lado: j.lado,
   forca: j.forca,
   atributos: j.atributos,
+  ...(j.posicoesCampo ? { posicoesCampo: j.posicoesCampo } : {}),
   ...(j.numero !== undefined ? { numero: j.numero } : {}),
 });
 
@@ -83,14 +89,29 @@ function montarTime(indices: Indices, escolha: Escolha): TimePartida | null {
     .filter((j) => !j.base)
     .map(paraPartida);
   if (jogadores.length < 11) return null;
+  const automatica = escalacaoAutomatica(
+    jogadores,
+    escolha.formacao === "personalizada" ? escolha.vagas : escolha.formacao,
+  );
+  const ids = new Set(jogadores.map((j) => j.id));
+  const mexida =
+    escolha.titulares?.length === 11 && escolha.titulares.every((id) => !id || ids.has(id));
+  const escalacao: Escalacao = {
+    ...automatica,
+    ...(escolha.formacao === "personalizada" ? {} : { vagas: escolha.vagas }),
+    ...(mexida
+      ? {
+          titulares: escolha.titulares ?? [],
+          reservas: (escolha.reservas ?? []).filter((id) => ids.has(id)),
+        }
+      : {}),
+    ...(escolha.papeis ? { papeis: escolha.papeis } : {}),
+  };
   return {
     id: clube.id,
     nome: clube.nomeCurto,
     jogadores,
-    escalacao: escalacaoAutomatica(
-      jogadores,
-      escolha.formacao === "personalizada" ? escolha.vagas : escolha.formacao,
-    ),
+    escalacao,
     tatica: { estilo: escolha.estilo, marcacao: "leve", concentracao: "equilibrada" },
     cpu: true,
   };
@@ -255,18 +276,39 @@ function EscolhaTime({
   const [nomeSalvar, setNomeSalvar] = useState("");
   const clube = indices.clubePorId.get(escolha.clubeId);
   const achados = useMemo(() => procurar(banco, busca, 8).clubes, [banco, busca]);
-  // Quem a escalação automática põe em cada vaga, para mostrar os nomes no campo.
+  const [selecionada, setSelecionada] = useState<number | null>(null);
+  // A escalação em uso (a automática ou a mexida pelo técnico), para o campo e a vaga.
   const time = useMemo(() => montarTime(indices, escolha), [indices, escolha]);
   const porId = new Map(time?.jogadores.map((j) => [j.id, j]) ?? []);
   const titulares = time?.escalacao.titulares ?? [];
-  const nomes = titulares.map((id) => porId.get(id)?.nome.split(" ").at(-1) ?? "");
-  const foraDePosicao = new Set(
-    titulares.flatMap((id, i) => {
-      const j = porId.get(id);
-      const vaga = escolha.vagas[i];
-      return j && vaga && encaixe(j, vaga) < 1 ? [i] : [];
-    }),
-  );
+  const reservas = time?.escalacao.reservas ?? [];
+  const papeis = escolha.papeis ?? escolha.vagas.map(() => null);
+  const ocupantes = titulares.map((id) => porId.get(id) ?? null);
+  const candidatos: Candidato[] =
+    selecionada === null
+      ? []
+      : (time?.jogadores ?? [])
+          .filter((j) => j.id !== titulares[selecionada])
+          .map((j) => {
+            const k = titulares.indexOf(j.id);
+            return { jogador: j, origem: k >= 0 ? k : "banco" };
+          });
+
+  /** Põe o candidato na vaga escolhida: troca com quem estava (outra vaga ou o banco). */
+  const escalar = (c: Candidato) => {
+    if (selecionada === null) return;
+    const novos = [...titulares];
+    let banco = [...reservas];
+    const saiu = novos[selecionada] ?? "";
+    if (c.origem === "banco") {
+      novos[selecionada] = c.jogador.id;
+      banco = [saiu, ...banco.filter((id) => id !== c.jogador.id)].filter(Boolean).slice(0, 9);
+    } else {
+      novos[selecionada] = c.jogador.id;
+      novos[c.origem] = saiu;
+    }
+    onMudar({ ...escolha, titulares: novos, reservas: banco });
+  };
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <p className="text-xs font-bold text-suave">{titulo}</p>
@@ -292,7 +334,9 @@ function EscolhaTime({
                 type="button"
                 className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-white/5"
                 onClick={() => {
-                  onMudar({ ...escolha, clubeId: c.id });
+                  const { titulares: _t, reservas: _r, papeis: _p, ...resto } = escolha;
+                  onMudar({ ...resto, clubeId: c.id });
+                  setSelecionada(null);
                   setBusca("");
                 }}
               >
@@ -358,9 +402,37 @@ function EscolhaTime({
       {time && (
         <EditorFormacao
           vagas={escolha.vagas}
-          nomes={nomes}
-          foraDePosicao={foraDePosicao}
-          onMudar={(vagas) => onMudar({ ...escolha, formacao: "personalizada", vagas })}
+          ocupantes={ocupantes}
+          papeis={papeis}
+          selecionada={selecionada}
+          onSelecionar={setSelecionada}
+          onMudar={(vagas) =>
+            // Arrastar move o jogador: a escalação fica como está (não refaz a automática).
+            onMudar({
+              ...escolha,
+              formacao: "personalizada",
+              vagas,
+              titulares: [...titulares],
+              reservas: [...reservas],
+            })
+          }
+        />
+      )}
+      {time && selecionada !== null && escolha.vagas[selecionada] && (
+        <PainelVaga
+          vaga={escolha.vagas[selecionada]}
+          indice={selecionada}
+          ocupante={ocupantes[selecionada] ?? null}
+          escolhido={papeis[selecionada] ?? null}
+          candidatos={candidatos}
+          rotuloTroca={(c) => (c.origem === "banco" ? "Escalar" : "Trocar de vaga")}
+          onPapel={(papel) => {
+            const novos = escolha.vagas.map((_, i) => papeis[i] ?? null);
+            novos[selecionada] = papel;
+            onMudar({ ...escolha, papeis: novos });
+          }}
+          onTrocar={escalar}
+          onFechar={() => setSelecionada(null)}
         />
       )}
       {escolha.formacao === "personalizada" && (
