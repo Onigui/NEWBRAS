@@ -1,10 +1,12 @@
 /**
  * Jogos do time: os marcados e os já disputados, e o formulário para marcar amistosos.
- * As ligas e copas entram na Fase 9; por enquanto a agenda é de amistosos.
+ * Os jogos oficiais vêm das competições; os amistosos o técnico marca aqui.
  */
 import { useMemo, useState } from "react";
 import {
+  agendaCompleta,
   dataCurta,
+  nomeDoCompromisso,
   desmarcarAmistoso,
   marcarAmistoso,
   problemasDoAmistoso,
@@ -27,13 +29,14 @@ export function Jogos({
 }) {
   const { mundo } = montado;
   const nomes = (id: string) => mundo.jogador(id)?.nome ?? id;
+  const agenda = agendaCompleta(c);
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div>
         <h2 className="mb-2 font-placar text-2xl font-bold">Agenda</h2>
-        {c.agenda.length === 0 && <p className="text-sm text-suave">Nenhum jogo marcado.</p>}
+        {agenda.length === 0 && <p className="text-sm text-suave">Nenhum jogo marcado.</p>}
         <ul className="flex flex-col">
-          {c.agenda.map((x) => {
+          {agenda.map((x) => {
             const adv = mundo.clube(x.adversario);
             const r = x.resultado;
             const nosso = mundo.clube(c.clube);
@@ -42,19 +45,29 @@ export function Jogos({
               <li key={x.id} className="flex flex-col gap-1 border-b border-white/5 py-2 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="w-20 text-xs text-suave">{dataCurta(x.data)}</span>
-                  <span className="text-xs text-suave">Amistoso</span>
+                  <span
+                    className="w-44 truncate text-xs text-suave"
+                    title={nomeDoCompromisso(c, mundo, x)}
+                  >
+                    {nomeDoCompromisso(c, mundo, x)}
+                  </span>
                   <span className="flex flex-1 items-center justify-end gap-1 text-right">
                     {casa?.nomeCurto}
                     {casa && <Escudo clube={casa} tamanho={18} />}
                   </span>
                   <span className="w-14 text-center font-bold">
                     {r ? `${r.placar[0]} x ${r.placar[1]}` : "x"}
+                    {r?.penaltis ? (
+                      <span className="block text-[0.65rem] font-normal text-suave">
+                        pên. {r.penaltis[0]}x{r.penaltis[1]}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="flex flex-1 items-center gap-1">
                     {fora && <Escudo clube={fora} tamanho={18} />}
                     {fora?.nomeCurto}
                   </span>
-                  {!r && x.data > c.data && (
+                  {!r && x.tipo === "amistoso" && x.data > c.data && (
                     <button
                       type="button"
                       className="rounded px-1 text-xs text-suave hover:bg-white/10"

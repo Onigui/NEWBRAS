@@ -34,6 +34,7 @@ export function NovoJogo({
   const [pais, setPais] = useState("BRA");
   const [busca, setBusca] = useState("");
   const [clubeId, setClubeId] = useState<string | null>(null);
+  const [preparando, setPreparando] = useState(false);
 
   const indices = ed.indices;
   const banco = ed.banco;
@@ -69,19 +70,23 @@ export function NovoJogo({
     : 0;
 
   const comecar = () => {
-    if (!clube) return;
-    const id = novoId();
-    onComecar(
-      novaCarreira(mundoDoBanco(banco), {
-        id,
-        semente: id,
-        tecnico: tecnico.trim() || "Técnico",
-        clube: clube.id,
-        referencia: ed.dataReferencia,
-        versaoBanco: banco.meta.versao,
-        ...(ed.edicoes > 0 && ed.patch ? { patch: ed.patch } : {}),
-      }),
-    );
+    if (!clube || preparando) return;
+    setPreparando(true);
+    // Montar as competições do mundo inteiro leva um ou dois segundos: a tela avisa antes.
+    setTimeout(() => {
+      const id = novoId();
+      onComecar(
+        novaCarreira(mundoDoBanco(banco), {
+          id,
+          semente: id,
+          tecnico: tecnico.trim() || "Técnico",
+          clube: clube.id,
+          referencia: ed.dataReferencia,
+          versaoBanco: banco.meta.versao,
+          ...(ed.edicoes > 0 && ed.patch ? { patch: ed.patch } : {}),
+        }),
+      );
+    }, 30);
   };
 
   const escolher = (c: Clube) => {
@@ -189,7 +194,9 @@ export function NovoJogo({
                 </p>
               )}
               <Botao variante="primario" className="mt-auto py-2 text-base" onClick={comecar}>
-                Começar a carreira no {clube.nomeCurto}
+                {preparando
+                  ? "Preparando as ligas do mundo inteiro…"
+                  : `Começar a carreira no ${clube.nomeCurto}`}
               </Botao>
             </>
           ) : (

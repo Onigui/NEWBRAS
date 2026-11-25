@@ -100,6 +100,11 @@ export interface OpcoesPartida {
   fora: TimePartida;
   /** Mata-mata: pênaltis direto ou prorrogação e depois pênaltis, se empatar. */
   desempate?: Desempate;
+  /**
+   * Jogo de volta: gols da ida, na ordem [casa, fora] deste jogo. Com eles, o desempate só vem
+   * se o placar agregado empatar.
+   */
+  agregado?: readonly [number, number];
   /** Guarda a posição dos 22 e da bola a cada segundo, para o mini-campo. */
   gravarQuadros?: boolean;
   /** Campo neutro: ninguém tem a vantagem de jogar em casa (finais, por exemplo). */

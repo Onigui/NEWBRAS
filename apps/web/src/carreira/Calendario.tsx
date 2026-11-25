@@ -3,7 +3,7 @@
  * Clicar num dia livre a partir de amanhã marca um amistoso nele.
  */
 import { useState } from "react";
-import { marcasDoMes, NOMES_MES, type Carreira } from "@newbras/engine";
+import { agendaCompleta, marcasDoMes, NOMES_MES, type Carreira } from "@newbras/engine";
 import { Escudo } from "../components/Escudo";
 import { Botao } from "../editor/ui";
 import { MarcarAmistoso } from "./Jogos";
@@ -31,7 +31,7 @@ export function Calendario({
   if (!pais) return null;
   const dias = marcasDoMes(mes.ano, mes.mes, pais, mundo.datasFifa);
   const vazios = new Date(Date.UTC(mes.ano, mes.mes - 1, 1)).getUTCDay();
-  const jogoNoDia = new Map(c.agenda.map((x) => [x.data, x]));
+  const jogoNoDia = new Map(agendaCompleta(c).map((x) => [x.data, x]));
   const andar = (d: number) =>
     setMes((m) => {
       const t = m.ano * 12 + (m.mes - 1) + d;

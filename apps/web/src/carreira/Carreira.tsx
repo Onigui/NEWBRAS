@@ -19,6 +19,10 @@ import {
   partidaDoCompromisso,
   proximoCompromisso,
   registrarJogo,
+  agendaCompleta,
+  atualizarCarreira,
+  nomeDoCompromisso,
+  suspensosNaCompeticao,
   type Carreira as CarreiraT,
   type Compromisso,
   type Concentracao,
@@ -31,19 +35,21 @@ import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { AoVivo } from "../partida/AoVivo";
 import { Calendario } from "./Calendario";
+import { Competicoes } from "./Competicoes";
 import { Jogos } from "./Jogos";
 import { Plantel } from "./Plantel";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
 
-type Aba = "inicio" | "plantel" | "escalacao" | "calendario" | "jogos";
+type Aba = "inicio" | "plantel" | "escalacao" | "calendario" | "jogos" | "competicoes";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "inicio", nome: "Início", tecla: "1" },
   { id: "plantel", nome: "Plantel", tecla: "2" },
   { id: "escalacao", nome: "Escalação", tecla: "3" },
   { id: "calendario", nome: "Calendário", tecla: "4" },
   { id: "jogos", nome: "Jogos", tecla: "5" },
+  { id: "competicoes", nome: "Competições", tecla: "6" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -83,14 +89,21 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const hoje = compromissoDoDia(c);
   const proximo = proximoCompromisso(c);
   const jogadores = useMemo(() => elencoParaPartida(c, mundo, c.clube), [c, mundo]);
+  // Suspensos para o próximo jogo oficial entram nos avisos (e ficam fora do jogo).
+  const suspensos = useMemo(() => suspensosNaCompeticao(c, proximo?.competicao), [c, proximo]);
   const avisos = useMemo(() => {
     const m = new Map<string, string>();
     for (const j of jogadores) {
-      const a = avisoPoupar(estadoDe(c, j.id));
+      const a = suspensos.has(j.id) ? "suspenso" : avisoPoupar(estadoDe(c, j.id));
       if (a) m.set(j.id, a);
     }
     return m;
-  }, [c, jogadores]);
+  }, [c, jogadores, suspensos]);
+
+  // Salvamento de uma versão anterior: ganha as competições ao abrir.
+  useEffect(() => {
+    if (c.formato !== 2 || !c.competicoes) mudar((x) => atualizarCarreira(x, mundo));
+  }, [c.formato, c.competicoes, mudar, mundo]);
 
   const escalacao: EscalacaoEditavel = useMemo(() => {
     const e = escalacaoDoTecnico(c, jogadores);
@@ -202,8 +215,8 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         <section className="flex flex-col gap-3 rounded-md border-2 border-placar-borda bg-placar p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-placar text-3xl font-bold">
-              Amistoso {hoje.mando === "casa" ? "contra o" : "na casa do"}{" "}
-              {adversarioHoje?.nomeCurto}
+              {nomeDoCompromisso(c, mundo, hoje)}:{" "}
+              {hoje.mando === "casa" ? "contra o" : "na casa do"} {adversarioHoje?.nomeCurto}
             </h2>
             <div className="flex gap-2">
               <Botao onClick={() => setDia("hub")}>Voltar</Botao>
@@ -291,6 +304,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             )}
             {aba === "calendario" && <Calendario c={c} montado={montado} mudar={mudar} />}
             {aba === "jogos" && <Jogos c={c} montado={montado} mudar={mudar} />}
+            {aba === "competicoes" && <Competicoes c={c} montado={montado} />}
           </section>
         </>
       )}
@@ -385,7 +399,7 @@ function Inicio({
   const { mundo } = montado;
   const proximo = proximoCompromisso(c);
   const adv = proximo ? mundo.clube(proximo.adversario) : undefined;
-  const ultimos = c.agenda
+  const ultimos = agendaCompleta(c)
     .filter((x) => x.resultado)
     .slice(-5)
     .reverse();
@@ -400,8 +414,8 @@ function Inicio({
               <div>
                 <p className="font-placar text-2xl font-bold">{adv.nomeCurto}</p>
                 <p className="text-sm text-suave">
-                  Amistoso {proximo.mando === "casa" ? "em casa" : "fora"},{" "}
-                  {dataCurta(proximo.data)}
+                  {nomeDoCompromisso(c, montado.mundo, proximo)},{" "}
+                  {proximo.mando === "casa" ? "em casa" : "fora"}, {dataCurta(proximo.data)}
                   {proximo.data === c.data
                     ? " (hoje)"
                     : ` (em ${diasEntre(c.data, proximo.data)} dias)`}
@@ -414,7 +428,7 @@ function Inicio({
               <button type="button" className="underline" onClick={onJogos}>
                 Marque um amistoso
               </button>
-              . As ligas e copas chegam na próxima fase.
+              .
             </p>
           )}
         </div>
