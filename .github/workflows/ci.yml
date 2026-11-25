@@ -52,3 +52,29 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  tags:
+    name: Marcar fases concluídas
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Criar as tags que faltam (docs/tags-das-fases.txt)
+        run: |
+          while read -r tag sha; do
+            case "$tag" in ''|'#'*) continue ;; esac
+            if ! git cat-file -e "$sha^{commit}" 2> /dev/null; then
+              echo "::warning::$tag: commit $sha não encontrado"
+            elif git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+              echo "$tag já existe"
+            else
+              git tag "$tag" "$sha"
+              git push origin "refs/tags/$tag"
+              echo "$tag criada em $sha"
+            fi
+          done < docs/tags-das-fases.txt

@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import type { Banco, Clube, Jogador } from "@newbras/data";
 import { NOME_POSICAO } from "@newbras/data";
 import {
+  encaixe,
   escalacaoAutomatica,
+  FORMACOES,
   NOMES_FORMACOES,
   rotuloMinuto,
   simularPartida,
@@ -14,7 +16,9 @@ import {
   type LadoCampo,
   type ResultadoPartida,
   type TimePartida,
+  type Vaga,
 } from "@newbras/engine";
+import { EditorFormacao } from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { procurar, type Indices } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
@@ -48,9 +52,41 @@ const NOME_ESTILO: Record<Estilo, string> = {
 
 interface Escolha {
   clubeId: string;
-  formacao: Formacao;
+  formacao: Formacao | "personalizada";
+  /** Vagas em uso: as da formação pronta ou as arrastadas pelo técnico. */
+  vagas: Vaga[];
   estilo: Estilo;
 }
+
+interface FormacaoSalva {
+  nome: string;
+  vagas: Vaga[];
+}
+
+const CHAVE_FORMACOES = "newbras:formacoes";
+
+/** Formações personalizadas guardadas neste navegador (a carreira guarda as suas na Fase 8). */
+function lerFormacoes(): FormacaoSalva[] {
+  try {
+    const bruto = localStorage.getItem(CHAVE_FORMACOES);
+    const lista: unknown = bruto ? JSON.parse(bruto) : [];
+    return Array.isArray(lista)
+      ? (lista as FormacaoSalva[]).filter((f) => f?.vagas?.length === 11)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function gravarFormacoes(lista: FormacaoSalva[]): void {
+  try {
+    localStorage.setItem(CHAVE_FORMACOES, JSON.stringify(lista));
+  } catch {
+    // Sem armazenamento (navegação privada): a formação vale só nesta sessão.
+  }
+}
+
+const pronta = (formacao: Formacao) => FORMACOES[formacao].map((v) => ({ ...v }));
 
 const paraPartida = (j: Jogador): JogadorPartida => ({
   id: j.id,
@@ -74,7 +110,10 @@ function montarTime(indices: Indices, escolha: Escolha): TimePartida | null {
     id: clube.id,
     nome: clube.nomeCurto,
     jogadores,
-    escalacao: escalacaoAutomatica(jogadores, escolha.formacao),
+    escalacao: escalacaoAutomatica(
+      jogadores,
+      escolha.formacao === "personalizada" ? escolha.vagas : escolha.formacao,
+    ),
     tatica: { estilo: escolha.estilo, marcacao: "leve", concentracao: "equilibrada" },
     cpu: true,
   };
@@ -85,11 +124,13 @@ export function Amistoso({ onBack }: { onBack: () => void }) {
   const [casa, setCasa] = useState<Escolha>({
     clubeId: "bra-flamengo",
     formacao: "4-4-2",
+    vagas: pronta("4-4-2"),
     estilo: "equilibrado",
   });
   const [fora, setFora] = useState<Escolha>({
     clubeId: "bra-palmeiras",
     formacao: "4-3-3",
+    vagas: pronta("4-3-3"),
     estilo: "equilibrado",
   });
   const [rodada, setRodada] = useState(1);
@@ -208,8 +249,22 @@ function EscolhaTime({
   indices: Indices;
 }) {
   const [busca, setBusca] = useState("");
+  const [salvas, setSalvas] = useState<FormacaoSalva[]>(lerFormacoes);
+  const [nomeSalvar, setNomeSalvar] = useState("");
   const clube = indices.clubePorId.get(escolha.clubeId);
   const achados = useMemo(() => procurar(banco, busca, 8).clubes, [banco, busca]);
+  // Quem a escalação automática põe em cada vaga, para mostrar os nomes no campo.
+  const time = useMemo(() => montarTime(indices, escolha), [indices, escolha]);
+  const porId = new Map(time?.jogadores.map((j) => [j.id, j]) ?? []);
+  const titulares = time?.escalacao.titulares ?? [];
+  const nomes = titulares.map((id) => porId.get(id)?.nome.split(" ").at(-1) ?? "");
+  const foraDePosicao = new Set(
+    titulares.flatMap((id, i) => {
+      const j = porId.get(id);
+      const vaga = escolha.vagas[i];
+      return j && vaga && encaixe(j, vaga) < 1 ? [i] : [];
+    }),
+  );
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <p className="text-xs font-bold text-suave">{titulo}</p>
@@ -251,11 +306,36 @@ function EscolhaTime({
         <Campo rotulo="Formação">
           <select
             className={estiloCampo}
-            value={escolha.formacao}
-            onChange={(e) => onMudar({ ...escolha, formacao: e.target.value as Formacao })}
+            value={escolha.formacao === "personalizada" ? "personalizada" : escolha.formacao}
+            onChange={(e) => {
+              const valor = e.target.value;
+              if (valor === "personalizada") onMudar({ ...escolha, formacao: "personalizada" });
+              else if (valor.startsWith("salva:")) {
+                const salva = salvas.find((f) => `salva:${f.nome}` === valor);
+                if (salva)
+                  onMudar({
+                    ...escolha,
+                    formacao: "personalizada",
+                    vagas: salva.vagas.map((v) => ({ ...v })),
+                  });
+              } else
+                onMudar({
+                  ...escolha,
+                  formacao: valor as Formacao,
+                  vagas: pronta(valor as Formacao),
+                });
+            }}
           >
             {NOMES_FORMACOES.map((f) => (
-              <option key={f}>{f}</option>
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+            <option value="personalizada">Personalizada</option>
+            {salvas.map((f) => (
+              <option key={f.nome} value={`salva:${f.nome}`}>
+                Minha: {f.nome}
+              </option>
             ))}
           </select>
         </Campo>
@@ -273,6 +353,39 @@ function EscolhaTime({
           </select>
         </Campo>
       </div>
+      {time && (
+        <EditorFormacao
+          vagas={escolha.vagas}
+          nomes={nomes}
+          foraDePosicao={foraDePosicao}
+          onMudar={(vagas) => onMudar({ ...escolha, formacao: "personalizada", vagas })}
+        />
+      )}
+      {escolha.formacao === "personalizada" && (
+        <div className="flex gap-2">
+          <input
+            className={estiloCampo}
+            value={nomeSalvar}
+            placeholder="Nome para guardar esta formação"
+            onChange={(e) => setNomeSalvar(e.target.value)}
+          />
+          <Botao
+            onClick={() => {
+              const nome = nomeSalvar.trim();
+              if (!nome) return;
+              const lista = [
+                ...salvas.filter((f) => f.nome !== nome),
+                { nome, vagas: escolha.vagas },
+              ];
+              gravarFormacoes(lista);
+              setSalvas(lista);
+              setNomeSalvar("");
+            }}
+          >
+            Guardar
+          </Botao>
+        </div>
+      )}
     </div>
   );
 }

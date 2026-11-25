@@ -23,8 +23,8 @@ import {
   noQuadro,
   type Ponto,
 } from "./campo";
-import { encaixe } from "./escalacao";
-import { FORMACOES, type Vaga } from "./formacoes";
+import { encaixe, vagasDaEscalacao } from "./escalacao";
+import type { Vaga } from "./formacoes";
 import {
   TATICA_PADRAO,
   type Evento,
@@ -152,7 +152,7 @@ export class Partida {
   // ---------------------------------------------------------------- montagem
 
   private montarTime(lado: LadoCampo, dados: TimePartida): Time {
-    const formacao = FORMACOES[dados.escalacao.formacao];
+    const formacao = vagasDaEscalacao(dados.escalacao);
     const porId = new Map(dados.jogadores.map((j) => [j.id, j]));
     const atletas: Atleta[] = [];
     const vagas: (Atleta | null)[] = formacao.map(() => null);
@@ -698,20 +698,23 @@ export class Partida {
     const vel = this.att(dono, "velocidade");
     const angulo = Math.abs(q.y - MEIO_Y);
 
+    // Os pesos usam o atributo comparado com a força do próprio jogador: decide o estilo
+    // (quem finaliza bem chuta mais), sem fazer times fortes chutarem mais só por serem fortes.
+    const nivel = Math.max(40, dono.j.forca);
     let wChute = 0;
-    if (d <= 11) wChute = 1.45 * (fin / 70);
-    else if (d <= 18) wChute = 0.45 * (fin / 70);
-    else if (d <= 25) wChute = 0.1 * (longe / 70) ** 2;
-    else if (d <= 32) wChute = 0.025 * (longe / 70) ** 3;
+    if (d <= 11) wChute = 1.45 * (fin / nivel);
+    else if (d <= 18) wChute = 0.45 * (fin / nivel);
+    else if (d <= 25) wChute = 0.1 * (longe / nivel) ** 2;
+    else if (d <= 32) wChute = 0.025 * (longe / nivel) ** 3;
     if (angulo > 18 && d < 20) wChute *= 0.25;
     if (estilo === "ataque") wChute *= 1.15;
 
     let wCruz = 0;
     if (q.x > 78 && angulo > 14)
-      wCruz = 1.5 * (cru / 70) * (time.tatica.concentracao === "laterais" ? 1.4 : 1);
+      wCruz = 1.5 * (cru / nivel) * (time.tatica.concentracao === "laterais" ? 1.4 : 1);
 
-    const wDrible = pertos > 0 || maisPerto < 3 ? 0.3 * (dri / 70) ** 2 : 0.04 * (dri / 70);
-    let wConduz = maisPerto > 6 ? 1.8 * (vel / 70) : 0.25;
+    const wDrible = pertos > 0 || maisPerto < 3 ? 0.3 * (dri / nivel) ** 2 : 0.04 * (dri / nivel);
+    let wConduz = maisPerto > 6 ? 1.8 * (vel / nivel) : 0.25;
     if (q.x > 88) wConduz *= 0.4;
     if (estilo === "ataque") wConduz *= 1.1;
     let wPasse = 2.6 + (pertos > 0 ? 1 : 0) + (q.x < 35 ? 1 : 0);
@@ -806,7 +809,7 @@ export class Partida {
       (escolha.linha < 1.5 ? 0.15 : escolha.linha < 3 ? 0.04 : 0) -
       (escolha.livre < 1.5 ? 0.15 : escolha.livre < 3.5 ? 0.04 : 0) -
       (pertos > 0 ? 0.03 : 0) +
-      (passe - 65) / 250;
+      (passe - this.marcacaoPerto(escolha.c, adversarios)) / 250;
     chance = limitar(chance, 0.3, 0.98);
     const duracao = Math.max(1, Math.round(escolha.dist / 16));
 
@@ -926,6 +929,25 @@ export class Partida {
     this.ultimoPasse = null;
     this.acaoEm = this.t + 1;
     return true;
+  }
+
+  /**
+   * Nível de quem marca um jogador: média de marcação e desarme do adversário mais perto.
+   * Serve de régua para passe e chute serem relativos (70 quando ninguém está perto).
+   */
+  private marcacaoPerto(a: Atleta, adversarios: readonly Atleta[]): number {
+    let perto: Atleta | null = null;
+    let menor = 8;
+    for (const o of adversarios) {
+      if (o.vaga === 0) continue;
+      const d = distancia(o.pos, a.pos);
+      if (d < menor) {
+        menor = d;
+        perto = o;
+      }
+    }
+    if (!perto) return 65;
+    return 0.5 * this.att(perto, "marcacao") + 0.5 * this.att(perto, "desarme");
   }
 
   private falta(infrator: Atleta, vitima: Atleta): void {
@@ -1106,7 +1128,9 @@ export class Partida {
       xg = tipo === "cabeca" ? 0.6 * Math.exp(-d / 5.5) : 0.95 * Math.exp(-d / 7.2);
       xg *= limitar(1.15 - Math.max(0, angulo - 4) / 22, 0.25, 1.1);
       xg *= 1 - 0.18 * Math.min(2, pertos);
-      xg *= (habilidade / 70) ** 1.6 * 0.55;
+      // Habilidade contra a marcação de quem está perto: craque contra zaga forte vale menos.
+      const defesaPerto = this.marcacaoPerto(dono, this.emCampoDe(defesa));
+      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.55;
     }
     xg = limitar(xg, 0.005, 0.95);
     time.est.chutes++;
@@ -1137,7 +1161,7 @@ export class Partida {
         ? 0.88
         : tipo === "falta"
           ? 0.38
-          : limitar(0.27 + xg * 1.1 + (habilidade - 65) / 250, 0.15, 0.9);
+          : limitar(0.27 + xg * 1.1 + (habilidade - Math.max(40, dono.j.forca)) / 250, 0.15, 0.9);
     if (!this.rng.chance(noAlvo)) {
       if (this.rng.chance(0.06)) {
         this.registrar("chute-trave", base);
@@ -1167,7 +1191,8 @@ export class Partida {
             : 0.5 * this.att(goleiro, "reflexo") +
               0.35 * this.att(goleiro, "colocacao") +
               0.15 * this.att(goleiro, "saida");
-      chanceGol *= limitar(1 - (nota - 70) / 140, 0.6, 1.35);
+      // Goleiro contra o nível de quem chuta, não contra uma régua fixa.
+      chanceGol *= limitar(1 - (nota - habilidade) / 140, 0.6, 1.35);
     } else chanceGol = Math.max(chanceGol, 0.85);
     chanceGol = limitar(chanceGol, 0.02, 0.98);
 

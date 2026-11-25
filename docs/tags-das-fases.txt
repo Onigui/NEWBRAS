@@ -1,0 +1,8 @@
+# Marco de cada fase concluída: tag e commit do main.
+# A CI (job "Marcar fases concluídas") cria no GitHub as tags que ainda não existem.
+# Ao fechar uma fase, a sessão acrescenta uma linha com o commit do merge.
+fase-1 1723e338ee8b90eb047e12ee03266284934dff88
+fase-2 fab88422fbbfd6cbc0497d5f5f4a37b6bd3213cc
+fase-3 c1a07c1d470866f8d44cdfc8e73b8593653b9cee
+fase-4 b7759575138af676a3be789a66aabfba987b4a9d
+fase-5 62eabbd0df4b37196d1eb54042eed581384b191c
