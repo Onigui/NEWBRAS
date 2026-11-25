@@ -4,7 +4,7 @@ import {
   type ClubeEntrada,
   type JogadorEntrada,
 } from "@newbras/data";
-import { Rng, gerarJogador, salarioBase } from "@newbras/engine";
+import { Rng, fracaoDoPotencial, gerarJogador, idadeEm, salarioBase } from "@newbras/engine";
 import { pais } from "../mundo/paises";
 import { DATA_FONTE_ELENCOS, DATA_REFERENCIA } from "../referencia";
 import { NOTAVEIS } from "./notaveis";
@@ -155,7 +155,9 @@ export function forcaPeloValor(
   const forca = limitar(pelaValor + veterano - juventude * 2.5, 35, 92);
   const potencial =
     idade <= 22 ? pelaValor + juventude * 1.5 : idade <= 26 ? forca + (27 - idade) : forca;
-  return { forca, potencial: limitar(potencial, forca, 95) };
+  // Promessa acima de 90 cresce pela metade: joia de verdade (Yamal, por exemplo) tem ajuste à mão.
+  const comprimido = potencial > 90 ? 90 + (potencial - 90) / 2 : potencial;
+  return { forca, potencial: limitar(comprimido, forca, 95) };
 }
 
 /** "Iñigo Martínez" → "inigo-martinez". */
@@ -172,6 +174,29 @@ export function slug(texto: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Ajuste à mão para o nome, se for o mesmo jogador: um homônimo com idade bem diferente
+ * (o Luis Suárez colombiano do Sporting, por exemplo) não herda os dados do uruguaio.
+ */
+function notavelDaLinha(nome: string, idade: number | undefined) {
+  const n = NOTAVEIS[nome];
+  if (!n?.nascimento || idade === undefined) return n;
+  const idadeNotavel = idadeEm(n.nascimento, DATA_FONTE_ELENCOS);
+  return Math.abs(idadeNotavel - idade) <= 2 ? n : undefined;
+}
+
+/**
+ * Auge estimado de quem já passou dele, pela mesma curva de idade do jogo. Limitado a 8 pontos
+ * acima da força de hoje e a 92: auge acima disso só para quem tem ajuste à mão (as lendas).
+ */
+const AUGE_ESTIMADO_MAXIMO = 92;
+
+export function picoPelaIdade(forca: number, idade: number, posicao: Posicao): number {
+  const fracao = fracaoDoPotencial(Math.min(idade, 36), posicao);
+  if (idade < 28 || fracao >= 1) return forca;
+  return Math.max(forca, Math.min(Math.round(forca / fracao), forca + 8, AUGE_ESTIMADO_MAXIMO));
 }
 
 /** Nascimento aproximado a partir da idade na data da fonte. */
@@ -215,7 +240,7 @@ export function jogadoresReais(
       const nacionalidade = l.pais ? PAIS_POR_NOME_EN[l.pais] : clube.pais;
       if (!nacionalidade) throw new Error(`país sem código: "${l.pais}" (${l.nome})`);
       const codigo = l.posicoes[0] ?? "Midfielder";
-      const notavel = NOTAVEIS[l.nome];
+      const notavel = notavelDaLinha(l.nome, l.idade);
       const [posicaoFonte, ladoFonte] = POSICAO[codigo] ?? ["M", "C"];
       const posicao = notavel?.posicao ?? posicaoFonte;
       const aConferir: NonNullable<JogadorEntrada["aConferir"]> = [];
@@ -225,7 +250,12 @@ export function jogadoresReais(
       const idade = l.idade ?? 24;
       const modelo = forcaPeloValor(rng, l.valorMil, idade, clube.nivel);
       const forca = notavel?.forca ?? modelo.forca;
-      const potencial = Math.max(forca, notavel?.forca ? forca : modelo.potencial);
+      // O potencial é o teto da carreira e não baixa com a idade: o veterano guarda o auge.
+      // Com auge conhecido (ajuste à mão), ele manda; sem, o auge vem da curva de idade.
+      const potencial =
+        notavel?.forcaAuge !== undefined
+          ? Math.max(forca, notavel.forcaAuge)
+          : Math.max(forca, modelo.potencial, picoPelaIdade(forca, idade, posicao));
       const nascimento = notavel?.nascimento ?? nascimentoPelaIdade(rng, idade);
       if (!notavel?.nascimento) aConferir.push("nascimento");
 

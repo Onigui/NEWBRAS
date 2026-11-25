@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   camisasDoClube,
+  ELENCO_MAXIMO,
   NOME_CARACTERISTICA,
   NOME_POSICAO,
   type Banco,
@@ -15,7 +16,7 @@ import { FormClube, NOME_REPUTACAO } from "./FormClube";
 import type { Indices } from "./indices";
 import { Botao } from "./ui";
 
-type Aba = "elenco" | "dados" | "visual";
+type Aba = "elenco" | "base" | "dados" | "visual";
 
 interface Props {
   clube: Clube;
@@ -39,8 +40,11 @@ export function FichaClube(props: Props) {
   const valido = !indices.invalidos.has(clube.id);
   const liga = indices.ligaDoClube.get(clube.id);
   const nomePais = indices.paises.find((p) => p.codigo === clube.pais)?.nome ?? clube.pais;
-  const media = elenco.length
-    ? Math.round(elenco.reduce((s, j) => s + j.forca, 0) / elenco.length)
+  // A base fica separada do elenco profissional, que tem limite de ELENCO_MAXIMO.
+  const profissionais = elenco.filter((j) => !j.base);
+  const base = elenco.filter((j) => j.base);
+  const media = profissionais.length
+    ? Math.round(profissionais.reduce((s, j) => s + j.forca, 0) / profissionais.length)
     : 0;
 
   return (
@@ -61,7 +65,7 @@ export function FichaClube(props: Props) {
           </p>
           <p className={`mt-1 text-sm font-bold ${valido ? "text-[#9fd39a]" : "text-[#ff8a7e]"}`}>
             {valido
-              ? `Time válido: ${elenco.length} jogadores, força média ${media}.`
+              ? `Time válido: ${profissionais.length} de ${ELENCO_MAXIMO} profissionais, força média ${media}${base.length ? `; ${base.length} na base` : ""}.`
               : `Time inválido: precisa de pelo menos 1 goleiro e 11 jogadores de linha (tem ${goleiros} e ${elenco.length - goleiros}).`}
           </p>
         </div>
@@ -80,7 +84,8 @@ export function FichaClube(props: Props) {
       <nav className="flex gap-1 border-b border-placar-borda px-4" aria-label="Partes do time">
         {(
           [
-            ["elenco", `Elenco (${elenco.length})`],
+            ["elenco", `Elenco (${profissionais.length})`],
+            ["base", `Base (${base.length})`],
             ["dados", "Dados do time"],
             ["visual", "Escudo e camisas"],
           ] as const
@@ -98,11 +103,13 @@ export function FichaClube(props: Props) {
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {aba === "elenco" && (
+        {(aba === "elenco" || aba === "base") && (
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-suave">
-                Clique num jogador para editar. Botão direito transfere.
+                {aba === "base"
+                  ? "Jogadores da categoria de base: não contam no limite do elenco até serem promovidos."
+                  : "Clique num jogador para editar. Botão direito transfere."}
               </p>
               <Botao variante="primario" onClick={props.onNovoJogador}>
                 Adicionar jogador
@@ -124,7 +131,7 @@ export function FichaClube(props: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {elenco.map((j) => (
+                  {(aba === "base" ? base : profissionais).map((j) => (
                     <tr
                       key={j.id}
                       className="cursor-pointer border-t border-placar-borda/60 hover:bg-[#24364a]"

@@ -51,6 +51,27 @@ describe("gerarNome", () => {
 });
 
 describe("gerarJogador", () => {
+  it("craques novos são raros: gerado comum para em 92 e fenômeno nasce jovem", () => {
+    let acima = 0;
+    for (let i = 0; i < 40_000; i++) {
+      const j = gerarJogador(new Rng(`raro-${i}`), {
+        id: `raro-${i}`,
+        nacionalidade: "BRA",
+        grupoNomes: "pt-BR",
+        posicao: "A",
+        nivel: 95,
+        hoje: "2026-07-01",
+      });
+      expect(j.potencial).toBeLessThanOrEqual(97);
+      if (j.potencial > 92) {
+        acima++;
+        expect(idadeEm(j.nascimento, "2026-07-01")).toBeLessThanOrEqual(21);
+      }
+    }
+    // 1 em 20.000 e só entre os jovens: em 40.000 sorteios, quase nenhum.
+    expect(acima).toBeLessThanOrEqual(4);
+  });
+
   it("gera jogadores sempre válidos pelo esquema, em todas as posições", () => {
     const rng = new Rng("validos");
     for (let i = 0; i < 500; i++) {

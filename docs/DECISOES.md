@@ -88,6 +88,29 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 - Os perfis dos dois no auge são feitos à mão (`atributosAuge` em `notaveis.ts`) e a força de hoje segue a idade (CR7 com 41 anos, Messi com 39).
 - Para o atacante, cabeceio e passe pesam 1 e força física 0,5 na força: cabeceio fraco puxa a força para baixo, mas não impede um craque de técnica.
 
+## Potencial, craques novos e tamanho dos elencos (25/11/2026)
+
+**Potencial é o teto da carreira e não baixa.** Serve para comparar até onde o jogador chegou e quanto ele já caiu. Veterano guarda o auge: Neymar tem força 80 hoje e potencial 95.
+
+- Lendas vivas têm o auge à mão em `notaveis.ts` (Neymar, Modrić, De Bruyne, Salah, Van Dijk, Kane, Neuer, Thiago Silva, Hulk, Di María, Kanté e outros), com posição, nascimento e destaques. Ajuste à mão só vale se a idade da fonte bater (±2 anos), para homônimos não herdarem dados.
+- Sem ajuste à mão, o auge de quem passou dos 28 vem da curva de idade: até 8 pontos acima da força de hoje e no máximo 92.
+- Estrela: força do auge 85 ou mais, ou força de hoje 82 ou mais.
+
+**Craques novos são raros.** O mundo já recebe as lendas que renascem.
+
+| Origem                | Regra                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Jogador gerado        | Potencial acima de 86 cresce um terço do sorteio, até 92                                      |
+| Fenômeno gerado       | 1 em 20.000, só com até 20 anos, potencial de 93 a 97 (nenhum no mundo inicial)               |
+| Promessa real (fonte) | Acima de 90 cresce pela metade, até 95; joias de verdade (Yamal 96, Mbappé, Haaland 95) à mão |
+| Todos, menos o CR7    | Nunca acima de 97                                                                             |
+
+**Elenco profissional: no máximo 30 por clube** (`ELENCO_MAXIMO`), como a lista A da CBF a partir de 2027; as ligas europeias inscrevem 25 mais os jovens. A base fica fora da conta, numa aba própria, com até 15 jogadores.
+
+- Onde a fonte trazia mais de 30 (Vasco com 54, Chapecoense com 58), o clube fica com os melhores, garantindo 3 goleiros, 4 laterais, 5 zagueiros, 6 meias e 4 atacantes.
+- Quem sobra com até 20 anos vai para a base do próprio clube; o resto vai para um clube do mesmo país com vaga (até 28 no elenco), do nível mais perto da força do jogador. O clube que cede não perde força e ninguém é inventado.
+- A validação do banco avisa quando um clube passa de 30 profissionais.
+
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 
 Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).

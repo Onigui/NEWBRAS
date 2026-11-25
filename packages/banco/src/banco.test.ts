@@ -2,6 +2,8 @@ import {
   atributosDaPosicao,
   CONFEDERACOES,
   elencoValido,
+  BASE_MAXIMA,
+  ELENCO_MAXIMO,
   FORCA_RECORDE,
   FORCA_TETO,
   forcaDosAtributos,
@@ -15,6 +17,9 @@ import { DATA_REFERENCIA, montarBanco } from "./montar";
 import { PAISES } from "./mundo/paises";
 
 const banco = montarBanco();
+/** Jogadores gerados do clube (o clube pode ter recebido também quem sobrou em outro elenco). */
+const geradosDe = (clube: string) =>
+  banco.jogadores.filter((j) => j.clube === clube && j.id.startsWith(`${clube}-`));
 
 describe("países e seleções", () => {
   it("tem as 211 seleções filiadas à FIFA, sem repetir código", () => {
@@ -169,6 +174,22 @@ describe("atributos", () => {
     expect(messi?.caracteristicas).toEqual(["drible", "finalizacao"]);
   });
 
+  it("o potencial é o auge da carreira e não baixa com a idade", () => {
+    const nome = (n: string) => banco.jogadores.find((j) => j.nome === n && j.forcaAuge)!;
+    const neymar = nome("Neymar");
+    expect(neymar.potencial).toBe(95);
+    expect(neymar.forca).toBeLessThan(neymar.potencial);
+    expect(neymar.estrela).toBe(true);
+    expect(neymar.posicao).toBe("A");
+    for (const n of ["Luka Modrić", "Thiago Silva", "Hulk", "Ángel Di María", "Kevin De Bruyne"])
+      expect(nome(n).potencial, n).toBeGreaterThan(nome(n).forca);
+    // Homônimo não herda o ajuste: o Luis Suárez do Sporting é colombiano e jovem.
+    const suarezSporting = banco.jogadores.find(
+      (j) => j.nome === "Luis Suárez" && j.clube === "por-sporting",
+    );
+    expect(suarezSporting?.forcaAuge).toBeUndefined();
+  });
+
   it("os perfis do auge feitos à mão dão exatamente a força do auge", () => {
     for (const n of Object.values(NOTAVEIS))
       if (n.atributosAuge)
@@ -193,6 +214,39 @@ describe("atributos", () => {
       (j.atributos.velocidade ?? 0) / j.forca;
     const maisRapido = [...icones].sort((a, b) => fracaoVelocidade(b) - fracaoVelocidade(a))[0];
     expect(maisRapido?.id).toBe("icone-gareth-bale");
+  });
+});
+
+describe("tamanho dos elencos", () => {
+  it(`nenhum clube passa de ${ELENCO_MAXIMO} profissionais; a base fica separada`, () => {
+    const profissionais = new Map<string, number>();
+    const base = new Map<string, number>();
+    for (const j of banco.jogadores) {
+      if (!j.clube) continue;
+      const mapa = j.base ? base : profissionais;
+      mapa.set(j.clube, (mapa.get(j.clube) ?? 0) + 1);
+    }
+    for (const [clube, n] of profissionais) expect(n, clube).toBeLessThanOrEqual(ELENCO_MAXIMO);
+    // Os ícones também começam na base; fora eles, cada clube tem até BASE_MAXIMA.
+    const icones = banco.jogadores.filter((j) => j.id.startsWith("icone-"));
+    for (const [clube, n] of base) {
+      const iconesNoClube = icones.filter((j) => j.clube === clube).length;
+      expect(n - iconesNoClube, clube).toBeLessThanOrEqual(BASE_MAXIMA);
+    }
+    expect(profissionais.get("bra-vasco")).toBe(ELENCO_MAXIMO);
+    expect(base.get("bra-vasco") ?? 0).toBeGreaterThan(0);
+  });
+
+  it("quem saiu dos elencos grandes foi para clubes do mesmo país", () => {
+    const clubePorId = new Map(banco.clubes.map((c) => [c.id, c]));
+    const transferidos = banco.jogadores.filter(
+      (j) => j.clube && !j.id.startsWith(`${j.clube}-`) && !j.id.startsWith("icone-"),
+    );
+    expect(transferidos.length).toBeGreaterThan(50);
+    for (const j of transferidos) {
+      const origem = banco.clubes.find((c) => j.id.startsWith(`${c.id}-`));
+      if (origem) expect(clubePorId.get(j.clube!)?.pais, j.id).toBe(origem.pais);
+    }
   });
 });
 
@@ -382,7 +436,8 @@ describe("MLS e Saudi Pro League com jogadores reais", () => {
 
   it("veteranos estão em declínio: força atual bem abaixo do auge", () => {
     for (const nome of ["Lionel Messi", "Cristiano Ronaldo", "Luis Suárez", "Marco Reus"]) {
-      const j = jogador(nome);
+      // O Luis Suárez colombiano do Sporting é homônimo e não tem auge guardado.
+      const j = banco.jogadores.find((x) => x.nome === nome && x.forcaAuge !== undefined)!;
       expect(j.forcaAuge! - j.forca, nome).toBeGreaterThanOrEqual(10);
     }
   });
@@ -872,7 +927,7 @@ describe("jogadores reais: Série A 2026", () => {
   it("as outras divisões seguem com elencos gerados", () => {
     const serieB = banco.competicoes.find((c) => c.id === "bra-serie-b")!;
     const clube = serieB.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -896,7 +951,7 @@ describe("jogadores reais: Premier League 2026/27", () => {
   it("a Championship segue com elencos gerados", () => {
     const championship = banco.competicoes.find((c) => c.id === "eng-championship")!;
     const clube = championship.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -920,7 +975,7 @@ describe("jogadores reais: LaLiga 2026/27", () => {
   it("a LaLiga 2 segue com elencos gerados", () => {
     const segunda = banco.competicoes.find((c) => c.id === "esp-laliga-2")!;
     const clube = segunda.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -944,7 +999,7 @@ describe("jogadores reais: Serie A 2026/27", () => {
   it("a Serie B segue com elencos gerados", () => {
     const serieB = banco.competicoes.find((c) => c.id === "ita-serie-b")!;
     const clube = serieB.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -966,7 +1021,7 @@ describe("jogadores reais: Bundesliga 2026/27", () => {
   it("a 2. Bundesliga segue com elencos gerados", () => {
     const segunda = banco.competicoes.find((c) => c.id === "ger-2-bundesliga")!;
     const clube = segunda.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -993,7 +1048,7 @@ describe("jogadores reais: Ligue 1 2026/27", () => {
   it("a Ligue 2 segue com elencos gerados", () => {
     const ligue2 = banco.competicoes.find((c) => c.id === "fra-ligue-2")!;
     const clube = ligue2.participantes.fixos[0]!;
-    expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+    expect(geradosDe(clube)).toHaveLength(25);
   });
 });
 
@@ -1034,7 +1089,7 @@ describe("jogadores reais: ligas de nível 2", () => {
   it("as segundas divisões seguem com elencos gerados", () => {
     for (const id of ["por-liga-portugal-2", "arg-primera-nacional", "jpn-j2"]) {
       const clube = banco.competicoes.find((c) => c.id === id)!.participantes.fixos[0]!;
-      expect(banco.jogadores.filter((j) => j.clube === clube)).toHaveLength(25);
+      expect(geradosDe(clube)).toHaveLength(25);
     }
   });
 });
