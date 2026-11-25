@@ -12,7 +12,7 @@ import { Partida } from "@newbras/engine";
 export type Velocidade = "rapida" | "normal" | "lenta";
 
 /** Segundos de jogo por segundo real, já contando que os lances de perigo andam devagar. */
-export const RITMO: Record<Velocidade, number> = { rapida: 40, normal: 22, lenta: 10.8 };
+export const RITMO: Record<Velocidade, number> = { rapida: 50, normal: 28, lenta: 13.5 };
 export const NOME_VELOCIDADE: Record<Velocidade, string> = {
   rapida: "Rápida (3 min)",
   normal: "Normal (5 min)",

@@ -62,6 +62,19 @@ export const PESOS: Readonly<Record<Posicao, Atributos>> = {
   },
 };
 
+/**
+ * Atributos que não entram na força da posição, mas que o jogador costuma ter bem acima dos
+ * outros: o meia que finaliza e cruza, o atacante que arma, o lateral que chuta de longe.
+ * Sem isso, só os atacantes sabem fazer gol.
+ */
+export const SECUNDARIOS: Readonly<Record<Posicao, readonly Atributo[]>> = {
+  G: [],
+  L: ["chuteLonge", "finalizacao"],
+  Z: ["passe", "chuteLonge"],
+  M: ["finalizacao", "cruzamento"],
+  A: ["armacao", "cruzamento"],
+};
+
 const limitar = (v: number) => Math.max(1, Math.min(100, Math.round(v)));
 
 /** Força pela média ponderada dos atributos da posição. */
@@ -184,7 +197,13 @@ export function gerarAtributos(p: PerfilAtributos): Atributos {
 
   for (const a of lista) {
     const peso = PESOS[p.posicao][a] ?? 0;
-    r[a] = limitar(peso ? base + rng.entre(-7, 5) : base - rng.entre(8, 26));
+    r[a] = limitar(
+      peso
+        ? base + rng.entre(-7, 5)
+        : SECUNDARIOS[p.posicao].includes(a)
+          ? base - rng.entre(3, 14)
+          : base - rng.entre(8, 26),
+    );
   }
 
   // Características acima dos outros atributos; com só uma, a segunda fica longe.

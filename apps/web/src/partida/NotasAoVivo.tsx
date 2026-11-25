@@ -3,6 +3,7 @@
  * mal (nota baixa, fôlego no fim) e decidir a troca sem tirar os olhos do jogo.
  */
 import type { EstatisticasJogador, LadoCampo, TimePartida } from "@newbras/engine";
+import { IconeHumor } from "./Resumo";
 
 const SIGLA = { G: "GOL", L: "LAT", Z: "ZAG", M: "MEI", A: "ATA" } as const;
 
@@ -47,6 +48,9 @@ export function NotasAoVivo({
                   <th className="py-0.5 text-right font-normal" title="Minutos em campo">
                     Min
                   </th>
+                  <th className="py-0.5 text-right font-normal" title="Gols / assistências">
+                    G/A
+                  </th>
                   <th className="py-0.5 text-right font-normal" title="Passes certos / tentados">
                     Passes
                   </th>
@@ -66,13 +70,9 @@ export function NotasAoVivo({
                       className={`border-b border-placar-borda/40 ${saiu ? "opacity-45" : ""}`}
                     >
                       <td className="max-w-0 truncate py-1">
+                        <IconeHumor humor={j.humor} />
                         <span className="mr-1 text-suave">{dados ? SIGLA[dados.posicao] : ""}</span>
                         {dados?.nome.split(" ").slice(-2).join(" ")}
-                        {j.gols > 0 && (
-                          <span className="ml-1" title={`${j.gols} gol(s)`}>
-                            {"⚽".repeat(j.gols)}
-                          </span>
-                        )}
                         {j.amarelos > 0 && (
                           <span className="ml-1 text-[#f5d020]" title="Amarelo">
                             ▮
@@ -90,6 +90,9 @@ export function NotasAoVivo({
                         )}
                       </td>
                       <td className="py-1 text-right tabular-nums">{j.minutos}</td>
+                      <td className="py-1 text-right tabular-nums">
+                        {j.gols}/{j.assistencias}
+                      </td>
                       <td className="py-1 text-right tabular-nums">
                         {j.passesCertos}/{j.passes}
                       </td>
