@@ -5,16 +5,36 @@ import { MainMenu } from "./screens/MainMenu";
 import { ComingSoon } from "./screens/ComingSoon";
 import { Editor } from "./screens/Editor";
 import { Amistoso } from "./screens/Amistoso";
+import type { Carreira as CarreiraT } from "@newbras/engine";
+import { Carreira } from "./carreira/Carreira";
+import { CarregarJogo } from "./carreira/CarregarJogo";
+import { NovoJogo } from "./carreira/NovoJogo";
 
 export function App() {
   const [screen, setScreen] = useState<ScreenId | null>(null);
   const [lastOpened, setLastOpened] = useState<ScreenId | null>(null);
+  const [carreira, setCarreira] = useState<CarreiraT | null>(null);
 
   const open = (id: ScreenId) => {
     setLastOpened(id);
     setScreen(id);
   };
 
+  if (carreira)
+    return (
+      <Carreira
+        key={carreira.id}
+        inicial={carreira}
+        onSair={() => {
+          setCarreira(null);
+          setScreen(null);
+        }}
+      />
+    );
+  if (screen === "novo-jogo")
+    return <NovoJogo onBack={() => setScreen(null)} onComecar={setCarreira} />;
+  if (screen === "carregar")
+    return <CarregarJogo onBack={() => setScreen(null)} onCarregar={setCarreira} />;
   if (screen === "editor") return <Editor onBack={() => setScreen(null)} />;
   if (screen === "amistoso") return <Amistoso onBack={() => setScreen(null)} />;
 

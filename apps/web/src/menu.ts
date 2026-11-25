@@ -17,14 +17,15 @@ export const MENU: readonly MenuItem[] = [
     label: "Novo jogo",
     key: "n",
     description:
-      "Escolha os países e ligas, quantos técnicos humanos vão jogar e o time de cada um.",
+      "Escolha seu nome e o clube; a carreira começa na pré-temporada do país, com amistosos marcados.",
     fase: 8,
   },
   {
     id: "carregar",
     label: "Carregar jogo",
     key: "c",
-    description: "Continue uma carreira salva com F2 durante o jogo.",
+    description:
+      "Continue uma carreira salva (ela se salva sozinha; F2 salva na hora) ou abra um arquivo.",
     fase: 8,
   },
   {

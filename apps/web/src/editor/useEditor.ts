@@ -17,6 +17,7 @@ import {
   type Jogador,
   type Patch,
 } from "@newbras/data";
+import { carregarBase } from "../dados/base";
 import { apagarPatch, lerPatchSalvo, salvarPatch } from "./armazenamento";
 import { montarIndices } from "./indices";
 
@@ -35,15 +36,7 @@ export function useEditor() {
 
   useEffect(() => {
     let vivo = true;
-    const worker = new Worker(new URL("./banco.worker.ts", import.meta.url), { type: "module" });
-    const banco = new Promise<{ banco: Banco; dataReferencia: string }>((resolve, reject) => {
-      worker.onmessage = (
-        e: MessageEvent<{ ok: boolean; banco: Banco; dataReferencia: string; mensagem?: string }>,
-      ) => (e.data.ok ? resolve(e.data) : reject(new Error(e.data.mensagem)));
-      worker.onerror = (e) => reject(new Error(e.message || "falha ao montar o banco"));
-    });
-    worker.postMessage("montar");
-    Promise.all([banco, lerPatchSalvo()])
+    Promise.all([carregarBase(), lerPatchSalvo()])
       .then(([{ banco: base, dataReferencia }, salvo]) => {
         if (!vivo) return;
         const lido = salvo === undefined ? undefined : lerPatch(salvo);
@@ -56,11 +49,9 @@ export function useEditor() {
             status: "erro",
             mensagem: erro instanceof Error ? erro.message : String(erro),
           });
-      })
-      .finally(() => worker.terminate());
+      });
     return () => {
       vivo = false;
-      worker.terminate();
     };
   }, []);
 
