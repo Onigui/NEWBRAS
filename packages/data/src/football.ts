@@ -79,6 +79,16 @@ export const FORCA_MAX = 100;
 export const FORCA_RECORDE = 99;
 export const FORCA_TETO = 97;
 
+/**
+ * Elenco profissional: no máximo 30 jogadores por clube, como a lista A da CBF a partir de 2027
+ * (as ligas europeias inscrevem 25 mais os jovens). Jogadores da base ficam fora dessa conta.
+ */
+export const ELENCO_MAXIMO = 30;
+/** Idade máxima para um jogador que sobra no elenco ir para a base em vez de sair do clube. */
+export const IDADE_MAXIMA_BASE = 20;
+/** Vagas na base de cada clube. */
+export const BASE_MAXIMA = 15;
+
 /** Características válidas para a posição. */
 export function caracteristicasDaPosicao(posicao: Posicao): readonly Caracteristica[] {
   return posicao === "G" ? CARACTERISTICAS_GOLEIRO : CARACTERISTICAS_LINHA;

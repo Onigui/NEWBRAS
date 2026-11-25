@@ -42,11 +42,12 @@ import * as suica from "./paises/suica";
 import * as turquia from "./paises/turquia";
 import * as uruguai from "./paises/uruguai";
 
+import { equilibrarElencos } from "./elencos";
 import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.21.1";
+export const VERSAO_BANCO = "0.22.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -420,8 +421,11 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
     }
   }
 
+  // Elencos acima do limite profissional: os jovens que sobram vão para a base e o resto
+  // para clubes do mesmo país com vaga.
+  const elencos = equilibrarElencos(jogadores, clubes, DATA_REFERENCIA).jogadores;
   // Ícones aposentados recomeçam na base de clubes sorteados.
-  jogadores.push(...iconesNaBase(clubes, semente));
+  elencos.push(...iconesNaBase(clubes, semente));
 
   return Banco.parse({
     formato: 1,
@@ -437,7 +441,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
     estados,
     datasFifa: DATAS_FIFA,
     clubes,
-    jogadores,
+    jogadores: elencos,
     competicoes,
     selecoes: SELECOES,
   });

@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { Banco, type Banco as BancoT, Patch, type Patch as PatchT } from "./schemas/banco";
 import type { Jogador } from "./schemas/jogador";
+import { ELENCO_MAXIMO } from "./football";
 
 export interface Problema {
   nivel: "erro" | "aviso";
@@ -124,6 +125,12 @@ export function validarIntegridade(banco: BancoT): Problema[] {
         `time inválido: precisa de pelo menos 1 goleiro e 11 jogadores de linha (tem ${elenco.length} jogadores)`,
       );
     }
+    const profissionais = elenco.filter((j) => !j.base).length;
+    if (profissionais > ELENCO_MAXIMO)
+      aviso(
+        `clubes > ${c.id}`,
+        `elenco com ${profissionais} profissionais; o máximo é ${ELENCO_MAXIMO} (a base fica fora da conta)`,
+      );
     const numeros = elenco.flatMap((j) => (j.numero ? [String(j.numero)] : []));
     for (const n of repetidos(numeros)) aviso(`clubes > ${c.id}`, `camisa ${n} repetida`);
   }

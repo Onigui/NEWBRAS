@@ -102,6 +102,30 @@ export interface OpcoesJogador {
 /** Ninguém gerado passa do teto do jogo (só o CR7 tem 99). */
 const limitar = (v: number) => Math.min(FORCA_TETO, Math.max(1, Math.round(v)));
 
+/** A partir daqui o potencial gerado é comprimido: craques novos são raros. */
+export const POTENCIAL_COMUM = 86;
+/** Chance de um gerado nascer fenômeno (potencial de 93 a 97): 1 em 20.000. */
+export const CHANCE_FENOMENO = 1 / 20_000;
+
+/** Potencial máximo de um gerado comum; acima disso, só fenômeno. */
+export const POTENCIAL_GERADO_MAXIMO = 92;
+/** Fenômenos nascem jovens: só quem tem até esta idade pode ser sorteado. */
+const IDADE_MAXIMA_FENOMENO = 20;
+
+/**
+ * Potencial acima de 86 cresce só um terço do que o sorteio pediria, até 92. Fenômenos, de 93 a
+ * 97, saem uma vez a cada 20.000 jogadores e sempre jovens: o mundo já recebe as lendas que
+ * renascem, então craques do nada têm de ser raros (no mundo inicial saem uns 2 ou 3).
+ */
+function tetoRaro(rng: Rng, potencial: number, idade: number): number {
+  const comprimido = Math.min(
+    POTENCIAL_GERADO_MAXIMO,
+    potencial > POTENCIAL_COMUM ? POTENCIAL_COMUM + (potencial - POTENCIAL_COMUM) / 3 : potencial,
+  );
+  const fenomeno = rng.chance(CHANCE_FENOMENO) && idade <= IDADE_MAXIMA_FENOMENO;
+  return fenomeno ? rng.int(93, FORCA_TETO) : comprimido;
+}
+
 /** Gera um jogador fictício coerente com o nível do clube e a curva de idade. */
 export function gerarJogador(rng: Rng, o: OpcoesJogador): JogadorEntrada {
   const idade = o.idade ?? sortearIdade(rng);
@@ -109,7 +133,7 @@ export function gerarJogador(rng: Rng, o: OpcoesJogador): JogadorEntrada {
 
   // Primeiro sorteia o teto do jogador, depois a força pela idade.
   const potencialBase = o.nivel + 6 + rng.normal(0, 7);
-  const potencial = limitar(Math.max(potencialBase, o.nivel * 0.7));
+  const potencial = limitar(tetoRaro(rng, Math.max(potencialBase, o.nivel * 0.7), idade));
   const variacao = rng.normal(0, 3);
   const forca = Math.min(potencial, limitar(forcaEsperada(potencial, idade, o.posicao) + variacao));
 
