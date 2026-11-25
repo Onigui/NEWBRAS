@@ -1,4 +1,4 @@
-export type ScreenId = "novo-jogo" | "carregar" | "editor" | "opcoes";
+export type ScreenId = "novo-jogo" | "carregar" | "amistoso" | "editor" | "opcoes";
 
 export interface MenuItem {
   id: ScreenId;
@@ -26,6 +26,14 @@ export const MENU: readonly MenuItem[] = [
     key: "c",
     description: "Continue uma carreira salva com F2 durante o jogo.",
     fase: 8,
+  },
+  {
+    id: "amistoso",
+    label: "Amistoso",
+    key: "a",
+    description:
+      "Prévia do motor de partida: escolha dois times do banco e veja o jogo lance a lance, com estatísticas e notas.",
+    fase: 5,
   },
   {
     id: "editor",
