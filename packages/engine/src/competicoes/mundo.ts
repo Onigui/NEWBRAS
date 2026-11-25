@@ -215,6 +215,79 @@ function forca(m: MundoParaCompeticoes, clube: string): number {
  * Joga, com a simulação rápida, os jogos de uma data em todas as competições. `pular` deixa de fora
  * o jogo do técnico (ele joga no motor completo).
  */
+/** Um jogo simulado do dia, com os gols (autor, assistência e minuto) para o plantão. */
+export interface JogoSimulado {
+  competicao: string;
+  indice: number;
+  casa: string;
+  fora: string;
+  placar: [number, number];
+  penaltis?: [number, number];
+  prorrogacao: boolean;
+  gols: { lado: "casa" | "fora"; minuto: number; jogador: string; assistencia?: string }[];
+}
+
+/**
+ * Simula os jogos do dia de uma competição. O sorteio é o mesmo de `jogarDia` (por competição e
+ * data), então o plantão de gols mostra exatamente os resultados que o dia vai registrar. Os
+ * minutos dos gols vêm de outro fluxo e não mudam os resultados.
+ */
+function simularJogosDoDia(
+  m: MundoParaCompeticoes,
+  c: Competicao,
+  e: EstadoCompeticao,
+  data: string,
+  semente: string,
+  pular?: (competicao: string, indice: number) => boolean,
+): JogoSimulado[] {
+  const idx = jogosDoDia(e, data).filter((i) => !pular?.(c.id, i));
+  if (!idx.length) return [];
+  const rng = new Rng(`${semente}:${c.id}:${data}`);
+  const lista: JogoSimulado[] = [];
+  for (const i of idx) {
+    const j = e.jogos[i];
+    if (!j || j.placar) continue;
+    const d = desempateDoJogo(c, e, j);
+    const r = simularRapido(rng, forca(m, j.casa), forca(m, j.fora), {
+      ...(j.neutro ? { neutro: true } : {}),
+      desempate: d.desempate,
+      ...(d.agregado ? { agregado: d.agregado } : {}),
+    });
+    const autores = {
+      casa: autoresDosGols(rng, m.elenco(j.casa), r.placar[0]),
+      fora: autoresDosGols(rng, m.elenco(j.fora), r.placar[1]),
+    };
+    const relogio = new Rng(`${semente}:${c.id}:${data}:${i}:minutos`);
+    const gols: JogoSimulado["gols"] = [];
+    (["casa", "fora"] as const).forEach((lado, k) => {
+      const normal = r.noTempoNormal[k] as number;
+      for (let g = 0; g < (r.placar[k] as number); g++) {
+        const autor = autores[lado][g];
+        const minuto = g < normal ? relogio.int(1, 90) : relogio.int(91, 120);
+        gols.push({
+          lado,
+          minuto,
+          jogador: autor?.jogador ?? "",
+          ...(autor?.assistencia ? { assistencia: autor.assistencia } : {}),
+        });
+      }
+    });
+    gols.sort((a, b) => a.minuto - b.minuto);
+    lista.push({
+      competicao: c.id,
+      indice: i,
+      casa: j.casa,
+      fora: j.fora,
+      placar: r.placar,
+      ...(r.penaltis ? { penaltis: r.penaltis } : {}),
+      prorrogacao: r.prorrogacao,
+      gols,
+    });
+  }
+  return lista;
+}
+
+/** Joga o dia inteiro no mundo (simulação rápida), menos os jogos que `pular` indicar. */
 export function jogarDia(
   m: MundoParaCompeticoes,
   estado: MundoCompeticoes,
@@ -224,32 +297,44 @@ export function jogarDia(
 ): MundoCompeticoes {
   let competicoes: Record<string, EstadoCompeticao> | null = null;
   for (const [id, e0] of Object.entries(estado.competicoes)) {
-    const idx = jogosDoDia(e0, data).filter((i) => !pular?.(id, i));
-    if (!idx.length) continue;
+    if (!jogosDoDia(e0, data).length) continue;
     const c = m.competicao(id);
     if (!c) continue;
-    const rng = new Rng(`${semente}:${id}:${data}`);
+    const jogos = simularJogosDoDia(m, c, e0, data, semente, pular);
+    if (!jogos.length) continue;
     let e = e0;
-    for (const i of idx) {
-      const j = e.jogos[i];
-      if (!j || j.placar) continue;
-      const d = desempateDoJogo(c, e, j);
-      const r = simularRapido(rng, forca(m, j.casa), forca(m, j.fora), {
-        ...(j.neutro ? { neutro: true } : {}),
-        desempate: d.desempate,
-        ...(d.agregado ? { agregado: d.agregado } : {}),
-      });
-      const gols = [
-        ...autoresDosGols(rng, m.elenco(j.casa), r.placar[0]),
-        ...autoresDosGols(rng, m.elenco(j.fora), r.placar[1]),
-      ];
-      e = lancarResultado(e, i, r.placar, r.penaltis, gols);
-    }
+    for (const j of jogos)
+      e = lancarResultado(
+        e,
+        j.indice,
+        j.placar,
+        j.penaltis,
+        j.gols.filter((g) => g.jogador),
+      );
     e = avancarCompeticao(c, e, semente);
     competicoes ??= { ...estado.competicoes };
     competicoes[id] = e;
   }
   return competicoes ? { ...estado, competicoes } : estado;
+}
+
+/**
+ * Os outros jogos do dia nas competições pedidas, já simulados, para o plantão de gols durante a
+ * partida do técnico. São os mesmos placares que `jogarDia` vai lançar depois.
+ */
+export function plantaoDoDia(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  data: string,
+  semente: string,
+  competicoes: readonly string[],
+  pular?: (competicao: string, indice: number) => boolean,
+): JogoSimulado[] {
+  return competicoes.flatMap((id) => {
+    const c = m.competicao(id);
+    const e = estado.competicoes[id];
+    return c && e ? simularJogosDoDia(m, c, e, data, semente, pular) : [];
+  });
 }
 
 /** Joga tudo o que estava marcado antes da data (para começar o mundo com as tabelas em dia). */

@@ -606,6 +606,23 @@ export function lancarResultado(
   return { ...e, jogos, artilharia };
 }
 
+/**
+ * A competição com placares parciais nos jogos ainda sem resultado, para a tabela ao vivo durante
+ * a rodada. Não mexe no estado guardado.
+ */
+export function comPlacaresParciais(
+  e: EstadoCompeticao,
+  parciais: readonly { indice: number; placar: [number, number] }[],
+): EstadoCompeticao {
+  if (!parciais.length) return e;
+  const jogos = e.jogos.slice();
+  for (const p of parciais) {
+    const j = jogos[p.indice];
+    if (j && !j.placar) jogos[p.indice] = { ...j, placar: p.placar };
+  }
+  return { ...e, jogos };
+}
+
 /** Nome curto: o próprio, o que está entre parênteses ("Paulistão") ou o nome inteiro. */
 export function nomeCurtoDaCompeticao(c: Pick<Competicao, "nome" | "nomeCurto">): string {
   return c.nomeCurto ?? /\(([^)]+)\)/.exec(c.nome)?.[1] ?? c.nome;

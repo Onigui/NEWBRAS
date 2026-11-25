@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Competicao, gerarAtributos, type Jogador, type Pais, type Posicao } from "@newbras/data";
 import { somarDias } from "../carreira/datas";
+import { jogosDoDia, lancarResultado } from "./competicao";
 import {
   iniciarMundo,
   jogarDia,
+  plantaoDoDia,
   virarTemporadas,
   type MundoCompeticoes,
   type MundoParaCompeticoes,
@@ -184,5 +186,35 @@ describe("copas e supercopas", () => {
     const serieB = w.competicoes["serie-b"]!.participantes;
     const esperados = classB.filter((x) => serieB.includes(x)).slice(0, 4);
     expect(copa.filter((x) => serieB.includes(x)).sort()).toEqual(esperados.sort());
+  });
+});
+
+describe("plantão de gols", () => {
+  it("mostra os mesmos placares que o dia registra, com o jogo do técnico jogado à parte", () => {
+    const m = mundo();
+    const w = iniciarMundo(m, "2027-01-05", "s");
+    const liga = w.competicoes["serie-a"]!;
+    const dia = liga.datas[3]!;
+    const [nosso, ...outros] = jogosDoDia(liga, dia);
+    expect(outros.length).toBeGreaterThan(0);
+    const pular = (id: string, i: number) => id === "serie-a" && i === nosso;
+    const plantao = plantaoDoDia(m, w, dia, "s", ["serie-a"], pular);
+    expect(plantao.map((j) => j.indice)).toEqual(outros);
+    for (const j of plantao) {
+      // Os minutos fecham com o placar.
+      expect(j.gols.filter((g) => g.lado === "casa")).toHaveLength(j.placar[0]);
+      expect(j.gols.filter((g) => g.lado === "fora")).toHaveLength(j.placar[1]);
+      expect(j.gols.every((g) => g.minuto >= 1 && g.minuto <= (j.prorrogacao ? 120 : 90))).toBe(
+        true,
+      );
+    }
+    // O técnico joga (aqui, um 3 a 2 qualquer) e depois o dia fecha no mundo.
+    const comNosso = {
+      ...w,
+      competicoes: { ...w.competicoes, "serie-a": lancarResultado(liga, nosso!, [3, 2]) },
+    };
+    const depois = jogarDia(m, comNosso, dia, "s").competicoes["serie-a"]!;
+    for (const j of plantao) expect(depois.jogos[j.indice]?.placar).toEqual(j.placar);
+    expect(depois.jogos[nosso!]?.placar).toEqual([3, 2]);
   });
 });

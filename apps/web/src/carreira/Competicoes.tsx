@@ -18,6 +18,31 @@ import { Escudo } from "../components/Escudo";
 import { Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
 
+/** Cor da zona da posição: classificação para a próxima fase; na fase única, acesso, playoff e rebaixamento. */
+export function zonaDaPosicao(
+  comp: Competicao,
+  e: EstadoCompeticao,
+  fase: number,
+  pos: number,
+): string | null {
+  const f = comp.fases[fase];
+  const grupos = e.fases[fase]?.grupos?.length ?? 1;
+  if (f?.tipo === "grupos") {
+    if (f.faixaClassificada && pos >= f.faixaClassificada.de && pos <= f.faixaClassificada.ate)
+      return "#7cc4f5";
+    if (f.classificamPorGrupo && pos <= f.classificamPorGrupo) return "#7ed37a";
+  }
+  if (fase === 0 && grupos === 1)
+    for (const m of comp.movimentos) {
+      if (!m.posicoes.includes(pos)) continue;
+      if (m.tipo === "acesso") return "#7ed37a";
+      if (m.tipo === "rebaixamento") return "#ff6b5c";
+      if (m.tipo === "playoff-acesso" && !(f?.tipo === "grupos" && f.faixaClassificada))
+        return "#7cc4f5";
+    }
+  return null;
+}
+
 /** Ligas primeiro, depois as copas e as supercopas; estaduais e regionais no fim. */
 const ORDEM_TIPO: Record<Competicao["tipo"], number> = {
   liga: 0,
@@ -245,23 +270,7 @@ function Tabela({
   const linhas = tabelaDoGrupo(comp, e, fase, grupo);
   const n = linhas.length;
   const grupos = e.fases[fase]?.grupos?.length ?? 1;
-  // Zonas: classificação para a próxima fase; na fase única, acesso, playoff e rebaixamento.
-  const zona = (pos: number): string | null => {
-    if (f?.tipo === "grupos") {
-      if (f.faixaClassificada && pos >= f.faixaClassificada.de && pos <= f.faixaClassificada.ate)
-        return "#7cc4f5";
-      if (f.classificamPorGrupo && pos <= f.classificamPorGrupo) return "#7ed37a";
-    }
-    if (fase === 0 && grupos === 1)
-      for (const m of comp.movimentos) {
-        if (!m.posicoes.includes(pos)) continue;
-        if (m.tipo === "acesso") return "#7ed37a";
-        if (m.tipo === "rebaixamento") return "#ff6b5c";
-        if (m.tipo === "playoff-acesso" && !(f?.tipo === "grupos" && f.faixaClassificada))
-          return "#7cc4f5";
-      }
-    return null;
-  };
+  const zona = (pos: number) => zonaDaPosicao(comp, e, fase, pos);
   return (
     <div className="overflow-x-auto">
       <h3 className="mb-1 text-sm font-bold">

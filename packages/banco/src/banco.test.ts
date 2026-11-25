@@ -1097,9 +1097,10 @@ describe("jogadores reais: ligas de nível 2", () => {
 describe("copas nacionais e supercopas", () => {
   const copas = banco.competicoes.filter((c) => c.tipo === "copa");
   const supercopas = banco.competicoes.filter((c) => c.tipo === "supercopa");
+  const regionais = banco.competicoes.filter((c) => c.tipo === "regional");
   const competicao = (id: string) => banco.competicoes.find((c) => c.id === id);
   const paisDe = (c: (typeof banco.competicoes)[number]) =>
-    c.escopo.tipo === "pais" ? c.escopo.pais : undefined;
+    c.escopo.tipo === "pais" || c.escopo.tipo === "estado" ? c.escopo.pais : undefined;
 
   it("todo país de nível 1 e 2 tem copa nacional, e os de nível 1 têm supercopa", () => {
     for (const p of PAISES.filter((p) => p.nivel === 1 || p.nivel === 2))
@@ -1119,7 +1120,7 @@ describe("copas nacionais e supercopas", () => {
   });
 
   it("as vagas vêm de competições do mesmo país, com posições que existem", () => {
-    for (const c of [...copas, ...supercopas]) {
+    for (const c of [...copas, ...supercopas, ...regionais]) {
       expect(c.participantes.fixos, c.id).toEqual([]);
       let total = 0;
       for (const v of c.participantes.vagas) {
@@ -1165,5 +1166,31 @@ describe("copas nacionais e supercopas", () => {
         true,
       );
     }
+  });
+});
+
+describe("copas regionais", () => {
+  const estadoDe = (id: string) => {
+    const c = banco.competicoes.find((x) => x.id === id);
+    return c?.escopo.tipo === "estado" ? c.escopo.estado : undefined;
+  };
+  const estados = (id: string) =>
+    banco.competicoes.find((c) => c.id === id)!.participantes.vagas.map((v) => estadoDe(v.de));
+
+  it("Copa do Nordeste: 16 clubes dos 9 estados do Nordeste, grupos e mata-mata", () => {
+    const c = banco.competicoes.find((x) => x.id === "bra-copa-do-nordeste")!;
+    expect(c.participantes.quantidade).toBe(16);
+    expect(new Set(estados(c.id))).toEqual(
+      new Set(["BA", "CE", "PE", "AL", "RN", "PB", "SE", "MA", "PI"]),
+    );
+    expect(c.fases.map((f) => f.tipo)).toEqual(["grupos", "mata-mata", "mata-mata", "mata-mata"]);
+  });
+
+  it("Copa Verde: 16 clubes do Norte, do Centro-Oeste e do Espírito Santo em mata-mata", () => {
+    const c = banco.competicoes.find((x) => x.id === "bra-copa-verde")!;
+    expect(c.participantes.quantidade).toBe(16);
+    expect(estados(c.id)).toContain("ES");
+    expect(estados(c.id)).not.toContain("SP");
+    expect(c.fases).toHaveLength(4);
   });
 });

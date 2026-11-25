@@ -1,4 +1,5 @@
 import { COPAS } from "./mundo/copas";
+import { COPAS_REGIONAIS } from "./mundo/regionais";
 import { paisesComTemporadaAjustada } from "./mundo/temporadas";
 import {
   Banco,
@@ -49,7 +50,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.25.0";
+export const VERSAO_BANCO = "0.26.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -424,7 +425,7 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
   }
 
   // Copas nacionais e supercopas: os participantes vêm das ligas, a cada temporada.
-  competicoes.push(...COPAS);
+  competicoes.push(...COPAS, ...COPAS_REGIONAIS);
 
   // Elencos acima do limite profissional: os jovens que sobram vão para a base e o resto
   // para clubes do mesmo país com vaga.
