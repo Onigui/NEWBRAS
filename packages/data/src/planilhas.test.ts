@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { detectarSeparador, escreverCsv, lerCsv } from "./csv";
+import { forcaDosAtributos } from "./atributos";
 import { bancoExemplo } from "./exemplo.test-utils";
 import {
   exportarClubesCsv,
@@ -60,6 +61,23 @@ describe("planilha de jogadores", () => {
       estrela: true,
     });
     expect(r.itens[1]!.caracteristicas).toEqual(["penalti", "reflexo"]);
+  });
+
+  it("lê os atributos: completos valem como estão, parciais completam o perfil", () => {
+    const cab =
+      "id,nome,nascimento,nacionalidade,posicao,lado,forca,potencial,caracteristica_1,velocidade,resistencia,forca_fisica,finalizacao,chute_longe,cabeceio,drible,passe,cruzamento,armacao,desarme,marcacao";
+    const completo = "bra-a,Ana,2000-01-01,BRA,A,C,50,90,,95,60,60,80,70,60,88,60,50,55,30,30";
+    const parcial = "bra-b,Bia,2000-01-01,BRA,A,C,70,90,drible,99,,,,,,,,,,,";
+    const r = importarJogadoresCsv([cab, completo, parcial].join("\n"));
+    expect(r.problemas).toEqual([]);
+    const [a, b] = r.itens;
+    expect(a?.atributos.velocidade).toBe(95);
+    expect(a?.caracteristicas).toEqual(["velocidade", "drible"]);
+    expect(a?.forca).toBe(forcaDosAtributos("A", a?.atributos ?? {}));
+    expect(b?.atributos.velocidade).toBe(99);
+    expect(b?.caracteristicas[0]).toBe("velocidade");
+    const volta = importarJogadoresCsv(exportarJogadoresCsv(r.itens)).itens;
+    expect(volta).toEqual(r.itens);
   });
 
   it("aponta a linha da planilha com problema e importa as outras", () => {

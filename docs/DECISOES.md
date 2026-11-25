@@ -28,6 +28,8 @@ O NewBras recria o Brasfoot antes de inovar. Estas exceções foram aprovadas e 
 5. Futebol mundial completo, com todas as competições reais.
 6. Categoria de base com olheiros, no estilo do FC.
 7. Ícones aposentados recomeçando na base.
+8. Atributos dos jogadores por trás da força e das características.
+9. Humor do jogador visível na escalação e barra de condição física.
 
 ## Curva de evolução por idade
 
@@ -61,3 +63,35 @@ Para elencos reais sem ajuste à mão, a força vem do valor de mercado e da ida
 - sem valor na fonte, a força parte do nível do clube.
 
 Lendas e craques têm força atual e força do auge ajustadas à mão (`packages/banco/src/reais/notaveis.ts`).
+
+## Atributos dos jogadores (etapa 4b, aprovada em 25/11/2026)
+
+O Brasfoot mostra só força e 2 características. O NewBras guarda atributos para o motor espacial poder diferenciar quem é rápido, quem chuta de longe, quem cansa. Na tela, a força e as características continuam como no Brasfoot.
+
+| Grupo   | Atributos (1 a 100)                                                                                                                               |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linha   | Velocidade, Resistência, Força física (novo), Finalização, Chute de longe (novo), Cabeceio, Drible, Passe, Cruzamento, Armação, Desarme, Marcação |
+| Goleiro | Reflexo, Colocação, Saída do gol, Defesa de pênalti, Reposição (novo)                                                                             |
+
+- A força é a média ponderada dos atributos com pesos por posição (`packages/data/src/atributos.ts`). Mudar de posição muda a força: um zagueiro escalado de atacante rende menos.
+- As características são o atributo mais alto e, se estiver a até 8 pontos dele, o segundo. Só uma característica marca jogador limitado, como no Brasfoot (cerca de 12% do banco).
+- Sem atributos na fonte, o perfil é gerado pela semente do id: os atributos que pesam na posição ficam em volta da força, os outros abaixo, as características acima de todos. O perfil é montado numa força de no máximo 92 e escalado para a de hoje, para os destaques caberem acima do resto.
+- Craques e ícones têm destaques à mão na escala do auge (velocidade 99 do Bale, chute de longe 97 do Roberto Carlos, drible 99 do Messi). Lendas renascidas mantêm o perfil.
+- No editor, mexer num atributo recalcula força e características; mexer na força escala todos os atributos na mesma proporção. Nas planilhas, cada atributo tem sua coluna.
+- Evolução (Fase 12): atributos físicos (velocidade, resistência, força física) chegam ao auge por volta dos 25 a 28 anos e caem primeiro; técnicos e mentais caem mais tarde.
+
+## Humor e condição física (desenho aprovado em 25/11/2026)
+
+Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).
+
+| Humor   | Chance base | Efeito no rendimento |
+| ------- | ----------- | -------------------- |
+| Ótimo   | 10%         | +6%                  |
+| Bom     | 30%         | +3%                  |
+| Normal  | 45%         | 0                    |
+| Ruim    | 12%         | −5%                  |
+| Péssimo | 3%          | −10%                 |
+
+- O humor dura alguns dias (sequências boas e ruins) e é puxado pela moral, pelo cansaço acumulado e pela adaptação de quem chegou ao clube. Aparece na escalação; o "dia iluminado" continua escondido.
+- Condição física de 0 a 100%: cai durante o jogo conforme os minutos, a intensidade e a resistência; recupera a cada dia. Abaixo de certo ponto, corta os atributos físicos e aumenta o risco de lesão.
+- A escalação avisa "melhor poupar" quando um titular está esgotado ou num dia ruim; a CPU usa a mesma regra para fazer rodízio.

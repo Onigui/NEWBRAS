@@ -1,8 +1,13 @@
-import type { ClubeEntrada, JogadorEntrada } from "@newbras/data";
+import {
+  gerarAtributos,
+  type Atributos,
+  type ClubeEntrada,
+  type JogadorEntrada,
+} from "@newbras/data";
 import { Rng, fracaoDoPotencial } from "@newbras/engine";
 import { DATA_REFERENCIA } from "../referencia";
 
-type Caracteristicas = JogadorEntrada["caracteristicas"];
+type Caracteristicas = NonNullable<JogadorEntrada["caracteristicas"]>;
 
 /**
  * Ícones aposentados que começam o jogo como garotos de 15 ou 16 anos na base de um clube sorteado,
@@ -53,6 +58,35 @@ const ICONES: ReadonlyArray<
   ["Toni Kroos", "Toni Kroos", "GER", "M", "C", 91, ["passe", "armacao"]],
 ];
 
+/**
+ * O que fez cada ícone ser único, na escala do auge. Viram os atributos mais altos do perfil
+ * e decidem as características (a velocidade do Bale, o chute do Roberto Carlos).
+ */
+export const DESTAQUES_ICONES: Readonly<Record<string, Atributos>> = {
+  "Gareth Bale": { velocidade: 99, chuteLonge: 92 },
+  Zidane: { armacao: 97, drible: 96, passe: 95 },
+  Ronaldinho: { drible: 99, passe: 94 },
+  Ronaldo: { finalizacao: 98, drible: 97, velocidade: 96 },
+  Kaká: { velocidade: 94, armacao: 93 },
+  "Thierry Henry": { velocidade: 97, finalizacao: 95 },
+  "Andrea Pirlo": { passe: 98, chuteLonge: 93 },
+  Xavi: { passe: 99, armacao: 95 },
+  "Andrés Iniesta": { drible: 96, passe: 95 },
+  "Paolo Maldini": { marcacao: 97, desarme: 96 },
+  "Gianluigi Buffon": { reflexo: 96, colocacao: 96 },
+  "Iker Casillas": { reflexo: 97, penalti: 92 },
+  "Roberto Carlos": { chuteLonge: 97, velocidade: 95 },
+  Cafu: { resistencia: 97, velocidade: 91 },
+  "Wayne Rooney": { finalizacao: 92, chuteLonge: 91 },
+  "Zlatan Ibrahimović": { finalizacao: 94, forcaFisica: 93 },
+  "Didier Drogba": { forcaFisica: 95, cabeceio: 93 },
+  "Steven Gerrard": { chuteLonge: 94, passe: 92 },
+  "Francesco Totti": { armacao: 93, chuteLonge: 92 },
+  "Arjen Robben": { drible: 95, chuteLonge: 92 },
+  "Eden Hazard": { drible: 97, velocidade: 92 },
+  "Toni Kroos": { passe: 97, chuteLonge: 91 },
+};
+
 /** Quantos ícones existem; útil para testes e para a tela de novo jogo. */
 export const TOTAL_ICONES = ICONES.length;
 
@@ -80,8 +114,10 @@ export function iconesNaBase(clubes: readonly ClubeEntrada[], semente: string): 
       .toISOString()
       .slice(0, 10);
     const forca = Math.max(1, Math.round(auge * fracaoDoPotencial(idade, posicao)));
+    const id = `icone-${slug(nome)}`;
+    const destaques = DESTAQUES_ICONES[nome];
     return {
-      id: `icone-${slug(nome)}`,
+      id,
       nome,
       nomeCompleto,
       nascimento,
@@ -91,6 +127,18 @@ export function iconesNaBase(clubes: readonly ClubeEntrada[], semente: string): 
       forca,
       potencial: auge,
       caracteristicas,
+      ...(destaques
+        ? {
+            atributos: gerarAtributos({
+              semente: id,
+              posicao,
+              forca,
+              caracteristicas,
+              destaques,
+              forcaAuge: auge,
+            }),
+          }
+        : {}),
       estrela: true,
       base: true,
       clube: clube.id,

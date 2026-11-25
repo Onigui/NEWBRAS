@@ -1,13 +1,14 @@
-import type { JogadorEntrada } from "@newbras/data";
+import type { Atributos, JogadorEntrada } from "@newbras/data";
 
-type Caracteristicas = JogadorEntrada["caracteristicas"];
+type Caracteristicas = NonNullable<JogadorEntrada["caracteristicas"]>;
 
 /**
  * Ajustes à mão para jogadores consagrados. O resto vem do modelo (valor de mercado, idade, posição).
  * - forca: força de hoje, quando o modelo erraria (lendas veteranas valem pouco no mercado);
  * - forcaAuge: a força do auge da carreira; é o potencial quando a lenda renascer;
  * - nascimento: data exata, conhecida;
- * - contratoFim: fim de contrato divulgado.
+ * - contratoFim: fim de contrato divulgado;
+ * - destaques: atributos marcantes, na escala do auge (a velocidade do Werner, o chute do CR7).
  * Escala do jogo: 99 é o topo absoluto; titulares de Premier League ficam perto de 85.
  */
 export interface Notavel {
@@ -18,6 +19,7 @@ export interface Notavel {
   lado?: JogadorEntrada["lado"];
   posicao?: JogadorEntrada["posicao"];
   contratoFim?: string;
+  destaques?: Atributos;
 }
 
 export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
@@ -29,12 +31,14 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
     nascimento: "1987-06-24",
     posicao: "A",
     contratoFim: "2028-12-31",
+    destaques: { drible: 99, finalizacao: 97, armacao: 96 },
   },
   "Luis Suárez": {
     forca: 76,
     forcaAuge: 93,
     caracteristicas: ["finalizacao", "drible"],
     nascimento: "1987-01-24",
+    destaques: { finalizacao: 95 },
   },
   "Rodrigo De Paul": {
     forca: 81,
@@ -47,6 +51,7 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
     forcaAuge: 89,
     caracteristicas: ["desarme", "marcacao"],
     nascimento: "1992-02-23",
+    destaques: { desarme: 92, forcaFisica: 90 },
   },
   "Sergio Reguilón": {
     forca: 74,
@@ -60,18 +65,21 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
     forcaAuge: 95,
     caracteristicas: ["finalizacao", "cabeceio"],
     nascimento: "1988-08-21",
+    destaques: { finalizacao: 97, cabeceio: 92 },
   },
   "Antoine Griezmann": {
     forca: 83,
     forcaAuge: 91,
     caracteristicas: ["finalizacao", "armacao"],
     nascimento: "1991-03-21",
+    destaques: { armacao: 91 },
   },
   "Heung-Min Son": {
     forca: 83,
     forcaAuge: 90,
     caracteristicas: ["finalizacao", "velocidade"],
     nascimento: "1992-07-08",
+    destaques: { velocidade: 93, chuteLonge: 90 },
   },
   "Hugo Lloris": {
     forca: 76,
@@ -114,6 +122,7 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
     forcaAuge: 85,
     caracteristicas: ["velocidade", "finalizacao"],
     nascimento: "1996-03-06",
+    destaques: { velocidade: 94 },
   },
   "Héctor Herrera": { forcaAuge: 84, nascimento: "1990-04-19" },
   "Emil Forsberg": { forcaAuge: 84, nascimento: "1991-10-23" },
@@ -134,35 +143,41 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
     caracteristicas: ["finalizacao", "cabeceio"],
     nascimento: "1985-02-05",
     contratoFim: "2027-06-30",
+    destaques: { finalizacao: 99, cabeceio: 96, chuteLonge: 95, velocidade: 95 },
   },
   "Sadio Mané": {
     forca: 78,
     forcaAuge: 90,
     caracteristicas: ["velocidade", "drible"],
     nascimento: "1992-04-10",
+    destaques: { velocidade: 95 },
   },
   "Kalidou Koulibaly": {
     forca: 78,
     forcaAuge: 89,
     caracteristicas: ["desarme", "cabeceio"],
     nascimento: "1991-06-20",
+    destaques: { forcaFisica: 94 },
   },
   "Yassine Bounou": {
     forca: 81,
     forcaAuge: 87,
     caracteristicas: ["reflexo", "penalti"],
     nascimento: "1991-04-05",
+    destaques: { reflexo: 90 },
   },
   "Théo Hernández": {
     forcaAuge: 87,
     caracteristicas: ["velocidade", "cruzamento"],
     nascimento: "1997-10-06",
     lado: "E",
+    destaques: { velocidade: 95 },
   },
   "Kingsley Coman": {
     forcaAuge: 86,
     caracteristicas: ["velocidade", "drible"],
     nascimento: "1996-06-13",
+    destaques: { velocidade: 94 },
   },
   "João Félix": { forcaAuge: 84, nascimento: "1999-11-10" },
   "Iñigo Martínez": { forcaAuge: 84, nascimento: "1991-05-17" },

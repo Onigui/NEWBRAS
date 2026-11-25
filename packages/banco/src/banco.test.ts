@@ -1,4 +1,10 @@
-import { CONFEDERACOES, elencoValido, validarIntegridade } from "@newbras/data";
+import {
+  atributosDaPosicao,
+  CONFEDERACOES,
+  elencoValido,
+  forcaDosAtributos,
+  validarIntegridade,
+} from "@newbras/data";
 import { gruposDeNomes, idadeEm } from "@newbras/engine";
 import { describe, expect, it } from "vitest";
 import { TOTAL_ICONES } from "./lendas/icones";
@@ -131,6 +137,35 @@ describe("banco montado", () => {
       return forcas.reduce((a, b) => a + b, 0) / forcas.length;
     };
     expect(media("bra-serie-a")).toBeGreaterThan(media("bra-serie-c") + 12);
+  });
+});
+
+describe("atributos", () => {
+  it("todo jogador tem os atributos da posição e a força é a média ponderada deles", () => {
+    for (const j of banco.jogadores) {
+      expect(Object.keys(j.atributos)).toHaveLength(atributosDaPosicao(j.posicao).length);
+      expect(j.forca).toBe(forcaDosAtributos(j.posicao, j.atributos));
+    }
+  });
+
+  it("uma parte pequena dos jogadores mostra só uma característica, como no Brasfoot", () => {
+    const uma = banco.jogadores.filter((j) => j.caracteristicas.length === 1).length;
+    const fracao = uma / banco.jogadores.length;
+    expect(fracao).toBeGreaterThan(0.05);
+    expect(fracao).toBeLessThan(0.25);
+  });
+
+  it("os destaques à mão aparecem: Bale é o mais rápido dos ícones, Roberto Carlos chuta de longe", () => {
+    const icone = (id: string) => banco.jogadores.find((j) => j.id === id);
+    const bale = icone("icone-gareth-bale");
+    const rc = icone("icone-roberto-carlos");
+    expect(bale?.caracteristicas[0]).toBe("velocidade");
+    expect(rc?.caracteristicas).toContain("chuteLonge");
+    const icones = banco.jogadores.filter((j) => j.id.startsWith("icone-") && j.posicao !== "G");
+    const fracaoVelocidade = (j: (typeof icones)[number]) =>
+      (j.atributos.velocidade ?? 0) / j.forca;
+    const maisRapido = [...icones].sort((a, b) => fracaoVelocidade(b) - fracaoVelocidade(a))[0];
+    expect(maisRapido?.id).toBe("icone-gareth-bale");
   });
 });
 

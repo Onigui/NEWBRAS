@@ -2,6 +2,7 @@
  * Importação e exportação de clubes e jogadores em planilha (CSV).
  * É o caminho para atualizar elencos a cada janela sem digitar jogador por jogador no editor.
  */
+import { atributosDaPosicao, gerarAtributos, type Atributo, type Atributos } from "./atributos";
 import { escreverCsv, lerCsvComCabecalho, type Separador } from "./csv";
 import {
   CARACTERISTICAS_GOLEIRO,
@@ -36,7 +37,81 @@ export const COLUNAS_JOGADORES = [
   "numero",
   "forca_auge",
   "base",
+  "velocidade",
+  "resistencia",
+  "forca_fisica",
+  "finalizacao",
+  "chute_longe",
+  "cabeceio",
+  "drible",
+  "passe",
+  "cruzamento",
+  "armacao",
+  "desarme",
+  "marcacao",
+  "reflexo",
+  "colocacao",
+  "saida",
+  "penalti",
+  "reposicao",
 ] as const;
+
+/** Coluna da planilha de cada atributo (snake_case, como as outras colunas). */
+export const COLUNA_DO_ATRIBUTO: Readonly<Record<Atributo, string>> = {
+  velocidade: "velocidade",
+  resistencia: "resistencia",
+  forcaFisica: "forca_fisica",
+  finalizacao: "finalizacao",
+  chuteLonge: "chute_longe",
+  cabeceio: "cabeceio",
+  drible: "drible",
+  passe: "passe",
+  cruzamento: "cruzamento",
+  armacao: "armacao",
+  desarme: "desarme",
+  marcacao: "marcacao",
+  reflexo: "reflexo",
+  colocacao: "colocacao",
+  saida: "saida",
+  penalti: "penalti",
+  reposicao: "reposicao",
+};
+
+/**
+ * Atributos da linha da planilha. Com todos os da posição, valem como estão; com só alguns,
+ * os que faltam são gerados a partir da força e das características e os informados por cima.
+ * Sem nenhum, fica indefinido e o jogo gera o perfil inteiro. Quando há atributos, a força sai deles.
+ */
+function atributosDaLinha(
+  l: Record<string, string>,
+  id: string | undefined,
+  posicao: (typeof POSICOES)[number] | undefined,
+  forca: number | undefined,
+  caracteristicas: readonly string[],
+): Atributos | undefined {
+  if (!posicao) return undefined;
+  const lista = atributosDaPosicao(posicao);
+  const informados: Atributos = {};
+  for (const a of lista) {
+    const v = numero(l[COLUNA_DO_ATRIBUTO[a]] ?? "");
+    if (v !== undefined) informados[a] = v;
+  }
+  const quantos = Object.keys(informados).length;
+  if (quantos === 0) return undefined;
+  if (quantos === lista.length || forca === undefined) return informados;
+  const validas = caracteristicas.filter((c): c is Atributo =>
+    (lista as readonly string[]).includes(c),
+  );
+  return {
+    ...gerarAtributos({
+      semente: id ?? "planilha",
+      posicao,
+      forca,
+      ...(validas.length ? { caracteristicas: validas } : {}),
+    }),
+    ...informados,
+  };
+}
 
 export const COLUNAS_CLUBES = [
   "id",
@@ -132,7 +207,8 @@ export function importarJogadoresCsv(conteudo: string): ResultadoPlanilha<Jogado
       lado: (l.lado || (posicao === "L" ? "" : "C")).toUpperCase(),
       forca,
       potencial: numero(l.potencial ?? "") ?? forca,
-      caracteristicas,
+      caracteristicas: caracteristicas.length ? caracteristicas : undefined,
+      atributos: atributosDaLinha(l, l.id, posicao, forca, caracteristicas),
       estrela: simNao(l.estrela ?? ""),
       clube: texto(l.clube),
       contrato: contratoFim
@@ -182,6 +258,13 @@ export function exportarJogadoresCsv(
     j.numero ? String(j.numero) : "",
     j.forcaAuge !== undefined ? String(j.forcaAuge) : "",
     j.base ? "sim" : "nao",
+    ...COLUNAS_JOGADORES.slice(COLUNAS_JOGADORES.indexOf("velocidade")).map((coluna) => {
+      const atributo = (Object.keys(COLUNA_DO_ATRIBUTO) as Atributo[]).find(
+        (a) => COLUNA_DO_ATRIBUTO[a] === coluna,
+      );
+      const v = atributo ? j.atributos[atributo] : undefined;
+      return v !== undefined ? String(v) : "";
+    }),
   ]);
   return escreverCsv([[...COLUNAS_JOGADORES], ...linhas], separador);
 }

@@ -13,3 +13,4 @@ export * from "./planilhas";
 export * from "./periodos";
 export * from "./editor";
 export * from "./visual";
+export * from "./atributos";

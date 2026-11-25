@@ -7,6 +7,13 @@ import {
   LADOS,
   POSICOES,
 } from "../football";
+import {
+  atributosDaPosicao,
+  caracteristicasDosAtributos,
+  forcaDosAtributos,
+  gerarAtributos,
+  type Atributos,
+} from "../atributos";
 import { CodigoPais, Data, Id, NomeTexto } from "./comum";
 
 const Forca = z.int().min(FORCA_MIN).max(FORCA_MAX);
@@ -44,11 +51,23 @@ export const Jogador = z
     forca: Forca,
     /** Força máxima que o jogador pode atingir. */
     potencial: Forca,
-    /** As características principais (1 ou 2), como no Brasfoot. */
+    /**
+     * As características principais (1 ou 2), como no Brasfoot. Saem sempre dos atributos;
+     * na entrada só servem para guiar a geração quando os atributos não vêm.
+     */
     caracteristicas: z
       .array(z.enum([...CARACTERISTICAS_GOLEIRO, ...CARACTERISTICAS_LINHA]))
       .min(1)
-      .max(2),
+      .max(2)
+      .optional(),
+    /**
+     * Atributos de 1 a 100 (os de goleiro ou os de linha, conforme a posição). Quando vêm,
+     * a força passa a ser a média ponderada deles. Sem eles, o jogo gera um perfil coerente
+     * com a força e as características, sempre o mesmo para o mesmo id.
+     */
+    atributos: z
+      .partialRecord(z.enum([...CARACTERISTICAS_GOLEIRO, ...CARACTERISTICAS_LINHA]), Forca)
+      .optional(),
     /** Craque. Estrelas ficam fora dos leilões automáticos e podem renascer como lenda. */
     estrela: z.boolean().default(false),
     /** Está na categoria de base do clube (ainda não promovido ao elenco profissional). */
@@ -72,7 +91,16 @@ export const Jogador = z
     }
     const goleiro = j.posicao === "G";
     const validas: readonly string[] = goleiro ? CARACTERISTICAS_GOLEIRO : CARACTERISTICAS_LINHA;
-    for (const c of j.caracteristicas) {
+    if (j.atributos) {
+      const faltam = atributosDaPosicao(j.posicao).filter((a) => j.atributos?.[a] === undefined);
+      if (faltam.length)
+        ctx.addIssue({
+          code: "custom",
+          path: ["atributos"],
+          message: `faltam atributos: ${faltam.join(", ")}`,
+        });
+    }
+    for (const c of j.caracteristicas ?? []) {
       if (!validas.includes(c)) {
         ctx.addIssue({
           code: "custom",
@@ -81,7 +109,7 @@ export const Jogador = z
         });
       }
     }
-    if (new Set(j.caracteristicas).size !== j.caracteristicas.length) {
+    if (j.caracteristicas && new Set(j.caracteristicas).size !== j.caracteristicas.length) {
       ctx.addIssue({
         code: "custom",
         path: ["caracteristicas"],
@@ -95,6 +123,31 @@ export const Jogador = z
         message: "jogador livre não tem contrato",
       });
     }
+  })
+  .transform((j) => {
+    // Os atributos mandam: a força e as características saem deles.
+    const atributos: Atributos = {};
+    const dados =
+      j.atributos ??
+      gerarAtributos({
+        semente: j.id,
+        posicao: j.posicao,
+        forca: j.forca,
+        ...(j.caracteristicas ? { caracteristicas: j.caracteristicas } : {}),
+        ...(j.forcaAuge !== undefined ? { forcaAuge: j.forcaAuge } : {}),
+      });
+    for (const a of atributosDaPosicao(j.posicao)) {
+      const v = dados[a];
+      if (v !== undefined) atributos[a] = v;
+    }
+    const forca = forcaDosAtributos(j.posicao, atributos);
+    return {
+      ...j,
+      forca,
+      potencial: Math.max(j.potencial, forca),
+      caracteristicas: caracteristicasDosAtributos(j.posicao, atributos),
+      atributos,
+    };
   });
 export type Jogador = z.infer<typeof Jogador>;
 export type JogadorEntrada = z.input<typeof Jogador>;
