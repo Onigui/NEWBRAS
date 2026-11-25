@@ -6,10 +6,33 @@ import {
   type ContextoNarracao,
   type EstatisticasTime,
   type Evento,
+  type Humor,
   type LadoCampo,
   type ResultadoPartida,
   type TimePartida,
 } from "@newbras/engine";
+
+/** Rótulo e símbolo de cada humor (o técnico vê antes e durante o jogo). */
+export const HUMOR: Record<Humor, { nome: string; simbolo: string; cor: string }> = {
+  otimo: { nome: "Ótimo", simbolo: "▲▲", cor: "text-[#5fd36b]" },
+  bom: { nome: "Bom", simbolo: "▲", cor: "text-[#9bd36b]" },
+  normal: { nome: "Normal", simbolo: "●", cor: "text-suave" },
+  ruim: { nome: "Ruim", simbolo: "▼", cor: "text-[#f0a35a]" },
+  pessimo: { nome: "Péssimo", simbolo: "▼▼", cor: "text-[#ff6b5e]" },
+};
+
+export function IconeHumor({ humor }: { humor: Humor }) {
+  const h = HUMOR[humor];
+  return (
+    <span
+      className={`mr-1 inline-block w-5 text-[10px] font-black ${h.cor}`}
+      title={`Humor: ${h.nome}`}
+      aria-label={`Humor ${h.nome}`}
+    >
+      {h.simbolo}
+    </span>
+  );
+}
 
 /** Lances do modo clássico; "todos os lances" mostra também chutes, faltas e escanteios. */
 export const PRINCIPAIS = new Set<Evento["tipo"]>([
@@ -135,6 +158,9 @@ export function Notas({
             <th className="py-1">Posição</th>
             <th className="py-1 text-right">Min.</th>
             <th className="py-1 text-right">Gols</th>
+            <th className="py-1 text-right" title="Assistências">
+              Assist.
+            </th>
             <th className="py-1 text-right">Fôlego</th>
             <th className="py-1 text-right">Nota</th>
           </tr>
@@ -145,6 +171,7 @@ export function Notas({
             return (
               <tr key={j.id} className="border-b border-placar-borda/50">
                 <td className="py-1.5">
+                  <IconeHumor humor={j.humor} />
                   {dados?.nome}
                   {!j.titular && <span className="ml-1 text-xs text-suave">entrou</span>}
                   {j.amarelos > 0 && <span className="ml-1 text-xs text-[#f5d020]">▮</span>}
@@ -153,6 +180,7 @@ export function Notas({
                 <td className="py-1.5 text-suave">{dados ? NOME_POSICAO[dados.posicao] : ""}</td>
                 <td className="py-1.5 text-right tabular-nums">{j.minutos}</td>
                 <td className="py-1.5 text-right tabular-nums">{j.gols || ""}</td>
+                <td className="py-1.5 text-right tabular-nums">{j.assistencias || ""}</td>
                 <td className="py-1.5 text-right tabular-nums">{j.condicaoFinal}%</td>
                 <td className="py-1.5 text-right font-bold tabular-nums">{j.nota.toFixed(1)}</td>
               </tr>

@@ -162,7 +162,7 @@ Muda estilo, marcação e formação (cada um vai para a vaga onde rende mais) e
 
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 
-Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor) e 8 (escalação).
+Estado da carreira salvo no jogo, não dado do banco. Implementação nas Fases 6 (humor no motor, feito) e 8 (escalação e sequências).
 
 | Humor   | Chance base | Efeito no rendimento |
 | ------- | ----------- | -------------------- |
@@ -177,3 +177,28 @@ O dia ruim pesa mais que o dia bom ajuda (ajuste de 25/11/2026): quem está mal 
 - O humor dura alguns dias (sequências boas e ruins) e é puxado pela moral, pelo cansaço acumulado e pela adaptação de quem chegou ao clube. Aparece na escalação; o "dia iluminado" continua escondido.
 - Condição física de 0 a 100%: cai durante o jogo conforme os minutos, a intensidade e a resistência; recupera a cada dia. Abaixo de certo ponto, corta os atributos físicos e aumenta o risco de lesão.
 - A escalação avisa "melhor poupar" quando um titular está esgotado ou num dia ruim; a CPU usa a mesma regra para fazer rodízio.
+
+## Realismo e calibração (Fase 6, 25/11/2026)
+
+Forma do dia, sorteada no começo de cada partida pela semente (o mesmo jogo, o mesmo resultado):
+
+| Fator            | Valor                                                | Visível?                            |
+| ---------------- | ---------------------------------------------------- | ----------------------------------- |
+| Humor do jogador | tabela acima; a carreira pode impor o humor (Fase 8) | sim: trocas, notas ao vivo e resumo |
+| Dia iluminado    | 2% de chance por jogador, +10% no rendimento         | não                                 |
+| Dia do time      | ±5% em média, no máximo ±10%                         | não                                 |
+| Mando de campo   | +4,5% para o mandante; nada em campo neutro          | sim                                 |
+| Moral do time    | até ±3% (moral de 0 a 100, 50 é neutro)              | sim, a partir da Fase 8             |
+| Acomodação       | −4% para quem vence por 3 gols ou mais               | não                                 |
+
+Gols espalhados pelo time (pedido de 25/11/2026: em goleadas o mesmo atacante fazia todos):
+
+- Diagnóstico: 30% dos gols saíam de pênalti, todos batidos pelo melhor finalizador; 85% dos gols eram de atacantes; 9,4% dos jogos tinham hat-trick.
+- Ajustes: menos pênaltis (falta na área bem mais rara), meias e pontas chegando à área no fim da jogada, passe para trás (cutback) e para o companheiro livre na área, chute de fora quando há espaço, marcação mais forte em quem já marcou e atributos secundários dos meias e laterais mais perto do principal.
+- Resultado em 10.000 jogos: pênaltis em 13% dos gols, hat-trick em 3,1% dos jogos, atacantes com 77% dos gols.
+
+Assistências: contadas no motor desde a Fase 5, agora aparecem no resumo (coluna "Assist.") e nas notas ao vivo (G/A). O ranking por campeonato (artilharia e assistências) entra com as competições (Fases 9 e 15).
+
+Notas dos jogadores: com mais passes e desarmes por jogo, a média tinha subido para 7,2 e 3,7% dos titulares tiravam 10. Ajuste: desarme e interceptação valem menos, a nota parte de 5,9 e, acima de 7, cada ponto conta 75%. Agora a média é 6,6, 2,5% passam de 9 e o 10 fica para atuações raras (cerca de 0,6%), como hat-tricks.
+
+Calibração: as metas ficam em `packages/engine/src/partida/calibracao.ts`; `pnpm calibrar` roda 10.000 jogos e grava `docs/CALIBRACAO.md`. A CI roda um lote de 600 jogos com folga nas faixas. Equilíbrio tático ainda imperfeito (num campo neutro, 4-2-3-1 tem saldo médio de +0,5 gol e 5-4-1 no contra-ataque, −0,5); ajuste fino fica para a Fase 16, com a paridade.

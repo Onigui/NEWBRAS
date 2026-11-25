@@ -22,7 +22,7 @@ import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { MiniCampo, type CorTime } from "./MiniCampo";
 import { NotasAoVivo } from "./NotasAoVivo";
-import { Estatisticas, LanceALance, Notas } from "./Resumo";
+import { Estatisticas, HUMOR, LanceALance, Notas } from "./Resumo";
 import { NOME_VELOCIDADE, usePartidaAoVivo, type Velocidade } from "./usePartidaAoVivo";
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -333,6 +333,7 @@ function Comando({
 }) {
   const emCampo = partida.emCampo(lado);
   const condicoes = partida.condicoes(lado);
+  const humores = partida.humor(lado);
   const reservas = partida.reservas(lado);
   const restantes = partida.trocasRestantes(lado);
   const tatica = partida.tatica(lado);
@@ -360,8 +361,7 @@ function Comando({
             {emCampo.map((id, i) =>
               id ? (
                 <option key={id} value={id}>
-                  {nome(id)} (fôlego {condicoes[i]}%
-                  {notas.has(id) ? `, nota ${notas.get(id)?.toFixed(1)}` : ""})
+                  {`${nome(id)} (fôlego ${condicoes[i]}%${notas.has(id) ? `, nota ${notas.get(id)?.toFixed(1)}` : ""}, humor ${HUMOR[humores.get(id) ?? "normal"].nome.toLowerCase()})`}
                 </option>
               ) : null,
             )}

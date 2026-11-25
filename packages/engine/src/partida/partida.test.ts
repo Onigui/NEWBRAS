@@ -326,6 +326,55 @@ describe("partida", () => {
     expect(p.parcial().jogadores).toEqual(p.resultado().jogadores);
   });
 
+  it(
+    "forma do dia: humor sorteado, visível e com efeito; mando de campo pesa",
+    { timeout: 120_000 },
+    () => {
+      const r = jogo("humor");
+      const humores = new Set(r.jogadores.map((j) => j.humor));
+      expect(humores.size).toBeGreaterThan(1);
+      // Humor imposto pela carreira é respeitado.
+      const ruins = timeDeTeste("A", 70);
+      const pessimo = {
+        ...ruins,
+        jogadores: ruins.jogadores.map((j) => ({ ...j, humor: "pessimo" as const })),
+      };
+      const p = simularPartida({ semente: "humor-2", casa: pessimo, fora: timeDeTeste("B", 70) });
+      expect(p.jogadores.filter((j) => j.time === "casa").every((j) => j.humor === "pessimo")).toBe(
+        true,
+      );
+      // Um time inteiro num dia péssimo perde muito mais do que ganha.
+      let saldo = 0;
+      for (let i = 0; i < 120; i++) {
+        const x = simularPartida({
+          semente: `humor-${i}`,
+          neutro: true,
+          casa: pessimo,
+          fora: timeDeTeste("B", 70),
+        });
+        saldo += x.placar[0] - x.placar[1];
+      }
+      expect(saldo / 120).toBeLessThan(-0.4);
+    },
+  );
+
+  it("notas: média perto de 6,6 e nota 10 rara", { timeout: 120_000 }, () => {
+    const notas: number[] = [];
+    for (let i = 0; i < 120; i++) {
+      const r = simularPartida({
+        semente: `nota-${i}`,
+        casa: timeDeTeste("A", 62 + (i % 20)),
+        fora: timeDeTeste("B", 72),
+      });
+      for (const e of r.jogadores) if (e.minutos >= 60) notas.push(e.nota);
+    }
+    const media = notas.reduce((s, n) => s + n, 0) / notas.length;
+    expect(media).toBeGreaterThan(6.3);
+    expect(media).toBeLessThan(7);
+    expect(notas.filter((n) => n >= 9).length / notas.length).toBeLessThan(0.05);
+    expect(notas.filter((n) => n === 10).length / notas.length).toBeLessThan(0.015);
+  });
+
   it("expulsão deixa a vaga vazia nos quadros do mini-campo", () => {
     for (let i = 0; i < 300; i++) {
       const r = simularPartida({

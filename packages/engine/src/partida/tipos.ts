@@ -7,6 +7,27 @@ import type { Formacao, Vaga } from "./formacoes";
 
 export type LadoCampo = "casa" | "fora";
 
+/** Humor do jogador no dia (decisão de 25/11/2026): visível na escalação. */
+export type Humor = "otimo" | "bom" | "normal" | "ruim" | "pessimo";
+
+/** Quanto o humor muda o rendimento: o dia ruim pesa mais do que o dia bom ajuda. */
+export const EFEITO_HUMOR: Readonly<Record<Humor, number>> = {
+  otimo: 0.05,
+  bom: 0.02,
+  normal: 0,
+  ruim: -0.1,
+  pessimo: -0.2,
+};
+
+/** Chance de cada humor quando a carreira não diz (Fase 8: sequências, moral e cansaço). */
+export const CHANCE_HUMOR: Readonly<Record<Humor, number>> = {
+  otimo: 0.08,
+  bom: 0.22,
+  normal: 0.5,
+  ruim: 0.15,
+  pessimo: 0.05,
+};
+
 /** O que o motor precisa saber de cada jogador. */
 export interface JogadorPartida {
   id: string;
@@ -18,6 +39,8 @@ export interface JogadorPartida {
   numero?: number;
   /** Condição física no início do jogo, de 0 a 100 (padrão 100). Fase 8: vem da carreira. */
   condicao?: number;
+  /** Humor do dia; sem ele, o motor sorteia pelas chances de `CHANCE_HUMOR`. */
+  humor?: Humor;
 }
 
 /** Cadenciado: toque de bola para segurar o resultado e esfriar o jogo. */
@@ -56,8 +79,10 @@ export interface TimePartida {
   tatica?: Tatica;
   /** A CPU troca cansados e lesionados sozinha. O time do humano só troca lesionado sem opção. */
   cpu?: boolean;
-  /** Multiplicador geral de rendimento (Fase 6: mando, moral, humor). Padrão 1. */
+  /** Multiplicador geral de rendimento, para ajustes de fora (padrão 1). */
   ajuste?: number;
+  /** Moral do time, de 0 a 100 (padrão 50): rende até 3% a mais ou a menos. */
+  moral?: number;
 }
 
 export type Desempate = "nenhum" | "penaltis" | "prorrogacao";
@@ -70,6 +95,8 @@ export interface OpcoesPartida {
   desempate?: Desempate;
   /** Guarda a posição dos 22 e da bola a cada segundo, para o mini-campo. */
   gravarQuadros?: boolean;
+  /** Campo neutro: ninguém tem a vantagem de jogar em casa (finais, por exemplo). */
+  neutro?: boolean;
   /** Máximo de substituições por time (padrão 5, em até 3 paradas fora do intervalo). */
   substituicoes?: number;
 }
@@ -154,6 +181,7 @@ export interface EstatisticasJogador {
   id: string;
   time: LadoCampo;
   titular: boolean;
+  humor: Humor;
   minutos: number;
   gols: number;
   golsContra: number;

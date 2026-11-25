@@ -26,11 +26,14 @@ import {
 import { encaixe, vagasDaEscalacao } from "./escalacao";
 import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
 import {
+  CHANCE_HUMOR,
+  EFEITO_HUMOR,
   TATICA_PADRAO,
   type Evento,
   type EstatisticasJogador,
   type EstatisticasTime,
   type Estilo,
+  type Humor,
   type Marcacao,
   type JogadorPartida,
   type LadoCampo,
@@ -73,6 +76,8 @@ interface Atleta {
   resistencia: number;
   /** Adversário que ele está marcando. */
   marcado: Atleta | null;
+  /** Forma do dia: humor e, raramente, o dia iluminado (escondido). */
+  forma: number;
 }
 
 interface Time {
@@ -90,6 +95,10 @@ interface Time {
   posturaCpu: number;
   /** Algo mudou (gol, expulsão): a CPU revê a estratégia no próximo minuto. */
   reavaliar: boolean;
+  /** Mando de campo, moral e dia do time, juntos. */
+  forma: number;
+  /** Time que já goleia relaxa um pouco. */
+  acomodacao: number;
 }
 
 function estatisticasVazias(): EstatisticasTime {
@@ -132,6 +141,12 @@ const AVANCO_DEFENDENDO: Readonly<Record<Estilo, number>> = {
   "contra-ataque": -7,
 };
 const LADOS_CAMPO: readonly LadoCampo[] = ["casa", "fora"];
+
+/** Quanto o mando de campo rende (torcida, gramado, viagem do adversário). */
+export const VANTAGEM_MANDO = 0.045;
+/** O raro dia em que tudo dá certo para um jogador (escondido, como no Brasfoot). */
+export const CHANCE_DIA_ILUMINADO = 0.02;
+export const EFEITO_DIA_ILUMINADO = 0.1;
 
 /** Formação que a CPU usa em cada postura (0 = a formação escolhida antes do jogo). */
 const FORMACAO_POR_POSTURA: Readonly<Record<number, Formacao>> = {
@@ -176,6 +191,7 @@ export class Partida {
       casa: this.montarTime("casa", opcoes.casa),
       fora: this.montarTime("fora", opcoes.fora),
     };
+    this.sortearForma();
     this.registrar("inicio", {});
     this.saidaDeBola("casa");
   }
@@ -204,10 +220,12 @@ export class Partida {
       velocidade: 0,
       resistencia: j.atributos.resistencia ?? j.forca * 0.8,
       marcado: null,
+      forma: 1,
       est: {
         id: j.id,
         time: lado,
         titular,
+        humor: j.humor ?? "normal",
         minutos: 0,
         gols: 0,
         golsContra: 0,
@@ -255,7 +273,37 @@ export class Partida {
       est: estatisticasVazias(),
       posturaCpu: 0,
       reavaliar: false,
+      forma: 1,
+      acomodacao: 1,
     };
+  }
+
+  /**
+   * Forma do dia (Fase 6), sorteada à parte para não mexer no resto da partida:
+   * humor de cada jogador (se a carreira não disser), o raro dia iluminado (escondido, 2%),
+   * o dia do time (±6%, escondido), o mando de campo e a moral.
+   */
+  private sortearForma(): void {
+    const rng = this.rng.fork("forma");
+    const humores = Object.entries(CHANCE_HUMOR) as [Humor, number][];
+    for (const lado of LADOS_CAMPO) {
+      const time = this.times[lado];
+      for (const a of time.atletas) {
+        const humor = a.j.humor ?? rng.weighted(humores, ([, p]) => p)[0];
+        a.est.humor = humor;
+        const iluminado = rng.chance(CHANCE_DIA_ILUMINADO);
+        a.forma = (1 + EFEITO_HUMOR[humor]) * (iluminado ? 1 + EFEITO_DIA_ILUMINADO : 1);
+      }
+      const diaDoTime = 1 + limitar(rng.normal(0, 0.05), -0.1, 0.1);
+      const mando = lado === "casa" && !this.opcoes.neutro ? 1 + VANTAGEM_MANDO : 1;
+      const moral = 1 + ((limitar(time.dados.moral ?? 50, 0, 100) - 50) / 50) * 0.03;
+      time.forma = diaDoTime * mando * moral;
+    }
+  }
+
+  /** Humor de cada jogador no jogo (para a escalação e o painel de notas). */
+  humor(lado: LadoCampo): ReadonlyMap<string, Humor> {
+    return new Map(this.times[lado].atletas.map((a) => [a.j.id, a.est.humor]));
   }
 
   // ---------------------------------------------------------------- consultas
@@ -488,7 +536,8 @@ export class Partida {
     const base = a.j.atributos[nome] ?? a.j.forca * 0.35;
     const fisico = FISICOS.has(nome);
     const condicao = fisico ? 0.7 + 0.3 * (a.condicao / 100) : 0.9 + 0.1 * (a.condicao / 100);
-    const ajuste = this.times[a.lado].dados.ajuste ?? 1;
+    const time = this.times[a.lado];
+    const ajuste = (time.dados.ajuste ?? 1) * time.forma * time.acomodacao * a.forma;
     const valor = limitar(base * a.fator * condicao * ajuste, 1, 100);
     a.efetivos[nome] = valor;
     return valor;
@@ -612,6 +661,10 @@ export class Partida {
           if (!atacando && !goleiro) y += (by - y) * 0.12;
           const linhaMinima = vaga.posicao === "Z" || vaga.posicao === "L" ? (bx < 20 ? 5 : 8) : 3;
           x = goleiro ? limitar(x, 1, 20) : limitar(x, linhaMinima, 101);
+          // Chegada de trás: com o ataque no terço final, o meia central passa da bola e entra
+          // na área (é de onde saem os gols de meio-campista).
+          if (atacando && vaga.posicao === "M" && Math.abs(vaga.y - MEIO_Y) <= 15 && bx > 72)
+            x = Math.max(x, Math.min(bx + 6, 91));
           // Atacando, ninguém espera a bola em impedimento: fica na linha do penúltimo defensor.
           // Atacante arrisca ficar no limite (e às vezes passa: impedimento).
           if (atacando && !goleiro)
@@ -809,9 +862,13 @@ export class Partida {
     let wChute = 0;
     if (d <= 11) wChute = 1.45 * (fin / nivel);
     else if (d <= 18) wChute = 0.45 * (fin / nivel);
-    else if (d <= 25) wChute = 0.1 * (longe / nivel) ** 2;
-    else if (d <= 32) wChute = 0.025 * (longe / nivel) ** 3;
+    else if (d <= 25) wChute = 0.16 * (longe / nivel) ** 2;
+    else if (d <= 32) wChute = 0.05 * (longe / nivel) ** 3;
     if (angulo > 18 && d < 20) wChute *= 0.25;
+    // Livre na entrada da área, arrisca; cercado lá dentro, prefere servir quem chega.
+    if (d > 16 && d <= 28 && maisPerto > 4) wChute *= 2.2;
+    if (d <= 16 && pertos >= 2) wChute *= 0.6;
+    else if (d <= 16 && pertos === 1) wChute *= 0.8;
 
     let wCruz = 0;
     if (q.x > 78 && angulo > 14)
@@ -826,7 +883,7 @@ export class Partida {
     if (estilo === "cadenciado") wPasse += 0.5;
 
     const opcoes = [
-      { acao: "chute" as const, peso: wChute },
+      { acao: "chute" as const, peso: wChute * 0.85 },
       { acao: "cruzamento" as const, peso: wCruz },
       { acao: "drible" as const, peso: wDrible },
       { acao: "conducao" as const, peso: wConduz },
@@ -875,10 +932,19 @@ export class Partida {
       let nota =
         (0.5 + livre / 10) *
         (0.4 + linha / 6) *
-        Math.exp(avanco / (estilo === "ataque" ? 20 : estilo === "cadenciado" ? 28 : 26));
+        // No terço final, avançar pesa menos: o jogo roda para quem chega de trás.
+        Math.exp(
+          avanco /
+            ((estilo === "ataque" ? 20 : estilo === "cadenciado" ? 28 : 26) * (q.x > 70 ? 1.8 : 1)),
+        );
       if (estilo === "contra-ataque" && avanco > 15) nota *= 1.5;
       if (dist > 30) nota *= 0.6;
       if (goleiro && c.vaga !== 0 && rq.x < 30) nota *= 1.3;
+      // Passe para trás na linha de fundo: quem chega de frente para o gol, na marca do pênalti.
+      if (q.x > 85 && rq.x > 80 && rq.x < q.x && Math.abs(rq.y - MEIO_Y) < 14 && livre > 3)
+        nota *= 2.5;
+      // Companheiro livre dentro da área: a assistência vale mais do que forçar o chute.
+      if (q.x > 75 && naArea(rq) && livre > 4) nota *= 1.8;
       // Quem decide pesa o risco: passe arriscado só compensa se avança muito.
       const risco =
         (linha < 1.5 ? 0.2 : linha < 3 ? 0.06 : 0) + (livre < 1.5 ? 0.22 : livre < 3.5 ? 0.08 : 0);
@@ -1088,7 +1154,9 @@ export class Partida {
     }
     const marcacao = this.times[marcador.lado].tatica.marcacao;
     const dureza = marcacao === "leve" ? 0.85 : marcacao === "pesada" ? 1.15 : 1.45;
-    if (this.rng.chance(0.17 * dureza)) {
+    // Na área, o defensor evita derrubar: falta ali é pênalti.
+    const naAreaDrible = naArea(noQuadro(dono.pos, this.paraDireita(dono.lado)));
+    if (this.rng.chance(0.17 * dureza * (naAreaDrible ? 0.15 : 1))) {
       this.falta(marcador, dono);
       return;
     }
@@ -1116,7 +1184,7 @@ export class Partida {
     if (!this.rng.chance(0.1 * dureza)) return false;
     // Dentro da área o defensor se cuida: falta ali é pênalti.
     const area = naArea(noQuadro(dono.pos, this.paraDireita(dono.lado)));
-    if (this.rng.chance(0.17 * dureza * (area ? 0.3 : 1))) {
+    if (this.rng.chance(0.17 * dureza * (area ? 0.12 : 1))) {
       this.falta(marcador, dono);
       return true;
     }
@@ -1184,7 +1252,7 @@ export class Partida {
       this.penalti(vitima.lado);
       return;
     }
-    if (q.x > 75 && Math.abs(q.y - MEIO_Y) < 22 && this.rng.chance(0.5)) {
+    if (q.x > 77 && Math.abs(q.y - MEIO_Y) < 20 && this.rng.chance(0.35)) {
       const batedor = this.melhor(vitima.lado, (a) => this.att(a, "chuteLonge"));
       if (batedor) {
         batedor.pos = { ...vitima.pos };
@@ -1333,7 +1401,7 @@ export class Partida {
 
     let xg: number;
     if (tipo === "penalti") xg = 0.76 * (habilidade / 75) ** 0.4;
-    else if (tipo === "falta") xg = 0.065 * (habilidade / 70) ** 2;
+    else if (tipo === "falta") xg = 0.05 * (habilidade / Math.max(40, dono.j.forca)) ** 2;
     else {
       xg = tipo === "cabeca" ? 0.5 * Math.exp(-d / 5.5) : 0.95 * Math.exp(-d / 7.2);
       xg *= limitar(1.15 - Math.max(0, angulo - 4) / 22, 0.25, 1.1);
@@ -1342,7 +1410,9 @@ export class Partida {
       xg *= 0.78 ** Math.min(3, nafrente);
       // Habilidade contra a marcação de quem está perto: craque contra zaga forte vale menos.
       const defesaPerto = this.marcacaoPerto(dono, this.emCampoDe(defesa));
-      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.62;
+      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.86;
+      // Quem já marcou passa a ser vigiado de perto: o terceiro gol do mesmo jogador é raro.
+      xg *= 0.62 ** dono.est.gols;
     }
     xg = limitar(xg, 0.005, 0.95);
     time.est.chutes++;
@@ -1598,6 +1668,12 @@ export class Partida {
         if (this.rng.chance(0.0001 * (1 + (100 - a.condicao) / 40))) this.lesionar(a);
 
     const minuto = this.minutoDe(this.s).minuto;
+    // Quem goleia relaxa: com 3 gols de vantagem, o time rende um pouco menos.
+    for (const lado of LADOS_CAMPO) {
+      const saldo =
+        this.placarAtual[lado === "casa" ? 0 : 1] - this.placarAtual[lado === "casa" ? 1 : 0];
+      this.times[lado].acomodacao = saldo >= 3 ? 0.96 : 1;
+    }
     // O técnico da CPU lê o jogo: a cada 5 minutos e logo depois de gol ou expulsão.
     for (const time of Object.values(this.times))
       if (time.dados.cpu && minuto >= 20 && (minuto % 5 === 0 || time.reavaliar)) {
@@ -1908,10 +1984,10 @@ export class Partida {
     e: EstatisticasJogador = a.est,
   ): number {
     const posicao = a.j.posicao;
-    let n = 6;
-    n += 1.1 * e.gols + 0.7 * e.assistencias + 0.2 * e.chutesNoGol + 0.25 * e.passesDecisivos;
+    let n = 5.9;
+    n += 1.1 * e.gols + 0.7 * e.assistencias + 0.2 * e.chutesNoGol + 0.2 * e.passesDecisivos;
     n += 0.012 * e.passesCertos - 0.04 * (e.passes - e.passesCertos);
-    n += 0.15 * e.desarmes + 0.05 * e.interceptacoes - 0.1 * e.faltas;
+    n += 0.1 * e.desarmes + 0.025 * e.interceptacoes - 0.1 * e.faltas;
     n -= 0.5 * e.amarelos + (e.vermelho ? 2 : 0) + e.golsContra;
     if (posicao === "G") {
       n += 0.35 * e.defesas - 0.45 * e.golsSofridos;
@@ -1921,6 +1997,8 @@ export class Partida {
       if (e.golsSofridos === 0 && e.minutos >= 60) n += 0.4;
     }
     n += feitos > sofridos ? 0.3 : feitos < sofridos ? -0.3 : 0;
+    // Nota alta é rara: acima de 7, cada ponto conta menos (gol e assistência ainda levam longe).
+    if (n > 7) n = 7 + (n - 7) * 0.75;
     if (e.minutos < 20) n = 6 + (n - 6) * (e.minutos / 20);
     return limitar(Math.round(n * 2) / 2, 0.5, 10);
   }
