@@ -8,4 +8,4 @@ export * from "./carreira";
 export * from "./competicoes";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.10.0";
+export const ENGINE_VERSION = "0.11.0";

@@ -1,3 +1,5 @@
+import { COPAS } from "./mundo/copas";
+import { paisesComTemporadaAjustada } from "./mundo/temporadas";
 import {
   Banco,
   type Banco as BancoT,
@@ -47,7 +49,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.24.0";
+export const VERSAO_BANCO = "0.25.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -421,6 +423,9 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
     }
   }
 
+  // Copas nacionais e supercopas: os participantes vêm das ligas, a cada temporada.
+  competicoes.push(...COPAS);
+
   // Elencos acima do limite profissional: os jovens que sobram vão para a base e o resto
   // para clubes do mesmo país com vaga.
   const elencos = equilibrarElencos(jogadores, clubes, DATA_REFERENCIA).jogadores;
@@ -435,9 +440,9 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
       versao: VERSAO_BANCO,
       descricao:
         "Banco oficial do NewBras. Clubes reais; jogadores reais na Série A, na Premier League, na LaLiga, na Serie A italiana, na Bundesliga, na Ligue 1, nas primeiras divisões de 17 países de nível 2, na MLS e na Saudi Pro League, ícones na base e elencos gerados no resto.",
-      atualizadoEm: "2026-11-23",
+      atualizadoEm: "2026-11-25",
     },
-    paises: PAISES,
+    paises: paisesComTemporadaAjustada(PAISES, competicoes),
     estados,
     datasFifa: DATAS_FIFA,
     clubes,

@@ -19,8 +19,10 @@ export function todosContraTodos(n: number, turnos: number, rng: Rng): [number, 
       const a = roda[i] as number;
       const b = roda[m - 1 - i] as number;
       if (a < 0 || b < 0) continue;
-      // Alterna o mando para ninguém jogar em casa várias vezes seguidas.
-      rodada.push((r + i) % 2 === 0 ? [a, b] : [b, a]);
+      // Alterna o mando: quem gira muda de mesa a cada rodada, então a paridade da mesa alterna
+      // casa e fora; o fixo (mesa 0) alterna pela rodada.
+      const casaPrimeiro = i === 0 ? r % 2 === 0 : i % 2 === 1;
+      rodada.push(casaPrimeiro ? [a, b] : [b, a]);
     }
     turno.push(rodada);
     // Gira todos menos o primeiro.

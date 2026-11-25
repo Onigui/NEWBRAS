@@ -39,6 +39,8 @@ export interface MundoCompeticoes {
   temporadas: Record<string, TemporadaDoPais>;
   /** Participantes de cada competição na próxima temporada (muda com acesso e rebaixamento). */
   participantes: Record<string, string[]>;
+  /** Classificação final da última temporada de cada competição (para as vagas das copas). */
+  classificacoes?: Record<string, string[]>;
   historico: RegistroHistorico[];
 }
 
@@ -57,11 +59,12 @@ export function paisDaCompeticao(c: Competicao): string | null {
 }
 
 const PRIORIDADE: Record<Competicao["tipo"], number> = {
+  // A supercopa é um jogo (ou dois) numa janela curta: marca primeiro e os outros fogem dela.
+  supercopa: -1,
   estadual: 0,
   regional: 1,
   liga: 2,
   copa: 3,
-  supercopa: 4,
   continental: 5,
   intercontinental: 6,
   selecoes: 7,
@@ -77,6 +80,66 @@ function participantesIniciais(c: Competicao): string[] {
   return c.participantes.fixos.filter((x) => !/^[A-Z]{3}$/.test(x));
 }
 
+/**
+ * Clubes de uma competição em ordem de força: pela classificação da temporada anterior (quem não
+ * estava nela vem depois) e, no empate ou na primeira temporada, pela força do elenco.
+ */
+function ranking(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  id: string,
+  daTemporada: Record<string, EstadoCompeticao>,
+): string[] {
+  const def = m.competicao(id);
+  // A supercopa abre antes das outras: uma copa ainda fechada tem os participantes pelas vagas.
+  const membros =
+    daTemporada[id]?.participantes ??
+    (def && !def.participantes.fixos.length && def.participantes.vagas.length
+      ? participantesPorVagas(m, estado, def, daTemporada)
+      : (estado.participantes[id] ?? (def ? participantesIniciais(def) : [])));
+  const anterior = estado.classificacoes?.[id] ?? [];
+  const pos = (x: string) => {
+    const i = anterior.indexOf(x);
+    return i < 0 ? Infinity : i;
+  };
+  return [...membros].sort(
+    (a, b) => pos(a) - pos(b) || forca(m, b) - forca(m, a) || a.localeCompare(b),
+  );
+}
+
+/**
+ * Participantes de uma copa ou supercopa pelas vagas: os primeiros de cada liga, o campeão e o
+ * vice (da temporada anterior; na primeira, os mais fortes). Vaga repetida passa para o próximo.
+ */
+function participantesPorVagas(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  c: Competicao,
+  daTemporada: Record<string, EstadoCompeticao>,
+): string[] {
+  const escolhidos: string[] = [];
+  for (const v of c.participantes.vagas) {
+    const ordem = ranking(m, estado, v.de, daTemporada);
+    const proximo = (desde: number) => ordem.slice(desde).find((x) => !escolhidos.includes(x));
+    if (v.criterio === "posicoes") {
+      for (const p of v.posicoes ?? []) {
+        const x = ordem[p - 1];
+        const escolhido = x && !escolhidos.includes(x) ? x : v.repassa ? proximo(p - 1) : undefined;
+        if (escolhido) escolhidos.push(escolhido);
+      }
+      continue;
+    }
+    const registro = [...estado.historico].reverse().find((h) => h.competicao === v.de);
+    const doHistorico = v.criterio === "campeao" ? registro?.campeao : registro?.vice;
+    const escolhido =
+      doHistorico && !escolhidos.includes(doHistorico)
+        ? doHistorico
+        : proximo(v.criterio === "campeao" ? 0 : 1);
+    if (escolhido) escolhidos.push(escolhido);
+  }
+  return escolhidos;
+}
+
 /** Abre a temporada de um país (a que contém a data, ou a próxima) com todas as competições dele. */
 function abrirTemporada(
   m: MundoParaCompeticoes,
@@ -90,7 +153,7 @@ function abrirTemporada(
   const t = temporadaDe(pais, data);
   const temporada: TemporadaDoPais = { nome: nomeTemporada(pais, data), ...t };
   const competicoes = { ...estado.competicoes };
-  // Primeiro as de janela curta (estaduais e regionais), depois as ligas (da 1ª divisão para baixo)
+  // Primeiro as de janela curta (supercopas, estaduais e regionais), depois as ligas (da 1ª divisão para baixo)
   // e as copas: cada uma foge das datas das anteriores, para o mesmo clube não ter dois jogos no
   // mesmo dia nem em dias seguidos.
   const ordem = competicoesDoMundo(m)
@@ -98,7 +161,10 @@ function abrirTemporada(
     .sort((a, b) => PRIORIDADE[a.tipo] - PRIORIDADE[b.tipo] || (a.divisao ?? 9) - (b.divisao ?? 9));
   const bloqueadas = new Set<string>();
   for (const c of ordem) {
-    const participantes = estado.participantes[c.id] ?? participantesIniciais(c);
+    const participantes =
+      c.participantes.fixos.length || !c.participantes.vagas.length
+        ? (estado.participantes[c.id] ?? participantesIniciais(c))
+        : participantesPorVagas(m, estado, c, competicoes);
     if (participantes.length < 2) continue;
     const e = montarCompeticao(c, participantes, t.inicio, {
       datasFifa: m.datasFifa,
@@ -238,6 +304,7 @@ export function virarTemporadas(
     const movimentos: Movimento[] = [];
     const historico = [...estado.historico];
     const participantes = { ...estado.participantes };
+    const classificacoes = { ...estado.classificacoes };
     for (const e of doPais) {
       const c = m.competicao(e.id);
       if (!c) continue;
@@ -250,7 +317,10 @@ export function virarTemporadas(
         ...(artilheiro ? { artilheiro: { jogador: artilheiro[0], gols: artilheiro[1][0] } } : {}),
       });
       movimentos.push(...movimentosDaTemporada(c, e));
-      participantes[e.id] = participantes[e.id] ?? [...e.participantes];
+      if (e.classificacao) classificacoes[e.id] = e.classificacao;
+      // Copas montam os participantes de novo a cada temporada, pelas vagas.
+      if (c.participantes.fixos.length)
+        participantes[e.id] = participantes[e.id] ?? [...e.participantes];
     }
     for (const mv of movimentos) {
       if (!m.competicao(mv.para)) continue;
@@ -260,7 +330,7 @@ export function virarTemporadas(
       ];
       participantes[mv.para] = destino.includes(mv.clube) ? destino : [...destino, mv.clube];
     }
-    estado = { ...estado, historico, participantes };
+    estado = { ...estado, historico, participantes, classificacoes };
     estado = abrirTemporada(m, estado, codigo, somarDias(data, 0), semente);
     encerradas.push({ pais: codigo, temporada: t.nome, movimentos });
   }

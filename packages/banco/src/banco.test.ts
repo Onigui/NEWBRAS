@@ -9,7 +9,7 @@ import {
   forcaDosAtributos,
   validarIntegridade,
 } from "@newbras/data";
-import { gruposDeNomes, idadeEm } from "@newbras/engine";
+import { datasDaCompeticao, gruposDeNomes, idadeEm, temporadaDe } from "@newbras/engine";
 import { describe, expect, it } from "vitest";
 import { TOTAL_ICONES } from "./lendas/icones";
 import { NOTAVEIS } from "./reais/notaveis";
@@ -1090,6 +1090,80 @@ describe("jogadores reais: ligas de nível 2", () => {
     for (const id of ["por-liga-portugal-2", "arg-primera-nacional", "jpn-j2"]) {
       const clube = banco.competicoes.find((c) => c.id === id)!.participantes.fixos[0]!;
       expect(geradosDe(clube)).toHaveLength(25);
+    }
+  });
+});
+
+describe("copas nacionais e supercopas", () => {
+  const copas = banco.competicoes.filter((c) => c.tipo === "copa");
+  const supercopas = banco.competicoes.filter((c) => c.tipo === "supercopa");
+  const competicao = (id: string) => banco.competicoes.find((c) => c.id === id);
+  const paisDe = (c: (typeof banco.competicoes)[number]) =>
+    c.escopo.tipo === "pais" ? c.escopo.pais : undefined;
+
+  it("todo país de nível 1 e 2 tem copa nacional, e os de nível 1 têm supercopa", () => {
+    for (const p of PAISES.filter((p) => p.nivel === 1 || p.nivel === 2))
+      expect(
+        copas.some((c) => paisDe(c) === p.codigo),
+        p.codigo,
+      ).toBe(true);
+    for (const p of PAISES.filter((p) => p.nivel === 1))
+      expect(
+        supercopas.some((c) => paisDe(c) === p.codigo),
+        p.codigo,
+      ).toBe(true);
+    expect(copas.filter((c) => paisDe(c) === "ENG").map((c) => c.id)).toEqual([
+      "eng-fa-cup",
+      "eng-league-cup",
+    ]);
+  });
+
+  it("as vagas vêm de competições do mesmo país, com posições que existem", () => {
+    for (const c of [...copas, ...supercopas]) {
+      expect(c.participantes.fixos, c.id).toEqual([]);
+      let total = 0;
+      for (const v of c.participantes.vagas) {
+        const origem = competicao(v.de);
+        expect(origem, `${c.id} → ${v.de}`).toBeDefined();
+        expect(paisDe(origem!), c.id).toBe(paisDe(c));
+        if (v.criterio === "posicoes") {
+          expect(Math.max(...(v.posicoes ?? [])), c.id).toBeLessThanOrEqual(
+            origem!.participantes.fixos.length,
+          );
+          total += v.posicoes?.length ?? 0;
+        } else total += 1;
+      }
+      expect(total, c.id).toBe(c.participantes.quantidade);
+    }
+  });
+
+  it("copas têm uma fase por eliminatória até a final", () => {
+    for (const c of copas) {
+      const n = c.participantes.quantidade;
+      expect(c.fases, c.id).toHaveLength(Math.ceil(Math.log2(n)));
+      expect(c.fases.at(-1)?.nome, c.id).toBe("Final");
+      expect(c.fases.every((f) => f.tipo === "mata-mata")).toBe(true);
+    }
+    const copaDoBrasil = competicao("bra-copa-do-brasil")!;
+    expect(copaDoBrasil.participantes.quantidade).toBe(64);
+    const jogos = (f: (typeof copaDoBrasil.fases)[number]) =>
+      f.tipo === "mata-mata" ? f.jogos : 0;
+    expect(copaDoBrasil.fases.map(jogos)).toEqual([1, 1, 2, 2, 2, 2]);
+    const final = competicao("eng-fa-cup")!.fases.at(-1);
+    expect(final?.tipo === "mata-mata" && final.mando).toBe("neutro");
+  });
+
+  it("a temporada de cada país contém todas as competições dele", () => {
+    const pais = new Map(banco.paises.map((p) => [p.codigo, p]));
+    for (const c of banco.competicoes) {
+      const codigo = c.escopo.tipo === "pais" || c.escopo.tipo === "estado" ? c.escopo.pais : null;
+      const p = codigo ? pais.get(codigo) : undefined;
+      if (!p) continue;
+      const t = temporadaDe(p, "2026-06-15");
+      const d = datasDaCompeticao(c.calendario, t.inicio);
+      expect(d.fim <= t.fim, `${c.id}: ${d.inicio}..${d.fim} fora de ${t.inicio}..${t.fim}`).toBe(
+        true,
+      );
     }
   });
 });
