@@ -119,7 +119,7 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 - **Disputas:** cada ação enfrenta o adversário mais perto: drible contra desarme e velocidade, bote do marcador, cabeceio contra cabeceio e marcação, goleiro contra chute (reflexo, colocação, saída e defesa de pênalti). O chute tem probabilidade de gol (xG) pela distância, ângulo, pressão e habilidade.
 - **Cansaço:** a condição cai com a distância corrida, mais em quem tem pouca resistência, e corta os atributos físicos (até 30%) e técnicos (até 10%). A CPU troca os cansados a partir dos 58 minutos; o humano troca quando quiser (até 5 trocas em 3 paradas). Lesionado sai na hora.
 - **Saída:** registro de eventos (modo clássico), estatísticas por time e por jogador, notas de 0,5 a 10 e, para o jogo assistido, a posição dos 22 e da bola a cada segundo (mini-campo da Fase 7).
-- **Números de referência** (200 jogos entre times de força 70): 2,8 gols, 14 chutes e 5 no gol por time, 78% de passes certos, 21 faltas, 3,3 amarelos, 29% de empates, 10 km por jogador. Um time 15 pontos mais forte vence mais de 60%. Cerca de 20 ms por partida.
+- **Números de referência** (200 jogos entre times de força 70, motor 0.7.0): 2,5 gols, 11 chutes e 4 no gol por time, 77% de passes certos, 21 faltas, 3,2 amarelos, 4 impedimentos, 32% de empates, 10 km por jogador. Um time 15 pontos mais forte vence mais de 60%. Cerca de 20 ms por partida. A linha de defesa recua menos do que avança e os atacantes esperam a bola na linha do penúltimo defensor (o centroavante arrisca e às vezes fica impedido).
 - **Fica para a Fase 6:** mando de campo, humor, moral, dia iluminado, ajuste das táticas e a calibração com 10.000 jogos contra as metas.
 
 ## Formações e partida assistida (25/11/2026)

@@ -274,6 +274,52 @@ export class Partida {
     return true;
   }
 
+  /** Reservas que ainda podem entrar. */
+  reservas(lado: LadoCampo): readonly string[] {
+    return this.times[lado].atletas.filter((a) => !a.usado).map((a) => a.j.id);
+  }
+
+  /** Trocas que o time ainda pode fazer (limite de trocas e de paradas). */
+  trocasRestantes(lado: LadoCampo): number {
+    const time = this.times[lado];
+    return this.podeTrocar(time) ? this.maxTrocas - time.trocas : 0;
+  }
+
+  /** Tática em uso. */
+  tatica(lado: LadoCampo): Tatica {
+    return this.times[lado].tatica;
+  }
+
+  /** Vagas em uso (formação atual do time). */
+  vagas(lado: LadoCampo): readonly Vaga[] {
+    return this.times[lado].formacao;
+  }
+
+  /** Condição física atual de quem está em campo, por vaga (0 a 100; null = vaga vazia). */
+  condicoes(lado: LadoCampo): readonly (number | null)[] {
+    return this.times[lado].vagas.map((a) => (a ? Math.round(a.condicao) : null));
+  }
+
+  /**
+   * Muda a formação durante o jogo: quem está na vaga i passa para a nova vaga i (o técnico
+   * redesenha o time sem trocar ninguém). Vale também para a formação personalizada.
+   */
+  mudarFormacao(lado: LadoCampo, vagas: readonly Vaga[]): boolean {
+    const time = this.times[lado];
+    if (vagas.length !== time.formacao.length || vagas[0]?.posicao !== "G") return false;
+    time.formacao = vagas;
+    this.cacheEmCampo[lado] = null;
+    for (const a of time.vagas) if (a) this.moverParaVaga(time, a, a.vaga);
+    return true;
+  }
+
+  /** Posição atual dos 22 e da bola, com quem está com a bola (índice da vaga, casa primeiro). */
+  instantaneo(): Quadro & { dono: number | null } {
+    let dono: number | null = null;
+    if (this.dono) dono = (this.dono.lado === "casa" ? 0 : 11) + this.dono.vaga;
+    return { ...this.montarQuadro(), dono };
+  }
+
   mudarTatica(lado: LadoCampo, tatica: Partial<Tatica>): void {
     const time = this.times[lado];
     time.tatica = { ...time.tatica, ...tatica };
@@ -481,6 +527,20 @@ export class Partida {
       const kMarcacao = marcacao === "leve" ? 0.55 : marcacao === "pesada" ? 0.7 : 0.8;
       const golX = direita ? 0 : COMPRIMENTO;
       const adversarios = atacando ? null : this.emCampoDe(outro(lado));
+      // Linha de impedimento: o penúltimo adversário (contando o goleiro), no quadro de ataque.
+      let linhaImpedimento = COMPRIMENTO;
+      if (atacando) {
+        let primeiro = 0;
+        let segundo = 0;
+        for (const o of this.emCampoDe(outro(lado))) {
+          const ox = direita ? o.pos.x : COMPRIMENTO - o.pos.x;
+          if (ox > primeiro) {
+            segundo = primeiro;
+            primeiro = ox;
+          } else if (ox > segundo) segundo = ox;
+        }
+        linhaImpedimento = Math.max(segundo, bx, MEIO_X);
+      }
 
       for (const a of this.emCampoDe(lado)) {
         let tx: number;
@@ -507,10 +567,18 @@ export class Partida {
             if (atacando && concentracao === "meio" && !aberto) avanco += 3;
             if (atacando && vaga.posicao === "A" && bx > 65) avanco += 6;
           }
-          let x = vaga.x + (bx - MEIO_X) * (ACOMPANHA[vaga.posicao] ?? 0.5) + avanco;
+          // Recua menos do que avança: a linha de defesa não se enterra na área com a bola no
+          // meio-campo; só desce de vez quando a bola chega perto do gol.
+          const recuo = bx < MEIO_X ? 0.85 : 1;
+          let x = vaga.x + (bx - MEIO_X) * (ACOMPANHA[vaga.posicao] ?? 0.5) * recuo + avanco;
           let y = vaga.y + (by - MEIO_Y) * (goleiro ? 0.15 : 0.35);
           if (!atacando && !goleiro) y += (by - y) * 0.12;
-          x = goleiro ? limitar(x, 1, 20) : limitar(x, 3, 101);
+          const linhaMinima = vaga.posicao === "Z" || vaga.posicao === "L" ? (bx < 20 ? 5 : 8) : 3;
+          x = goleiro ? limitar(x, 1, 20) : limitar(x, linhaMinima, 101);
+          // Atacando, ninguém espera a bola em impedimento: fica na linha do penúltimo defensor.
+          // Atacante arrisca ficar no limite (e às vezes passa: impedimento).
+          if (atacando && !goleiro)
+            x = Math.min(x, linhaImpedimento + (vaga.posicao === "A" ? 1.2 : -0.5));
           y = limitar(y, 2, LARGURA - 2);
           tx = direita ? x : COMPRIMENTO - x;
           ty = direita ? y : LARGURA - y;
@@ -791,7 +859,7 @@ export class Partida {
     if (escolha.rq.x > q.x && escolha.rq.x > MEIO_X) {
       const linhas = adversarios.map((o) => noQuadro(o.pos, direita).x).sort((a, b) => b - a);
       const penultimo = linhas[1] ?? COMPRIMENTO;
-      if (escolha.rq.x > penultimo + 1 && this.rng.chance(0.18)) {
+      if (escolha.rq.x > penultimo + 1 && this.rng.chance(0.8)) {
         time.est.impedimentos++;
         this.registrar("impedimento", {
           time: dono.lado,
@@ -1130,7 +1198,7 @@ export class Partida {
       xg *= 1 - 0.18 * Math.min(2, pertos);
       // Habilidade contra a marcação de quem está perto: craque contra zaga forte vale menos.
       const defesaPerto = this.marcacaoPerto(dono, this.emCampoDe(defesa));
-      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.55;
+      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.72;
     }
     xg = limitar(xg, 0.005, 0.95);
     time.est.chutes++;
@@ -1407,18 +1475,22 @@ export class Partida {
     return { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 };
   }
 
-  private gravarQuadro(): void {
+  private montarQuadro(): Quadro {
     const posicoes: number[] = [];
     for (const lado of ["casa", "fora"] as const)
       for (const a of this.times[lado].vagas) {
         if (a) posicoes.push(Math.round(a.pos.x * 10) / 10, Math.round(a.pos.y * 10) / 10);
         else posicoes.push(Number.NaN, Number.NaN);
       }
-    this.quadros.push({
+    return {
       t: this.t,
       bola: [Math.round(this.bola.x * 10) / 10, Math.round(this.bola.y * 10) / 10],
       posicoes,
-    });
+    };
+  }
+
+  private gravarQuadro(): void {
+    this.quadros.push(this.montarQuadro());
   }
 
   private fecharEstatisticas(): void {
