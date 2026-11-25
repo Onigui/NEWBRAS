@@ -204,6 +204,27 @@ describe("partida", () => {
     expect(trocasHumano.length).toBeLessThanOrEqual(1 + lesoes);
   });
 
+  it("controle ao vivo: posições, reservas, trocas restantes e nova formação", () => {
+    const humano = { ...timeDeTeste("H", 70), cpu: false };
+    const p = new Partida({ semente: "ao-vivo", casa: humano, fora: timeDeTeste("B", 70) });
+    p.avancar(600);
+    const agora = p.instantaneo();
+    expect(agora.posicoes).toHaveLength(44);
+    expect(agora.t).toBe(p.tempo);
+    expect(p.reservas("casa")).toHaveLength(humano.escalacao.reservas.length);
+    expect(p.trocasRestantes("casa")).toBe(5);
+    expect(p.condicoes("casa").every((c) => c === null || (c > 0 && c <= 100))).toBe(true);
+    // Recua todo mundo para um 5-4-1: quem estava em cada vaga continua, só muda o lugar.
+    const antes = p.emCampo("casa");
+    expect(p.mudarFormacao("casa", FORMACOES["5-4-1"])).toBe(true);
+    expect(p.emCampo("casa")).toEqual(antes);
+    expect(p.vagas("casa")).toBe(FORMACOES["5-4-1"]);
+    expect(p.mudarFormacao("casa", FORMACOES["4-4-2"].slice(1))).toBe(false);
+    p.mudarTatica("casa", { estilo: "contra-ataque" });
+    expect(p.tatica("casa").estilo).toBe("contra-ataque");
+    expect(p.simular().placar).toHaveLength(2);
+  });
+
   it("expulsão deixa a vaga vazia nos quadros do mini-campo", () => {
     for (let i = 0; i < 300; i++) {
       const r = simularPartida({
