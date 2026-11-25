@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
 import {
+  FAMILIA_POSICAO,
+  NOME_POSICAO_CAMPO,
+  POSICOES_CAMPO,
   atributosDaPosicao,
   caracteristicasDosAtributos,
   escalarAtributos,
@@ -63,7 +66,23 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
       const atributos = trocouGrupo
         ? gerarAtributos({ semente: atual.id, posicao, forca: atual.forca })
         : atual.atributos;
-      return comAtributos({ ...atual, lado }, posicao, atributos);
+      // As posições de campo da família antiga deixam de valer.
+      const { posicoesCampo, ...resto } = atual;
+      const campo = posicoesCampo?.filter((p) => FAMILIA_POSICAO[p] === posicao);
+      return comAtributos(
+        { ...resto, lado, ...(campo?.length ? { posicoesCampo: campo } : {}) },
+        posicao,
+        atributos,
+      );
+    });
+
+  const alternarPosicaoCampo = (p: (typeof POSICOES_CAMPO)[number]) =>
+    setJ((atual) => {
+      const { posicoesCampo, ...resto } = atual;
+      const lista = posicoesCampo?.includes(p)
+        ? posicoesCampo.filter((x) => x !== p)
+        : [...(posicoesCampo ?? []), p].slice(0, 5);
+      return lista.length ? { ...resto, posicoesCampo: lista } : resto;
     });
 
   const mudarAtributo = (a: Atributo, texto: string) => {
@@ -151,6 +170,32 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             ))}
           </select>
         </Campo>
+        <fieldset className="col-span-full flex flex-col gap-1 text-sm">
+          <legend className="mb-1">
+            Posições em campo{" "}
+            <span className="text-xs text-suave">
+              (onde ele joga de verdade; a primeira é a principal, até 5)
+            </span>
+          </legend>
+          <div className="flex flex-wrap gap-1">
+            {POSICOES_CAMPO.map((p) => {
+              const ordem = j.posicoesCampo?.indexOf(p) ?? -1;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={ordem >= 0}
+                  title={NOME_POSICAO_CAMPO[p]}
+                  onClick={() => alternarPosicaoCampo(p)}
+                  className={`rounded-sm px-2 py-0.5 text-xs font-bold ${ordem >= 0 ? "bg-canarinho text-placar" : "bg-white/10 hover:bg-white/20"}`}
+                >
+                  {p}
+                  {ordem >= 0 ? ` ${ordem + 1}` : ""}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
         <Campo rotulo="Idade">
           <input
             className={estiloCampo}

@@ -1,8 +1,10 @@
 import {
   escalarAtributos,
+  FAMILIA_POSICAO,
   gerarAtributos,
   type ClubeEntrada,
   type JogadorEntrada,
+  type PosicaoCampo,
 } from "@newbras/data";
 import { Rng, fracaoDoPotencial, gerarJogador, idadeEm, salarioBase } from "@newbras/engine";
 import { pais } from "../mundo/paises";
@@ -83,6 +85,34 @@ const POSICAO: Readonly<Record<string, readonly [Posicao, Lado]>> = {
   Attacker: ["A", "C"],
 };
 const GENERICAS = new Set(["Defender", "Midfielder", "Attacker"]);
+
+/** Código de posição da fonte → posição de campo (ponta, volante, centroavante...). */
+const POSICAO_CAMPO: Readonly<Record<string, PosicaoCampo>> = {
+  GK: "GOL",
+  RB: "LD",
+  RWB: "LD",
+  LB: "LE",
+  LWB: "LE",
+  CB: "ZAG",
+  DM: "VOL",
+  CM: "MC",
+  AM: "MEI",
+  RM: "MD",
+  LM: "ME",
+  RW: "PD",
+  LW: "PE",
+  ST: "CA",
+};
+
+/** Posições de campo da linha da fonte, sem repetir, na ordem dela (as genéricas ficam de fora). */
+export function posicoesDeCampo(codigos: readonly string[]): PosicaoCampo[] {
+  const lista: PosicaoCampo[] = [];
+  for (const c of codigos) {
+    const p = POSICAO_CAMPO[c];
+    if (p && !lista.includes(p)) lista.push(p);
+  }
+  return lista.slice(0, 5);
+}
 
 /** O que costuma se destacar em cada função; a posição detalhada da fonte escolhe o perfil. */
 const PERFIL: Readonly<Record<string, Partial<Record<Caracteristica, number>>>> = {
@@ -243,6 +273,10 @@ export function jogadoresReais(
       const notavel = notavelDaLinha(l.nome, l.idade);
       const [posicaoFonte, ladoFonte] = POSICAO[codigo] ?? ["M", "C"];
       const posicao = notavel?.posicao ?? posicaoFonte;
+      // A posição de campo só vale se for da família do cadastro (o notável pode ter mudado).
+      const campo = posicoesDeCampo(l.posicoes).filter(
+        (p, i) => i > 0 || FAMILIA_POSICAO[p] === posicao,
+      );
       const aConferir: NonNullable<JogadorEntrada["aConferir"]> = [];
       if (!l.pais) aConferir.push("nacionalidade");
       if (GENERICAS.has(codigo) && !notavel?.posicao) aConferir.push("posicao");
@@ -281,6 +315,7 @@ export function jogadoresReais(
         nacionalidade,
         posicao,
         lado: notavel?.lado ?? ladoFonte,
+        ...(campo.length ? { posicoesCampo: campo } : {}),
         forca,
         potencial,
         caracteristicas: notavel?.caracteristicas ?? caracteristicas(rng, codigo),

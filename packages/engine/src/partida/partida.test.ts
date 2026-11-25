@@ -194,11 +194,12 @@ describe("partida", () => {
     const p = new Partida({ semente: "humano", casa: humano, fora: timeDeTeste("B", 70) });
     p.avancar(60 * 30);
     const titular = p.emCampo("casa")[5]!;
-    const reserva = humano.escalacao.reservas[1]!;
+    // Uma lesão pode ter levado um reserva: escolhe entre os que ainda podem entrar.
+    const [reserva, outro] = p.reservas("casa").filter((id) => !id.endsWith("-0"));
     expect(p.substituir("casa", titular, "nao-existe")).toBe(false);
-    expect(p.substituir("casa", titular, reserva)).toBe(true);
+    expect(p.substituir("casa", titular, reserva!)).toBe(true);
     expect(p.emCampo("casa")[5]).toBe(reserva);
-    expect(p.substituir("casa", titular, humano.escalacao.reservas[2]!)).toBe(false);
+    expect(p.substituir("casa", titular, outro!)).toBe(false);
     const r = p.simular();
     const trocasHumano = r.eventos.filter((e) => e.tipo === "substituicao" && e.time === "casa");
     const lesoes = r.eventos.filter((e) => e.tipo === "lesao" && e.time === "casa").length;
@@ -374,6 +375,49 @@ describe("partida", () => {
     expect(notas.filter((n) => n >= 9).length / notas.length).toBeLessThan(0.05);
     expect(notas.filter((n) => n === 10).length / notas.length).toBeLessThan(0.015);
   });
+
+  it(
+    "funções: a escalação escolhe o papel; o falso 9 sai da área e chuta menos",
+    { timeout: 120_000 },
+    () => {
+      // Time do humano: a CPU não mexe na formação (e não refaz as funções).
+      const base = timeDeTeste("F", 72, { formacao: "4-3-3", cpu: false });
+      const p = new Partida({ semente: "papeis", casa: base, fora: timeDeTeste("B", 72) });
+      const papeis = p.papeis("casa");
+      expect(papeis[0]?.posicao).toBe("GOL");
+      expect(papeis[9]?.posicao).toBe("CA");
+      // O técnico pede falso 9 no centroavante; uma escolha que não cabe na vaga é ignorada.
+      p.mudarPapel("casa", 9, { posicao: "CA", funcao: "falso-9" });
+      expect(p.papeis("casa")[9]?.funcao).toBe("falso-9");
+      p.mudarPapel("casa", 9, { posicao: "ZAG", funcao: "zagueiro" });
+      expect(p.papeis("casa")[9]?.posicao).toBe("CA");
+
+      const centroavante = base.escalacao.titulares[9]!;
+      const medir = (funcao: "falso-9" | "centroavante") => {
+        let chutes = 0;
+        let passes = 0;
+        for (let i = 0; i < 60; i++) {
+          const papeis = base.escalacao.titulares.map((_, v) =>
+            v === 9 ? { posicao: "CA" as const, funcao } : null,
+          );
+          const r = simularPartida({
+            semente: `f9-${i}`,
+            casa: { ...base, escalacao: { ...base.escalacao, papeis } },
+            fora: timeDeTeste("B", 72),
+          });
+          const e = r.jogadores.find((j) => j.id === centroavante)!;
+          expect(e.papel?.funcao).toBe(funcao);
+          chutes += e.chutes;
+          passes += e.passes;
+        }
+        return { chutes, passes };
+      };
+      const falso = medir("falso-9");
+      const homem = medir("centroavante");
+      expect(falso.chutes).toBeLessThan(homem.chutes * 0.8);
+      expect(falso.passes).toBeGreaterThan(homem.passes * 1.2);
+    },
+  );
 
   it("expulsão deixa a vaga vazia nos quadros do mini-campo", () => {
     for (let i = 0; i < 300; i++) {

@@ -1,5 +1,5 @@
 /** Peças da tela de partida: lance a lance, estatísticas e notas. */
-import { NOME_POSICAO } from "@newbras/data";
+import { DADOS_FUNCAO, NOME_POSICAO, NOME_POSICAO_CAMPO } from "@newbras/data";
 import {
   rotuloMinuto,
   textoDoEvento,
@@ -177,7 +177,16 @@ export function Notas({
                   {j.amarelos > 0 && <span className="ml-1 text-xs text-[#f5d020]">▮</span>}
                   {j.vermelho && <span className="ml-1 text-xs text-[#ff5b4a]">▮</span>}
                 </td>
-                <td className="py-1.5 text-suave">{dados ? NOME_POSICAO[dados.posicao] : ""}</td>
+                <td
+                  className="py-1.5 text-suave"
+                  title={j.papel ? DADOS_FUNCAO[j.papel.funcao].nome : undefined}
+                >
+                  {j.papel
+                    ? NOME_POSICAO_CAMPO[j.papel.posicao]
+                    : dados
+                      ? NOME_POSICAO[dados.posicao]
+                      : ""}
+                </td>
                 <td className="py-1.5 text-right tabular-nums">{j.minutos}</td>
                 <td className="py-1.5 text-right tabular-nums">{j.gols || ""}</td>
                 <td className="py-1.5 text-right tabular-nums">{j.assistencias || ""}</td>

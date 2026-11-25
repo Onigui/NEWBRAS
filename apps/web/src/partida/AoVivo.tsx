@@ -17,7 +17,12 @@ import {
   type OpcoesPartida,
   type TimePartida,
 } from "@newbras/engine";
-import { EditorFormacao } from "../components/EditorFormacao";
+import {
+  EditorFormacao,
+  PainelVaga,
+  papelENota,
+  type Candidato,
+} from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { MiniCampo, type CorTime } from "./MiniCampo";
@@ -340,10 +345,34 @@ function Comando({
   const vagas = partida.vagas(lado);
   const [sai, setSai] = useState("");
   const [entra, setEntra] = useState("");
+  const [selecionada, setSelecionada] = useState<number | null>(null);
+  const escolhidos = partida.papeisEscolhidos(lado);
+  const ocupantes = emCampo.map((id) => (id ? (porId.get(id) ?? null) : null));
+  const vagaSai = sai ? emCampo.indexOf(sai) : -1;
+  const candidatos: Candidato[] =
+    selecionada === null
+      ? []
+      : [
+          ...emCampo.flatMap((id, i) => {
+            const j = id ? porId.get(id) : undefined;
+            return j && i !== selecionada ? [{ jogador: j, origem: i }] : [];
+          }),
+          ...reservas.flatMap((id) => {
+            const j = porId.get(id);
+            return j
+              ? [
+                  {
+                    jogador: j,
+                    origem: "banco" as const,
+                    ...(restantes > 0 && emCampo[selecionada] ? {} : { bloqueado: "Sem troca" }),
+                  },
+                ]
+              : [];
+          }),
+        ];
   const [formacao, setFormacao] = useState<Formacao | "personalizada">(time.escalacao.formacao);
 
   const nome = (id: string | null) => (id ? (porId.get(id)?.nome ?? id) : "");
-  const curto = (id: string | null) => nome(id).split(" ").at(-1) ?? "";
 
   return (
     <>
@@ -372,9 +401,12 @@ function Comando({
             <option value="">Escolha quem entra</option>
             {reservas.map((id) => {
               const j = porId.get(id);
+              const vaga = vagaSai >= 0 ? vagas[vagaSai] : undefined;
+              const nota = j && vaga ? papelENota(j, vaga, escolhidos[vagaSai]).nota : null;
               return (
                 <option key={id} value={id}>
-                  {j?.nome} ({j ? NOME_POSICAO[j.posicao] : ""}, força {j?.forca})
+                  {j?.nome} ({j ? NOME_POSICAO[j.posicao] : ""}, força {j?.forca}
+                  {nota !== null ? `, nota ${nota} na vaga` : ""})
                 </option>
               );
             })}
@@ -467,13 +499,37 @@ function Comando({
         </div>
         <EditorFormacao
           vagas={vagas}
-          nomes={emCampo.map(curto)}
-          foraDePosicao={new Set()}
+          ocupantes={ocupantes}
+          papeis={escolhidos}
+          selecionada={selecionada}
+          onSelecionar={setSelecionada}
           onMudar={(novas) => {
             setFormacao("personalizada");
             if (partida.mudarFormacao(lado, novas)) onMudou();
           }}
         />
+        {selecionada !== null && vagas[selecionada] && (
+          <PainelVaga
+            vaga={vagas[selecionada]}
+            indice={selecionada}
+            ocupante={ocupantes[selecionada] ?? null}
+            escolhido={escolhidos[selecionada] ?? null}
+            candidatos={candidatos}
+            rotuloTroca={(c) => (c.origem === "banco" ? "Substituir" : "Trocar de vaga")}
+            onPapel={(papel) => {
+              partida.mudarPapel(lado, selecionada, papel);
+              onMudou();
+            }}
+            onTrocar={(c) => {
+              const ok =
+                c.origem === "banco"
+                  ? partida.substituir(lado, emCampo[selecionada] ?? "", c.jogador.id)
+                  : partida.trocarVagas(lado, selecionada, c.origem);
+              if (ok) onMudou();
+            }}
+            onFechar={() => setSelecionada(null)}
+          />
+        )}
       </section>
     </>
   );

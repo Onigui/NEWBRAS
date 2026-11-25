@@ -2,31 +2,49 @@
  * Escalação: quanto cada jogador rende na vaga e a escalação automática da CPU
  * (também usada como sugestão para o humano).
  */
-import type { Lado, Posicao } from "@newbras/data";
+import {
+  familiaridade,
+  melhorPapel,
+  notaNoPapel,
+  papelValido,
+  posicaoDaVaga,
+  type PapelEmCampo,
+  type Posicao,
+} from "@newbras/data";
 import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
 import type { Escalacao, JogadorPartida } from "./tipos";
 
-/** Rendimento de um jogador de cada posição jogando em outra (fila: posição dele; coluna: vaga). */
-const ENCAIXE: Readonly<Record<Posicao, Readonly<Record<Posicao, number>>>> = {
-  G: { G: 1, L: 0.4, Z: 0.45, M: 0.4, A: 0.4 },
-  L: { G: 0.3, L: 1, Z: 0.9, M: 0.9, A: 0.8 },
-  Z: { G: 0.3, L: 0.88, Z: 1, M: 0.82, A: 0.72 },
-  M: { G: 0.3, L: 0.88, Z: 0.82, M: 1, A: 0.9 },
-  A: { G: 0.3, L: 0.78, Z: 0.68, M: 0.88, A: 1 },
-};
+type JogadorDaVaga = Pick<
+  JogadorPartida,
+  "posicao" | "lado" | "forca" | "atributos" | "posicoesCampo"
+>;
 
 /**
- * Fator de rendimento do jogador na vaga. Jogador fora de posição (nome em amarelo no Brasfoot)
- * rende menos; lateral do lado trocado também perde um pouco.
+ * Papel de quem está na vaga: o que o técnico pediu, se couber na vaga, ou a melhor função do
+ * jogador na posição de campo da vaga.
  */
-export function encaixe(jogador: Pick<JogadorPartida, "posicao" | "lado">, vaga: Vaga): number {
-  let fator = ENCAIXE[jogador.posicao][vaga.posicao];
-  if (ladoTrocado(jogador.lado, vaga.lado) && (vaga.posicao === "L" || jogador.posicao === "L"))
-    fator *= 0.95;
-  return fator;
+export function papelNaVaga(
+  jogador: JogadorDaVaga,
+  vaga: Vaga,
+  escolhido?: PapelEmCampo | null,
+): PapelEmCampo {
+  const posicao = posicaoDaVaga(vaga);
+  return escolhido && papelValido(posicao, escolhido) ? escolhido : melhorPapel(jogador, posicao);
 }
 
-const ladoTrocado = (a: Lado, b: Lado) => (a === "D" && b === "E") || (a === "E" && b === "D");
+/**
+ * Fator de rendimento do jogador na vaga (o motor aplica em todos os atributos). Fora da
+ * família da posição rende bem menos (nome em amarelo no Brasfoot); dentro dela, quem decide é
+ * o quanto os atributos servem à função.
+ */
+export function encaixe(jogador: JogadorDaVaga, vaga: Vaga, escolhido?: PapelEmCampo | null) {
+  return familiaridade(jogador, papelNaVaga(jogador, vaga, escolhido));
+}
+
+/** Nota do jogador na vaga (na escala da força), com o papel pedido ou o melhor dele ali. */
+export function notaNaVaga(jogador: JogadorDaVaga, vaga: Vaga, escolhido?: PapelEmCampo | null) {
+  return notaNoPapel(jogador, papelNaVaga(jogador, vaga, escolhido));
+}
 
 /** Ordem de preenchimento: posições mais difíceis de improvisar primeiro. */
 const PRIORIDADE: readonly Posicao[] = ["G", "Z", "L", "A", "M"];
@@ -56,7 +74,7 @@ export function escalacaoAutomatica(
   const usados = new Set<string>();
   const titulares: string[] = new Array<string>(vagas.length).fill("");
   const valor = (j: JogadorPartida, vaga: Vaga) =>
-    j.forca * encaixe(j, vaga) * (0.7 + 0.3 * ((j.condicao ?? 100) / 100));
+    notaNaVaga(j, vaga) * (0.7 + 0.3 * ((j.condicao ?? 100) / 100));
 
   const ordemVagas = vagas
     .map((vaga, i) => ({ vaga, i }))

@@ -2,7 +2,7 @@
  * Tipos da partida: o que entra (times, escalações, táticas) e o que sai (eventos,
  * estatísticas, notas e, se pedido, os quadros para o mini-campo).
  */
-import type { Atributos, Lado, Posicao } from "@newbras/data";
+import type { Atributos, Lado, PapelEmCampo, Posicao, PosicaoCampo } from "@newbras/data";
 import type { Formacao, Vaga } from "./formacoes";
 
 export type LadoCampo = "casa" | "fora";
@@ -41,6 +41,8 @@ export interface JogadorPartida {
   condicao?: number;
   /** Humor do dia; sem ele, o motor sorteia pelas chances de `CHANCE_HUMOR`. */
   humor?: Humor;
+  /** Posições de campo em que ele atua (jogadores reais); deixam a nota por posição mais fiel. */
+  posicoesCampo?: readonly PosicaoCampo[];
 }
 
 /** Cadenciado: toque de bola para segurar o resultado e esfriar o jogo. */
@@ -69,6 +71,11 @@ export interface Escalacao {
   titulares: readonly string[];
   /** Reservas disponíveis para substituições. */
   reservas: readonly string[];
+  /**
+   * Posição e função pedidas pelo técnico em cada vaga (mesma ordem das vagas). Vaga sem escolha
+   * (ou com escolha que não cabe nela) fica com a melhor função de quem estiver lá.
+   */
+  papeis?: readonly (PapelEmCampo | null)[];
 }
 
 export interface TimePartida {
@@ -182,6 +189,8 @@ export interface EstatisticasJogador {
   time: LadoCampo;
   titular: boolean;
   humor: Humor;
+  /** Posição e função em que terminou o jogo (null = não entrou em campo). */
+  papel: PapelEmCampo | null;
   minutos: number;
   gols: number;
   golsContra: number;
