@@ -3,6 +3,35 @@ import { CodigoPais, Cor, Id, NomeTexto } from "./comum";
 
 export const CAMPOS_A_CONFERIR = ["nome", "cidade", "estadio", "capacidade", "cores"] as const;
 
+/** Formas de escudo que o jogo desenha (sem logotipos oficiais: o escudo é gerado nas cores do clube). */
+export const FORMAS_ESCUDO = ["classico", "redondo", "diamante", "flamula", "moderno"] as const;
+/** Desenho dentro do escudo. */
+export const PADROES_ESCUDO = ["liso", "faixa", "listras", "metades", "cruz", "chevron"] as const;
+/** Desenhos de camisa. */
+export const PADROES_CAMISA = [
+  "lisa",
+  "listras-verticais",
+  "listras-horizontais",
+  "faixa-diagonal",
+  "metades",
+  "gola-contraste",
+] as const;
+
+export const Escudo = z.object({
+  forma: z.enum(FORMAS_ESCUDO),
+  padrao: z.enum(PADROES_ESCUDO),
+});
+export type Escudo = z.infer<typeof Escudo>;
+
+export const Camisa = z.object({
+  padrao: z.enum(PADROES_CAMISA),
+  /** Cor de fundo. */
+  cor1: Cor,
+  /** Cor do desenho, da gola e dos números. */
+  cor2: Cor,
+});
+export type Camisa = z.infer<typeof Camisa>;
+
 export const Clube = z.object({
   id: Id,
   nome: NomeTexto,
@@ -35,6 +64,10 @@ export const Clube = z.object({
   filialDe: Id.optional(),
   tecnico: NomeTexto.optional(),
   fundacao: z.int().min(1850).max(2100).optional(),
+  /** Escudo desenhado pelo jogo. Sem ele, o jogo escolhe forma e desenho a partir do id. */
+  escudo: Escudo.optional(),
+  /** Até 3 camisas (titular, reserva e terceira). Sem elas, o jogo usa as cores do clube. */
+  camisas: z.array(Camisa).min(1).max(3).optional(),
   /** Campos ainda não confirmados em fonte; o editor destaca para correção. */
   aConferir: z.array(z.enum(CAMPOS_A_CONFERIR)).default([]),
 });

@@ -31,7 +31,7 @@ O banco oficial é montado pelo pacote `packages/banco`; o progresso e as fontes
 | País       | código FIFA (BRA), nome, confederação, nível (0 a 3), grupo de nomes, temporada, janelas de transferência, cores da seleção                                                                                                                                                                     |
 | Estado     | sigla, nome, país                                                                                                                                                                                                                                                                               |
 | Data FIFA  | nome, período (MM-DD a MM-DD)                                                                                                                                                                                                                                                                   |
-| Clube      | id, nome, nome curto, abreviação (3 letras), país, estado, cidade, estádio e capacidade, cores, reputação (1 a 5), nível (1 a 100), rivais, filial de (equipe B), técnico, fundação                                                                                                             |
+| Clube      | id, nome, nome curto, abreviação (3 letras), país, estado, cidade, estádio e capacidade, cores, reputação (1 a 5), nível (1 a 100), rivais, filial de (equipe B), técnico, fundação, escudo (forma e desenho) e até 3 camisas (desenho e duas cores), opcionais                                 |
 | Jogador    | id, nome de camisa, nome completo, nascimento, nacionalidade (e segunda), posição (G, L, Z, M, A), lado (D, E, C), força e potencial (1 a 100), 1 ou 2 características, estrela, categoria de base, clube, contrato (fim, salário e multa rescisória), número, força do auge, campos a conferir |
 | Competição | id, nome, tipo, categoria (clubes ou seleções), escopo (país, estado, confederação, mundial), divisão, periodicidade, calendário, participantes (fixos e vagas), fases, pontos, desempate, acesso e rebaixamento, vagas que distribui                                                           |
 | Seleção    | país, reputação, ranking, técnico                                                                                                                                                                                                                                                               |
@@ -65,7 +65,9 @@ Linhas com problema são apontadas pelo número da linha e não impedem a import
 
 ## Patches
 
-Um patch muda um banco sem copiá-lo: itens com o mesmo id substituem os do banco, itens novos são acrescentados e `remover` tira clubes, jogadores, competições ou técnicos. Jogadores de um clube removido ficam livres.
+Um patch muda um banco sem copiá-lo: itens com o mesmo id substituem os do banco, itens novos são acrescentados e `remover` tira clubes, jogadores, competições ou técnicos. Jogadores de um clube removido ficam livres, e o clube sai das listas de participantes das competições.
+
+O Editor de Equipes grava tudo o que o usuário muda num patch com id `usuario/minhas-edicoes`, guardado no navegador (IndexedDB). O banco oficial é montado de novo a cada abertura, num Web Worker, e o patch é aplicado por cima. O patch pode ser exportado e importado pela tela "Planilhas e patches"; um patch importado entra por cima das edições atuais.
 
 ## Validação
 

@@ -41,6 +41,9 @@ importers:
       '@fontsource/atkinson-hyperlegible':
         specifier: ^5.3.0
         version: 5.3.0
+      '@newbras/banco':
+        specifier: workspace:*
+        version: link:../../packages/banco
       '@newbras/data':
         specifier: workspace:*
         version: link:../../packages/data

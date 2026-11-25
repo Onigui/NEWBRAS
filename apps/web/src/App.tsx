@@ -3,6 +3,7 @@ import { Pitch } from "./components/Pitch";
 import type { ScreenId } from "./menu";
 import { MainMenu } from "./screens/MainMenu";
 import { ComingSoon } from "./screens/ComingSoon";
+import { Editor } from "./screens/Editor";
 
 export function App() {
   const [screen, setScreen] = useState<ScreenId | null>(null);
@@ -12,6 +13,8 @@ export function App() {
     setLastOpened(id);
     setScreen(id);
   };
+
+  if (screen === "editor") return <Editor onBack={() => setScreen(null)} />;
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
