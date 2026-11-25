@@ -4,6 +4,7 @@ import { Arquivos } from "../editor/Arquivos";
 import { FichaClube } from "../editor/FichaClube";
 import { FormClube } from "../editor/FormClube";
 import { FormJogador } from "../editor/FormJogador";
+import { gruposDoPais } from "../editor/indices";
 import { ListaClubes } from "../editor/ListaClubes";
 import { Transferir } from "../editor/Transferir";
 import { Botao, Dialogo } from "../editor/ui";
@@ -58,9 +59,10 @@ export function Editor({ onBack }: { onBack: () => void }) {
   }
 
   const { banco, indices, acoes, dataReferencia } = ed;
+  // Sem escolha, abre o primeiro time da divisão principal do país.
   const clube = selecionado
     ? indices.clubePorId.get(selecionado)
-    : (indices.clubesDoPais.get(pais) ?? [])[0];
+    : gruposDoPais(banco, indices, pais)[0]?.clubes[0];
   const paisesNome = [...banco.paises].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const fechar = () => setJanela(undefined);
 
