@@ -561,7 +561,9 @@ export class Partida {
   }
 
   private encerrarPeriodo(): void {
-    const empate = this.placarAtual[0] === this.placarAtual[1];
+    // Jogo de volta: o empate que conta é o do placar agregado (ida + volta).
+    const [ac, af] = this.opcoes.agregado ?? [0, 0];
+    const empate = this.placarAtual[0] + ac === this.placarAtual[1] + af;
     const desempate = this.opcoes.desempate ?? "nenhum";
     if (this.periodo === 1 || this.periodo === 3) {
       this.registrar("intervalo", {});

@@ -4,7 +4,30 @@
  * a condição física e o humor de cada jogador, a moral do time, a escalação e as notícias.
  * Tudo é determinístico: o mesmo salvamento, avançado do mesmo jeito, dá o mesmo resultado.
  */
-import type { Banco, Clube, DataFifa, Jogador, PapelEmCampo, Pais, Patch } from "@newbras/data";
+import type {
+  Banco,
+  Clube,
+  Competicao,
+  DataFifa,
+  Jogador,
+  PapelEmCampo,
+  Pais,
+  Patch,
+} from "@newbras/data";
+import {
+  avancarCompeticao,
+  desempateDoJogo,
+  lancarResultado,
+  nomeCurtoDaCompeticao,
+  nomeDaRodada,
+} from "../competicoes/competicao";
+import {
+  iniciarMundo,
+  jogarDia,
+  jogosDoClube,
+  virarTemporadas,
+  type MundoCompeticoes,
+} from "../competicoes/mundo";
 import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
 import { escalacaoAutomatica } from "../partida/escalacao";
@@ -26,7 +49,10 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 1;
+export const FORMATO_CARREIRA = 2;
+
+/** Amarelos acumulados numa competição que dão um jogo de suspensão. */
+export const AMARELOS_SUSPENSAO = 3;
 
 export interface EstadoJogador {
   /** Condição física de 0 a 100. */
@@ -42,6 +68,10 @@ export interface EstadoJogador {
   somaNotas: number;
   amarelos: number;
   vermelhos: number;
+  /** Amarelos acumulados por competição (zeram ao virar suspensão). */
+  amarelosPorCompeticao?: Record<string, number>;
+  /** Jogos de suspensão a cumprir, por competição. */
+  suspensoes?: Record<string, number>;
 }
 
 export interface GolDoJogo {
@@ -60,11 +90,15 @@ export interface ResultadoCompromisso {
 export interface Compromisso {
   id: string;
   data: string;
-  tipo: "amistoso";
+  tipo: "amistoso" | "oficial";
   adversario: string;
   /** Onde o time do técnico joga. */
   mando: "casa" | "fora";
   resultado?: ResultadoCompromisso;
+  /** Jogo oficial: competição e índice do jogo nela. */
+  competicao?: string;
+  indice?: number;
+  neutro?: boolean;
 }
 
 export interface EscalacaoSalva {
@@ -103,12 +137,17 @@ export interface Carreira {
   escalacao: EscalacaoSalva | null;
   tatica: Tatica;
   formacoesSalvas: FormacaoSalva[];
+  /** Amistosos (os jogos oficiais ficam nas competições). */
   agenda: Compromisso[];
   noticias: Noticia[];
+  /** Ligas, estaduais e copas do mundo inteiro, na temporada de cada país. */
+  competicoes: MundoCompeticoes;
 }
 
 /** O que a carreira precisa saber do mundo. */
 export interface Mundo {
+  competicoes: readonly Competicao[];
+  competicao(id: string): Competicao | undefined;
   clube(id: string): Clube | undefined;
   jogador(id: string): Jogador | undefined;
   /** Elenco profissional do clube (sem a categoria de base). */
@@ -122,6 +161,7 @@ export function mundoDoBanco(banco: Banco): Mundo {
   const clubes = new Map(banco.clubes.map((c) => [c.id, c]));
   const jogadores = new Map(banco.jogadores.map((j) => [j.id, j]));
   const paises = new Map(banco.paises.map((p) => [p.codigo, p]));
+  const competicoes = new Map(banco.competicoes.map((c) => [c.id, c]));
   const elencos = new Map<string, Jogador[]>();
   for (const j of banco.jogadores) {
     if (!j.clube || j.base) continue;
@@ -136,6 +176,8 @@ export function mundoDoBanco(banco: Banco): Mundo {
     else porPais.set(c.pais, [c]);
   }
   return {
+    competicoes: banco.competicoes,
+    competicao: (id) => competicoes.get(id),
     clube: (id) => clubes.get(id),
     jogador: (id) => jogadores.get(id),
     elenco: (id) => elencos.get(id) ?? [],
@@ -237,6 +279,7 @@ export function novaCarreira(mundo: Mundo, o: OpcoesNovaCarreira): Carreira {
     tatica: { ...TATICA_PADRAO },
     formacoesSalvas: [],
     agenda,
+    competicoes: iniciarMundo(mundo, inicio, o.semente),
     noticias: [
       {
         data: inicio,
@@ -260,15 +303,71 @@ export function avisoPoupar(e: Pick<EstadoJogador, "condicao" | "humor">): strin
   return null;
 }
 
+/** Jogos oficiais do time do técnico na temporada atual de cada competição. */
+export function compromissosOficiais(c: Carreira): Compromisso[] {
+  return jogosDoClube(c.competicoes, c.clube).flatMap(({ competicao, indice, data }) => {
+    const j = c.competicoes.competicoes[competicao]?.jogos[indice];
+    if (!j) return [];
+    const casa = j.casa === c.clube;
+    return [
+      {
+        id: `${competicao}#${indice}`,
+        data,
+        tipo: "oficial" as const,
+        competicao,
+        indice,
+        adversario: casa ? j.fora : j.casa,
+        mando: casa ? ("casa" as const) : ("fora" as const),
+        ...(j.neutro ? { neutro: true } : {}),
+        ...(j.placar
+          ? {
+              resultado: {
+                placar: [j.placar[0], j.placar[1]] as [number, number],
+                ...(j.penaltis
+                  ? { penaltis: [j.penaltis[0], j.penaltis[1]] as [number, number] }
+                  : {}),
+                gols: [],
+              },
+            }
+          : {}),
+      },
+    ];
+  });
+}
+
+/** Amistosos e jogos oficiais, em ordem de data. */
+export function agendaCompleta(c: Carreira): Compromisso[] {
+  return [...c.agenda, ...compromissosOficiais(c)].sort(
+    (a, b) => a.data.localeCompare(b.data) || (a.tipo === "oficial" ? -1 : 1),
+  );
+}
+
 /** Compromisso ainda não jogado no dia de hoje (ele precisa ser jogado antes de avançar). */
 export function compromissoDoDia(c: Carreira): Compromisso | undefined {
-  return c.agenda.find((x) => x.data === c.data && !x.resultado);
+  return agendaCompleta(c).find((x) => x.data === c.data && !x.resultado);
 }
 
 export function proximoCompromisso(c: Carreira): Compromisso | undefined {
-  return c.agenda
-    .filter((x) => !x.resultado && x.data >= c.data)
-    .sort((a, b) => a.data.localeCompare(b.data))[0];
+  return agendaCompleta(c).find((x) => !x.resultado && x.data >= c.data);
+}
+
+/** Nome do compromisso: "Amistoso" ou a competição e a rodada. */
+export function nomeDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): string {
+  if (x.tipo !== "oficial" || !x.competicao) return "Amistoso";
+  const comp = mundo.competicao(x.competicao);
+  const e = c.competicoes.competicoes[x.competicao];
+  const j = e?.jogos[x.indice ?? -1];
+  if (!comp || !e || !j) return comp ? nomeCurtoDaCompeticao(comp) : "Jogo oficial";
+  return `${nomeCurtoDaCompeticao(comp)}, ${nomeDaRodada(comp, e, j)}`;
+}
+
+/** Quem está suspenso na competição (só o elenco do técnico conta cartões por enquanto). */
+export function suspensosNaCompeticao(c: Carreira, competicao: string | undefined): Set<string> {
+  const ids = new Set<string>();
+  if (!competicao) return ids;
+  for (const [id, e] of Object.entries(c.jogadores))
+    if ((e.suspensoes?.[competicao] ?? 0) > 0) ids.add(id);
+  return ids;
 }
 
 function noticia(c: Carreira, n: Noticia): Noticia[] {
@@ -329,7 +428,11 @@ export interface Avanco {
 /** Avança um dia. Com jogo marcado para hoje, não avança: o jogo vem antes. */
 export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
   if (compromissoDoDia(c)) return { carreira: c, novidades: [], parouPor: "jogo" };
+  // Fecha o dia: os jogos de hoje no mundo inteiro.
+  let competicoes = jogarDia(mundo, c.competicoes, c.data, c.semente);
   const data = somarDias(c.data, 1);
+  const virada = virarTemporadas(mundo, competicoes, data, c.semente);
+  competicoes = virada.estado;
   const clube = mundo.clube(c.clube);
   const pais = clube ? mundo.pais(clube.pais) : undefined;
   const eventos = pais ? eventosDoDia(data, pais, mundo.datasFifa) : [];
@@ -340,13 +443,42 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
-  const jogo = c.agenda.find((x) => x.data === data && !x.resultado);
+  // Campeões e acessos da temporada do país do técnico.
+  for (const v of virada.encerradas) {
+    if (v.pais !== clube?.pais) continue;
+    for (const h of competicoes.historico.filter((x) => x.temporada === v.temporada)) {
+      const comp = mundo.competicao(h.competicao);
+      if (!comp || !h.campeao || comp.escopo.tipo === "estado") continue;
+      const n: Noticia = {
+        data,
+        tipo: "carreira",
+        texto: `${nomeCurtoDaCompeticao(comp)} ${v.temporada}: ${mundo.clube(h.campeao)?.nomeCurto ?? h.campeao} campeão.`,
+      };
+      novidades.unshift(n);
+      noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
+    }
+    for (const mv of v.movimentos.filter((x) => x.clube === c.clube)) {
+      const destino = mundo.competicao(mv.para);
+      const n: Noticia = {
+        data,
+        tipo: "carreira",
+        texto:
+          mv.tipo === "acesso"
+            ? `Acesso! O ${clube?.nomeCurto} vai disputar a ${destino?.nomeCurto ?? destino?.nome ?? mv.para} na próxima temporada.`
+            : `Rebaixado: o ${clube?.nomeCurto} vai para a ${destino?.nomeCurto ?? destino?.nome ?? mv.para} na próxima temporada.`,
+      };
+      novidades.unshift(n);
+      noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
+    }
+  }
+  const proximo: Carreira = { ...c, data, competicoes };
+  const jogo = compromissoDoDia(proximo);
   if (jogo) {
     const adv = mundo.clube(jogo.adversario);
     const n: Noticia = {
       data,
       tipo: "jogo",
-      texto: `Dia de jogo: amistoso ${jogo.mando === "casa" ? "contra o" : "na casa do"} ${adv?.nomeCurto ?? jogo.adversario}.`,
+      texto: `Dia de jogo: ${nomeDoCompromisso(proximo, mundo, jogo)}, ${jogo.mando === "casa" ? "contra o" : "na casa do"} ${adv?.nomeCurto ?? jogo.adversario}.`,
     };
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -354,6 +486,7 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
   const carreira: Carreira = {
     ...c,
     data,
+    competicoes,
     jogadores: viverDia(c, mundo, data),
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
@@ -387,7 +520,10 @@ export function problemasDoAmistoso(
   if (!mundo.clube(pedido.adversario)) problemas.push("adversário não encontrado");
   else if (mundo.elenco(pedido.adversario).length < 11)
     problemas.push("o adversário não tem 11 jogadores");
-  if (c.agenda.some((x) => x.data === pedido.data)) problemas.push("já há um jogo nesse dia");
+  if (agendaCompleta(c).some((x) => x.data === pedido.data))
+    problemas.push("já há um jogo nesse dia");
+  else if (jogosDoClube(c.competicoes, pedido.adversario).some((x) => x.data === pedido.data))
+    problemas.push("o adversário tem jogo oficial nesse dia");
   return problemas;
 }
 
@@ -445,12 +581,16 @@ export function elencoParaPartida(c: Carreira, mundo: Mundo, clube: string): Jog
  * Escalação salva pelo técnico, conferida contra o elenco de hoje (quem saiu do clube some e a
  * vaga é preenchida pela escalação automática). Sem escalação salva, vale a automática.
  */
-export function escalacaoDoTecnico(c: Carreira, jogadores: readonly JogadorPartida[]): Escalacao {
+export function escalacaoDoTecnico(
+  c: Carreira,
+  jogadores: readonly JogadorPartida[],
+  indisponiveis: ReadonlySet<string> = new Set(),
+): Escalacao {
   const salva = c.escalacao;
   const vagas = salva?.vagas ?? FORMACOES["4-4-2"];
-  const automatica = escalacaoAutomatica(jogadores, salva ? vagas : "4-4-2");
+  const automatica = escalacaoAutomatica(jogadores, salva ? vagas : "4-4-2", { indisponiveis });
   if (!salva) return automatica;
-  const ids = new Set(jogadores.map((j) => j.id));
+  const ids = new Set(jogadores.filter((j) => !indisponiveis.has(j.id)).map((j) => j.id));
   const usados = new Set<string>();
   const titulares = vagas.map((_, i) => {
     const id = salva.titulares[i];
@@ -487,16 +627,24 @@ export function escalacaoDoTecnico(c: Carreira, jogadores: readonly JogadorParti
 }
 
 /** Time de um lado do compromisso: o do técnico com a escalação dele; o da CPU, com rodízio. */
-export function timeDoCompromisso(c: Carreira, mundo: Mundo, clubeId: string): TimePartida {
+export function timeDoCompromisso(
+  c: Carreira,
+  mundo: Mundo,
+  clubeId: string,
+  competicao?: string,
+): TimePartida {
   const clube = mundo.clube(clubeId);
   const jogadores = elencoParaPartida(c, mundo, clubeId);
   const humano = clubeId === c.clube;
+  const suspensos = humano ? suspensosNaCompeticao(c, competicao) : new Set<string>();
   return {
     id: clubeId,
     nome: clube?.nomeCurto ?? clubeId,
     jogadores,
     // A CPU escala pela nota na vaga, já descontando cansaço e humor: é o rodízio.
-    escalacao: humano ? escalacaoDoTecnico(c, jogadores) : escalacaoAutomatica(jogadores, "4-4-2"),
+    escalacao: humano
+      ? escalacaoDoTecnico(c, jogadores, suspensos)
+      : escalacaoAutomatica(jogadores, "4-4-2"),
     tatica: humano ? c.tatica : TATICA_PADRAO,
     cpu: !humano,
     ...(humano ? { moral: c.moral } : {}),
@@ -505,13 +653,21 @@ export function timeDoCompromisso(c: Carreira, mundo: Mundo, clubeId: string): T
 
 /** Opções da partida de um compromisso (a semente sai da carreira e do compromisso). */
 export function partidaDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): OpcoesPartida {
-  const nosso = timeDoCompromisso(c, mundo, c.clube);
-  const deles = timeDoCompromisso(c, mundo, x.adversario);
-  return {
-    semente: `${c.semente}:${x.id}`,
+  const nosso = timeDoCompromisso(c, mundo, c.clube, x.competicao);
+  const deles = timeDoCompromisso(c, mundo, x.adversario, x.competicao);
+  const base: OpcoesPartida = {
+    semente: `${c.semente}:${c.competicoes.temporadas[mundo.clube(c.clube)?.pais ?? ""]?.nome ?? ""}:${x.id}`,
     casa: x.mando === "casa" ? nosso : deles,
     fora: x.mando === "casa" ? deles : nosso,
+    ...(x.neutro ? { neutro: true } : {}),
   };
+  if (x.tipo !== "oficial" || !x.competicao) return base;
+  const comp = mundo.competicao(x.competicao);
+  const e = c.competicoes.competicoes[x.competicao];
+  const j = e?.jogos[x.indice ?? -1];
+  if (!comp || !e || !j) return base;
+  const d = desempateDoJogo(comp, e, j);
+  return { ...base, desempate: d.desempate, ...(d.agregado ? { agregado: d.agregado } : {}) };
 }
 
 /** Lança o resultado do jogo: condição, humor, números dos jogadores, moral e notícia. */
@@ -521,7 +677,7 @@ export function registrarJogo(
   compromissoId: string,
   r: ResultadoPartida,
 ): Carreira {
-  const x = c.agenda.find((y) => y.id === compromissoId);
+  const x = agendaCompleta(c).find((y) => y.id === compromissoId);
   if (!x || x.resultado) return c;
   const nosso: LadoCampo = x.mando === "casa" ? "casa" : "fora";
   const [gc, gf] = r.placar;
@@ -592,15 +748,100 @@ export function registrarJogo(
   const adv = mundo.clube(x.adversario);
   const [casa, fora] =
     nosso === "casa" ? [clube?.nomeCurto, adv?.nomeCurto] : [adv?.nomeCurto, clube?.nomeCurto];
+  const placarTexto = `${casa} ${gc} x ${gf} ${fora}${r.penaltis ? ` (pênaltis ${r.penaltis[0]} x ${r.penaltis[1]})` : ""}`;
+
+  if (x.tipo !== "oficial" || !x.competicao || x.indice === undefined) {
+    return {
+      ...c,
+      jogadores,
+      moral,
+      agenda: c.agenda.map((y) => (y.id === x.id ? { ...y, resultado } : y)),
+      noticias: noticia(c, { data: c.data, tipo: "jogo", texto: `Amistoso: ${placarTexto}.` }),
+    };
+  }
+
+  // Jogo oficial: cartões e suspensões do elenco do técnico nesta competição.
+  const comp = x.competicao;
+  for (const j of mundo.elenco(c.clube)) {
+    const antes = jogadores[j.id] ?? estadoDe(c, j.id);
+    const devia = antes.suspensoes?.[comp] ?? 0;
+    // Quem estava suspenso cumpriu a suspensão neste jogo.
+    if (devia > 0 && !usados.has(j.id))
+      jogadores[j.id] = { ...antes, suspensoes: { ...antes.suspensoes, [comp]: devia - 1 } };
+  }
+  for (const e of r.jogadores) {
+    if (e.time !== nosso || (!e.amarelos && !e.vermelho)) continue;
+    const antes = jogadores[e.id] ?? estadoDe(c, e.id);
+    const amarelos = (antes.amarelosPorCompeticao?.[comp] ?? 0) + (e.vermelho ? 0 : e.amarelos);
+    const suspende = e.vermelho || amarelos >= AMARELOS_SUSPENSAO ? 1 : 0;
+    jogadores[e.id] = {
+      ...antes,
+      amarelosPorCompeticao: {
+        ...antes.amarelosPorCompeticao,
+        [comp]: amarelos >= AMARELOS_SUSPENSAO ? 0 : amarelos,
+      },
+      suspensoes: { ...antes.suspensoes, [comp]: (antes.suspensoes?.[comp] ?? 0) + suspende },
+    };
+  }
+
+  // Lança na competição, avança de fase e fecha os outros jogos do dia no mundo.
+  const competicao = mundo.competicao(comp);
+  let estado = c.competicoes.competicoes[comp];
+  let competicoes = c.competicoes;
+  if (competicao && estado) {
+    const golsDoJogo = r.eventos
+      .filter((ev) => ev.tipo === "gol" && ev.jogador)
+      .map((ev) =>
+        ev.outro
+          ? { jogador: ev.jogador as string, assistencia: ev.outro }
+          : { jogador: ev.jogador as string },
+      );
+    estado = lancarResultado(
+      estado,
+      x.indice,
+      [gc, gf],
+      r.penaltis ? [r.penaltis[0], r.penaltis[1]] : undefined,
+      golsDoJogo,
+    );
+    estado = avancarCompeticao(competicao, estado, c.semente);
+    competicoes = {
+      ...c.competicoes,
+      competicoes: { ...c.competicoes.competicoes, [comp]: estado },
+    };
+    competicoes = jogarDia(mundo, competicoes, c.data, c.semente);
+  }
+  const suspensos = r.jogadores.filter(
+    (e) =>
+      e.time === nosso &&
+      (jogadores[e.id]?.suspensoes?.[comp] ?? 0) > (c.jogadores[e.id]?.suspensoes?.[comp] ?? 0),
+  );
+  let noticias = noticia(c, {
+    data: c.data,
+    tipo: "jogo",
+    texto: `${nomeDoCompromisso(c, mundo, x)}: ${placarTexto}.`,
+  });
+  for (const e of suspensos)
+    noticias = [
+      {
+        data: c.data,
+        tipo: "elenco" as const,
+        texto: `${mundo.jogador(e.id)?.nome ?? e.id} está suspenso para o próximo jogo da ${competicao ? nomeCurtoDaCompeticao(competicao) : "competição"}.`,
+      },
+      ...noticias,
+    ].slice(0, MAX_NOTICIAS);
+  return { ...c, jogadores, moral, competicoes, noticias };
+}
+
+/** Carreira salva numa versão anterior: completa o que falta (as competições, no formato 2). */
+export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
+  const antiga = c as Omit<Carreira, "formato" | "competicoes"> & {
+    formato: number;
+    competicoes?: MundoCompeticoes;
+  };
+  if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
   return {
-    ...c,
-    jogadores,
-    moral,
-    agenda: c.agenda.map((y) => (y.id === x.id ? { ...y, resultado } : y)),
-    noticias: noticia(c, {
-      data: c.data,
-      tipo: "jogo",
-      texto: `Amistoso: ${casa} ${gc} x ${gf} ${fora}.`,
-    }),
+    ...antiga,
+    formato: FORMATO_CARREIRA,
+    competicoes: antiga.competicoes ?? iniciarMundo(mundo, c.data, c.semente),
   };
 }

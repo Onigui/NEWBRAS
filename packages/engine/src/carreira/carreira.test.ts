@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  Competicao,
   gerarAtributos,
   type Clube,
   type Jogador,
@@ -12,6 +13,8 @@ import { escalacaoAutomatica } from "../partida/escalacao";
 import { FORMACOES } from "../partida/formacoes";
 import { eventosDoDia, inicioDaCarreira, marcasDoMes, nomeTemporada } from "./calendario";
 import {
+  agendaCompleta,
+  atualizarCarreira,
   avancarAteJogo,
   avancarDia,
   avisoPoupar,
@@ -113,7 +116,21 @@ function mundoDeTeste(): Mundo {
       } as unknown as Jogador);
     });
   const porId = new Map(jogadores.map((j) => [j.id, j]));
+  const liga = Competicao.parse({
+    id: "liga-teste",
+    nome: "Liga de Teste",
+    nomeCurto: "Liga",
+    tipo: "liga",
+    categoria: "clubes",
+    escopo: { tipo: "pais", pais: "BRA" },
+    divisao: 1,
+    calendario: { inicio: "02-01", fim: "05-01" },
+    participantes: { fixos: clubes.map((c) => c.id), quantidade: 4 },
+    fases: [{ id: "pc", nome: "Pontos corridos", tipo: "grupos", grupos: 1, turnos: 2 }],
+  });
   return {
+    competicoes: [liga],
+    competicao: (id) => (id === liga.id ? liga : undefined),
     clube: (id) => clubes.find((c) => c.id === id),
     jogador: (id) => porId.get(id),
     elenco: (id) => jogadores.filter((j) => j.clube === id),
@@ -302,5 +319,50 @@ describe("carreira", () => {
     expect(avisoPoupar({ condicao: 35, humor: "normal" })).toContain("cansado");
     expect(avisoPoupar({ condicao: 95, humor: "pessimo" })).toBe("humor péssimo");
     expect(avisoPoupar({ condicao: 95, humor: "bom" })).toBeNull();
+  });
+
+  it(
+    "liga oficial: jogos na agenda, jogo do técnico no motor, tabela, campeão e histórico",
+    { timeout: 120_000 },
+    () => {
+      const mundo = mundoDeTeste();
+      let c: Carreira = { ...nova(mundo, "liga"), agenda: [] };
+      const oficiais = agendaCompleta(c).filter((x) => x.tipo === "oficial");
+      expect(oficiais).toHaveLength(6);
+      expect(oficiais.every((x) => x.data >= "2027-02-01" && x.data <= "2027-05-01")).toBe(true);
+      for (let i = 0; i < 6; i++) {
+        c = avancarAteJogo(c, mundo).carreira;
+        const x = compromissoDoDia(c)!;
+        expect(x.tipo).toBe("oficial");
+        const r = simularPartida(partidaDoCompromisso(c, mundo, x));
+        c = registrarJogo(c, mundo, x.id, r);
+        const e = c.competicoes.competicoes["liga-teste"]!;
+        // O jogo do técnico e o outro jogo do dia estão lançados.
+        const doDia = e.jogos.filter((j) => e.datas[j.rodada] === c.data);
+        expect(doDia.every((j) => j.placar)).toBe(true);
+      }
+      const e = c.competicoes.competicoes["liga-teste"]!;
+      expect(e.encerrada).toBe(true);
+      expect(e.campeao).toBeTruthy();
+      expect(Object.values(e.artilharia).reduce((s, [g]) => s + g, 0)).toBeGreaterThan(0);
+      // Passa do fim da temporada: histórico, notícia do campeão e a temporada seguinte aberta.
+      for (let i = 0; i < 260 && c.data <= "2027-12-12"; i++) c = avancarDia(c, mundo).carreira;
+      expect(
+        c.competicoes.historico.some(
+          (h) => h.competicao === "liga-teste" && h.temporada === "2027",
+        ),
+      ).toBe(true);
+      expect(c.noticias.some((n) => n.texto.includes("campeão"))).toBe(true);
+      expect(c.competicoes.competicoes["liga-teste"]?.temporada).toBe("2028");
+    },
+  );
+
+  it("salvamento antigo (formato 1) ganha as competições ao abrir", () => {
+    const mundo = mundoDeTeste();
+    const { competicoes: _c, ...resto } = nova(mundo);
+    const antiga = { ...resto, formato: 1 } as unknown as Carreira;
+    const nova2 = atualizarCarreira(antiga, mundo);
+    expect(nova2.formato).toBe(2);
+    expect(nova2.competicoes.competicoes["liga-teste"]).toBeDefined();
   });
 });

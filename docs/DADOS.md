@@ -76,7 +76,7 @@ O Editor de Equipes grava tudo o que o usuário muda num patch com id `usuario/m
 
 ## Carreira salva
 
-Cada carreira é um objeto JSON (formato `1`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
+Cada carreira é um objeto JSON (formato `2`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
 
 | Campo                                    | O que é                                                                                                                                                                                                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
