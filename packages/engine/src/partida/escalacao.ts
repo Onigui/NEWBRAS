@@ -12,7 +12,7 @@ import {
   type Posicao,
 } from "@newbras/data";
 import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
-import type { Escalacao, JogadorPartida } from "./tipos";
+import { EFEITO_HUMOR, type Escalacao, type JogadorPartida } from "./tipos";
 
 type JogadorDaVaga = Pick<
   JogadorPartida,
@@ -73,8 +73,11 @@ export function escalacaoAutomatica(
   const disponiveis = jogadores.filter((j) => !opcoes.indisponiveis?.has(j.id));
   const usados = new Set<string>();
   const titulares: string[] = new Array<string>(vagas.length).fill("");
+  // Cansaço e humor contam: a CPU poupa quem está esgotado ou num dia ruim (é o rodízio).
   const valor = (j: JogadorPartida, vaga: Vaga) =>
-    notaNaVaga(j, vaga) * (0.7 + 0.3 * ((j.condicao ?? 100) / 100));
+    notaNaVaga(j, vaga) *
+    (0.7 + 0.3 * ((j.condicao ?? 100) / 100)) *
+    (1 + EFEITO_HUMOR[j.humor ?? "normal"]);
 
   const ordemVagas = vagas
     .map((vaga, i) => ({ vaga, i }))

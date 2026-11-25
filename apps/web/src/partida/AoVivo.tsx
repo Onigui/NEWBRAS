@@ -2,7 +2,7 @@
  * Tela de partida (Fase 7): placar, mini-campo ao vivo ou modo clássico, controles de ritmo,
  * trocas e instruções do técnico durante o jogo, e o resumo no fim.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { camisasDoClube, corDeTexto, NOME_POSICAO, type Clube } from "@newbras/data";
 import {
   FORMACOES,
@@ -15,6 +15,7 @@ import {
   type LadoCampo,
   type Marcacao,
   type OpcoesPartida,
+  type ResultadoPartida,
   type TimePartida,
 } from "@newbras/engine";
 import {
@@ -63,6 +64,10 @@ interface Props {
   /** Lado comandado pelo humano (pode trocar e dar instruções); null = só assistir. */
   humano: LadoCampo | null;
   onNovo: () => void;
+  /** Texto do botão do fim de jogo (padrão: "Novo jogo"). */
+  rotuloNovo?: string;
+  /** Chamado uma vez, quando o jogo termina (a carreira lança o resultado). */
+  onTerminou?: (resultado: ResultadoPartida) => void;
 }
 
 /** Cores dos times no mini-campo; se as camisas titulares forem parecidas, o visitante usa a reserva. */
@@ -89,7 +94,7 @@ function distanciaDeCor(a: string, b: string): number {
   return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
 }
 
-export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
+export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou }: Props) {
   const ao = usePartidaAoVivo(opcoes);
   const { controle: estado, partida } = ao;
   const [classico, setClassico] = useState(false);
@@ -124,6 +129,13 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
   }, [ao, ao.rodando]);
 
   const fim = estado.resultado;
+  const avisado = useRef(false);
+  useEffect(() => {
+    if (fim && !avisado.current) {
+      avisado.current = true;
+      onTerminou?.(fim);
+    }
+  }, [fim, onTerminou]);
   // Números de agora: só calculados quando alguém vai olhar (aba aberta ou painel de trocas).
   const parcial = !fim && (aba !== "lances" || humano) ? partida.parcial() : null;
   const notas = new Map(parcial?.jogadores.map((j) => [j.id, j.nota]) ?? []);
@@ -261,7 +273,7 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
             <div className="flex flex-wrap gap-2">
               {fim ? (
                 <Botao variante="primario" onClick={onNovo}>
-                  Novo jogo
+                  {rotuloNovo ?? "Novo jogo"}
                 </Botao>
               ) : ao.rodando ? (
                 <Botao variante="primario" onClick={ao.pausar}>
