@@ -64,6 +64,12 @@ export function textoDoEvento(e: Evento, c: ContextoNarracao): string {
       return `${quem} (${time}) se machuca.`;
     case "substituicao":
       return `Substituição no ${time}: sai ${quem}, entra ${nome(e.outro)}.`;
+    case "acrescimo":
+      return e.valor
+        ? `Placa no alto: mais ${e.valor} ${e.valor === 1 ? "minuto" : "minutos"} de acréscimo.`
+        : "Sem acréscimo: o juiz vai apitar.";
+    case "mudanca-tatica":
+      return `${time} ${e.detalhe ?? "muda a tática"}.`;
     case "disputa-penaltis":
       return `${quem} (${time}) ${e.valor ? "converte" : "perde"}.${placar}`;
   }

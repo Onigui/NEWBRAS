@@ -131,12 +131,34 @@ O Brasfoot mostra só força e 2 características. O NewBras guarda atributos pa
 | Velocidade | Duração real dos 90 minutos |
 | ---------- | --------------------------- |
 | Rápida     | cerca de 3 minutos          |
-| Normal     | cerca de 4 minutos (padrão) |
-| Lenta      | cerca de 5 minutos          |
+| Normal     | cerca de 5 minutos (padrão) |
+| Lenta      | cerca de 10 minutos         |
 
-Os lances de perigo e os gols ganham um instante a mais na tela; jogos de outros campos da rodada correm juntos no placar ao lado. A tela Amistoso de hoje é só a prévia do motor.
+Os lances de perigo andam mais devagar e o chute é mostrado como foi: a bola voa até a rede, a trave, a linha de fundo ou as mãos do goleiro e só então aparece o destaque ("GOL!"). A placa de acréscimo aparece nos lances e no placar ("+4 de acréscimo"); jogos de outros campos da rodada correm juntos no placar ao lado. A tela Amistoso de hoje é só a prévia do motor.
 
 **Régua relativa:** passe, chute, decisão e goleiro comparam o jogador com quem o marca e com o próprio nível, não com uma régua fixa. Assim um jogo entre dois times fortes tem números parecidos com o de dois times fracos (cerca de 2,6 a 2,9 gols de 55 a 85 de força), e a diferença de força entre os times é o que decide.
+
+## Técnico da CPU e cartões (25/11/2026)
+
+**A CPU lê o jogo.** A cada 5 minutos, e logo depois de gol ou expulsão, o técnico da CPU olha placar, minuto, diferença de força e número de jogadores em campo e escolhe uma postura:
+
+| Situação (a partir dos 60 minutos) | O que a CPU faz                                                                   |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| Empatando, sendo mais forte (70+)  | Vai para cima (4-4-2 no ataque)                                                   |
+| Perdendo por 1                     | Adianta o time aos 65; tudo ou nada aos 82 (4-3-3, ataque total, marcação pesada) |
+| Perdendo por 2                     | Se lança ao ataque para tentar a virada                                           |
+| Perdendo por 3 ou mais             | Recua no contra-ataque para não tomar uma goleada maior                           |
+| Ganhando por 1                     | Segura: contra-ataque aos 75, fecha a casinha aos 85 (4-5-1)                      |
+| Ganhando por 2 ou mais             | Cadencia o jogo                                                                   |
+| Com um a menos                     | Uma postura mais defensiva, salvo se estiver perdendo no fim                      |
+
+Muda estilo, marcação e formação (cada um vai para a vaga onde rende mais) e, quando cabe, faz troca tática: atacante no lugar de zagueiro ou volante para buscar o gol, o contrário para segurar. Com dois ou mais amarelados, a marcação fica leve. Cada mudança aparece no lance a lance ("Palmeiras fecha a defesa para segurar a vantagem (4-5-1, contra-ataque)"). O time do humano nunca muda sozinho. Medição: quem está na frente aos 60 minutos e tem o técnico da CPU vence cerca de 80% das vezes; quem está atrás busca o empate com mais frequência do que sem ele.
+
+**Expulsões existem:** vermelho direto e segundo amarelo, com o jogador saindo de campo e o time ficando com um a menos (goleiro expulso: entra o reserva ou um jogador da linha vai para o gol).
+
+**Suspensões (Fases 9 e 12):** o motor já devolve os cartões de cada jogador por partida. A carreira vai guardar o acúmulo por competição: 3 amarelos = 1 jogo de suspensão (regra configurável por competição, como no Brasileirão e na Champions), vermelho = suspenso no jogo seguinte da mesma competição, zeragem dos amarelos onde o regulamento manda (por exemplo, antes das quartas). Suspenso fica indisponível na escalação daquela competição e livre nas outras.
+
+**Passe em profundidade e o ferrolho:** contra linha alta, a bola no espaço atrás da defesa é a arma do contra-ataque; jogadores na frente do chute tiram ângulo e travam a bola. O equilíbrio fino entre estilos e formações (o 4-3-3 ainda rende demais e a linha de 5 se fecha atrás demais) fica para a calibração da Fase 6.
 
 ## Humor e condição física (desenho aprovado em 25/11/2026)
 

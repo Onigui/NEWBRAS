@@ -8,7 +8,7 @@
  * O registro de eventos alimenta o modo clássico (linha de minutos) e os quadros alimentam o
  * mini-campo (Fase 7). A calibração fina e o mando ficam para a Fase 6.
  */
-import type { Atributo } from "@newbras/data";
+import type { Atributo, Posicao } from "@newbras/data";
 import { Rng } from "../rng";
 import {
   COMPRIMENTO,
@@ -24,12 +24,14 @@ import {
   type Ponto,
 } from "./campo";
 import { encaixe, vagasDaEscalacao } from "./escalacao";
-import type { Vaga } from "./formacoes";
+import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
 import {
   TATICA_PADRAO,
   type Evento,
   type EstatisticasJogador,
   type EstatisticasTime,
+  type Estilo,
+  type Marcacao,
   type JogadorPartida,
   type LadoCampo,
   type OpcoesPartida,
@@ -83,6 +85,11 @@ interface Time {
   trocas: number;
   paradas: Set<number>;
   est: EstatisticasTime;
+  /** Último plano da CPU (postura, estilo e marcação), para não mexer à toa. */
+  planoCpu?: string;
+  posturaCpu: number;
+  /** Algo mudou (gol, expulsão): a CPU revê a estratégia no próximo minuto. */
+  reavaliar: boolean;
 }
 
 function estatisticasVazias(): EstatisticasTime {
@@ -110,7 +117,31 @@ function estatisticasVazias(): EstatisticasTime {
 }
 
 const outro = (l: LadoCampo): LadoCampo => (l === "casa" ? "fora" : "casa");
+
+/** Quanto o time avança (atacando) ou recua (defendendo) a partir das vagas, por estilo. */
+const AVANCO_ATACANDO: Readonly<Record<Estilo, number>> = {
+  ataque: 11,
+  equilibrado: 9,
+  cadenciado: 9,
+  "contra-ataque": 8,
+};
+const AVANCO_DEFENDENDO: Readonly<Record<Estilo, number>> = {
+  ataque: -3,
+  equilibrado: -5,
+  cadenciado: -5,
+  "contra-ataque": -7,
+};
 const LADOS_CAMPO: readonly LadoCampo[] = ["casa", "fora"];
+
+/** Formação que a CPU usa em cada postura (0 = a formação escolhida antes do jogo). */
+const FORMACAO_POR_POSTURA: Readonly<Record<number, Formacao>> = {
+  2: "4-3-3",
+  1: "4-4-2",
+  [-1]: "4-5-1",
+  [-2]: "4-5-1",
+};
+/** Ordem de preencher as vagas ao reorganizar: o que é mais difícil de improvisar primeiro. */
+const PRIORIDADE_VAGA: readonly Posicao[] = ["G", "Z", "L", "M", "A"];
 
 export class Partida {
   private readonly rng: Rng;
@@ -222,6 +253,8 @@ export class Partida {
       trocas: 0,
       paradas: new Set(),
       est: estatisticasVazias(),
+      posturaCpu: 0,
+      reavaliar: false,
     };
   }
 
@@ -242,6 +275,11 @@ export class Partida {
   /** Período e minuto de relógio atuais, para a tela. */
   get relogio(): { periodo: Periodo; minuto: number; acrescimo?: number } {
     return this.minutoDe(this.s);
+  }
+
+  /** Minutos de acréscimo dados no período atual (null antes de o tempo regulamentar acabar). */
+  get acrescimoDado(): number | null {
+    return this.acrescimo;
   }
 
   /** Quem está em campo agora, por vaga. */
@@ -371,8 +409,13 @@ export class Partida {
 
   private verificarFimDoPeriodo(): void {
     const regulamentar = DURACAO[this.periodo];
-    if (this.s === regulamentar && this.acrescimo === null)
+    if (this.s === regulamentar && this.acrescimo === null) {
       this.acrescimo = this.calcularAcrescimo();
+      // A placa do quarto árbitro: todo mundo fica sabendo quantos minutos foram dados.
+      const placa = this.registrar("acrescimo", { valor: this.acrescimo });
+      // A placa sobe no último minuto regulamentar (45' ou 90'), não no primeiro do acréscimo.
+      delete placa.acrescimo;
+    }
     if (this.acrescimo === null || this.s < regulamentar + this.acrescimo * 60) return;
     // Não apita no meio de um ataque perigoso: espera a bola sair da zona de ataque.
     if (this.dono && this.s < regulamentar + (this.acrescimo + 1) * 60) {
@@ -512,19 +555,13 @@ export class Partida {
       const atacando = this.posse === lado;
       const estilo = time.tatica.estilo;
       const concentracao = time.tatica.concentracao;
-      const avancoBase = atacando
-        ? estilo === "ataque"
-          ? 14
-          : estilo === "contra-ataque"
-            ? 5
-            : 9
-        : estilo === "ataque"
-          ? -2
-          : estilo === "contra-ataque"
-            ? -10
-            : -5;
+      const avancoBase = (atacando ? AVANCO_ATACANDO : AVANCO_DEFENDENDO)[estilo];
       const marcacao = time.tatica.marcacao;
       const kMarcacao = marcacao === "leve" ? 0.55 : marcacao === "pesada" ? 0.7 : 0.8;
+      // Ataque total e marcação forte cobram fôlego: o time cansa mais rápido.
+      const desgaste =
+        (estilo === "ataque" ? 1.25 : estilo === "cadenciado" ? 0.9 : 1) *
+        (marcacao === "leve" ? 1 : marcacao === "pesada" ? 1.12 : 1.25);
       const golX = direita ? 0 : COMPRIMENTO;
       const adversarios = atacando ? null : this.emCampoDe(outro(lado));
       // Linha de impedimento: o penúltimo adversário (contando o goleiro), no quadro de ataque.
@@ -565,7 +602,7 @@ export class Partida {
             const aberto = Math.abs(vaga.y - MEIO_Y) > 15;
             if (atacando && concentracao === "laterais" && aberto) avanco += 4;
             if (atacando && concentracao === "meio" && !aberto) avanco += 3;
-            if (atacando && vaga.posicao === "A" && bx > 65) avanco += 6;
+            if (atacando && vaga.posicao === "A" && bx > 65) avanco += 3;
           }
           // Recua menos do que avança: a linha de defesa não se enterra na área com a bola no
           // meio-campo; só desce de vez quando a bola chega perto do gol.
@@ -628,7 +665,7 @@ export class Partida {
         // Cansaço: correr cansa mais quem tem pouca resistência.
         a.condicao = Math.max(
           0,
-          a.condicao - passo * 0.0046 * (1.55 - a.resistencia / 100) - 0.0006,
+          a.condicao - passo * 0.0046 * desgaste * (1.55 - a.resistencia / 100) - 0.0006,
         );
       }
     }
@@ -775,7 +812,6 @@ export class Partida {
     else if (d <= 25) wChute = 0.1 * (longe / nivel) ** 2;
     else if (d <= 32) wChute = 0.025 * (longe / nivel) ** 3;
     if (angulo > 18 && d < 20) wChute *= 0.25;
-    if (estilo === "ataque") wChute *= 1.15;
 
     let wCruz = 0;
     if (q.x > 78 && angulo > 14)
@@ -784,9 +820,10 @@ export class Partida {
     const wDrible = pertos > 0 || maisPerto < 3 ? 0.3 * (dri / nivel) ** 2 : 0.04 * (dri / nivel);
     let wConduz = maisPerto > 6 ? 1.8 * (vel / nivel) : 0.25;
     if (q.x > 88) wConduz *= 0.4;
-    if (estilo === "ataque") wConduz *= 1.1;
     let wPasse = 2.6 + (pertos > 0 ? 1 : 0) + (q.x < 35 ? 1 : 0);
     if (estilo === "contra-ataque" && q.x < 60) wPasse += 0.5;
+    // Cadenciado: toca de lado, segura a bola e só arrisca o chute claro.
+    if (estilo === "cadenciado") wPasse += 0.5;
 
     const opcoes = [
       { acao: "chute" as const, peso: wChute },
@@ -836,15 +873,31 @@ export class Partida {
       const rq = noQuadro(c.pos, direita);
       const avanco = rq.x - q.x;
       let nota =
-        (0.5 + livre / 10) * (0.4 + linha / 6) * Math.exp(avanco / (estilo === "ataque" ? 20 : 26));
+        (0.5 + livre / 10) *
+        (0.4 + linha / 6) *
+        Math.exp(avanco / (estilo === "ataque" ? 20 : estilo === "cadenciado" ? 28 : 26));
       if (estilo === "contra-ataque" && avanco > 15) nota *= 1.5;
       if (dist > 30) nota *= 0.6;
       if (goleiro && c.vaga !== 0 && rq.x < 30) nota *= 1.3;
       // Quem decide pesa o risco: passe arriscado só compensa se avança muito.
       const risco =
         (linha < 1.5 ? 0.2 : linha < 3 ? 0.06 : 0) + (livre < 1.5 ? 0.22 : livre < 3.5 ? 0.08 : 0);
-      nota *= (1 - risco) ** 4;
+      nota *= (1 - risco) ** (estilo === "cadenciado" ? 5 : 4);
       opcoes.push({ c, rq, dist, linha, livre, nota });
+    }
+    const profundidade = goleiro
+      ? null
+      : this.passeEmProfundidade(dono, q, direita, adversarios, estilo);
+    if (!opcoes.length && !profundidade) {
+      this.conduzir(dono, q);
+      return;
+    }
+    if (profundidade) {
+      const pesoNormal = opcoes.reduce((soma, o) => soma + o.nota ** 2, 0);
+      if (this.rng.chance(profundidade.nota ** 2 / (pesoNormal + profundidade.nota ** 2))) {
+        this.lancarEmProfundidade(dono, profundidade);
+        return;
+      }
     }
     if (!opcoes.length) {
       this.conduzir(dono, q);
@@ -907,6 +960,90 @@ export class Partida {
     }
     const fora = { x: escolha.c.pos.x, y: escolha.c.pos.y < MEIO_Y ? 0.5 : LARGURA - 0.5 };
     this.bolaPara(outro(dono.lado), fora, 5);
+  }
+
+  /**
+   * Passe em profundidade: bola no espaço atrás da linha de defesa para quem chega correndo.
+   * Só existe se houver espaço entre a linha e o goleiro: contra linha alta é a arma do
+   * contra-ataque; contra time fechado lá atrás, quase não aparece.
+   */
+  private passeEmProfundidade(
+    dono: Atleta,
+    q: Ponto,
+    direita: boolean,
+    adversarios: readonly Atleta[],
+    estilo: Estilo,
+  ): { alvo: Ponto; nota: number; receptor: Atleta; distancia: number } | null {
+    let primeiro = 0;
+    let segundo = 0;
+    for (const o of adversarios) {
+      const ox = noQuadro(o.pos, direita).x;
+      if (ox > primeiro) {
+        segundo = primeiro;
+        primeiro = ox;
+      } else if (ox > segundo) segundo = ox;
+    }
+    const goleiro = this.goleiroDe(outro(dono.lado));
+    const goleiroX = goleiro ? noQuadro(goleiro.pos, direita).x : COMPRIMENTO;
+    const espaco = goleiroX - segundo;
+    if (espaco < 12) return null;
+    let melhor: { alvo: Ponto; nota: number; receptor: Atleta; distancia: number } | null = null;
+    for (const c of this.emCampoDe(dono.lado)) {
+      if (c === dono || c.vaga === 0 || c.j.posicao === "Z" || c.j.posicao === "G") continue;
+      const rq = noQuadro(c.pos, direita);
+      if (rq.x < q.x + 4 || rq.x < segundo - 6) continue;
+      const alvoQ = {
+        x: Math.min(goleiroX - 4, segundo + Math.min(16, espaco * 0.55)),
+        y: rq.y + (MEIO_Y - rq.y) * 0.2,
+      };
+      const alvo = noQuadro(alvoQ, direita);
+      const dist = distancia(dono.pos, alvo);
+      if (dist > 50 || dist < 10) continue;
+      const tempoReceptor = distancia(c.pos, alvo) / this.velocidadeMaxima(c);
+      let tempoDefesa = Infinity;
+      for (const o of adversarios) {
+        const t = distancia(o.pos, alvo) / this.velocidadeMaxima(o);
+        if (t < tempoDefesa) tempoDefesa = t;
+      }
+      const vantagem = tempoDefesa - tempoReceptor;
+      if (vantagem < -0.3) continue;
+      let nota = 1.2 * Math.exp((alvoQ.x - q.x) / 26) * (0.5 + Math.min(vantagem, 2) / 2.5);
+      if (estilo === "contra-ataque") nota *= 1.6;
+      if (estilo === "cadenciado") nota *= 0.3;
+      if (!melhor || nota > melhor.nota) melhor = { alvo, nota, receptor: c, distancia: dist };
+    }
+    return melhor;
+  }
+
+  /** Lança a bola no espaço: quem chegar primeiro (o atacante ou a defesa) fica com ela. */
+  private lancarEmProfundidade(
+    dono: Atleta,
+    lance: { alvo: Ponto; receptor: Atleta; distancia: number },
+  ): void {
+    const time = this.times[dono.lado];
+    time.est.passes++;
+    dono.est.passes++;
+    const precisao = limitar(
+      0.86 + (this.att(dono, "passe") - 65) / 220 - 0.003 * Math.max(0, lance.distancia - 25),
+      0.5,
+      0.97,
+    );
+    const direita = this.paraDireita(dono.lado);
+    let alvo = lance.alvo;
+    if (!this.rng.chance(precisao)) {
+      // Passou da conta: a bola corre para o goleiro ou para fora.
+      const q = noQuadro(alvo, direita);
+      alvo = noQuadro(
+        { x: Math.min(COMPRIMENTO - 1, q.x + this.rng.float(8, 16)), y: q.y },
+        direita,
+      );
+    } else {
+      time.est.passesCertos++;
+      dono.est.passesCertos++;
+    }
+    this.ultimoPasse = { de: dono, t: this.t };
+    this.bolaSolta(alvo);
+    this.acaoEm = this.t + Math.max(1, Math.round(lance.distancia / 18));
   }
 
   private conduzir(dono: Atleta, q: Ponto): void {
@@ -1120,7 +1257,7 @@ export class Partida {
       ? Math.max(this.att(marcador, "cabeceio"), this.att(marcador, "marcacao") * 0.9)
       : 30;
     const chance = limitar(
-      0.42 +
+      0.38 +
         (this.att(alvo, "cabeceio") - defesaAerea) / 120 +
         (this.att(dono, "cruzamento") - 65) / 250,
       0.15,
@@ -1178,6 +1315,11 @@ export class Partida {
     const q = noQuadro(dono.pos, direita);
     const d = distanciaAoGol(q);
     const angulo = Math.abs(q.y - MEIO_Y);
+    const golCentro = noQuadro({ x: COMPRIMENTO, y: MEIO_Y }, direita);
+    let nafrente = 0;
+    if (tipo === "pe" || tipo === "cabeca")
+      for (const o of this.emCampoDe(defesa))
+        if (o.vaga !== 0 && distanciaAoSegmento(o.pos, dono.pos, golCentro) < 1.6) nafrente++;
     const habilidade =
       tipo === "cabeca"
         ? this.att(dono, "cabeceio")
@@ -1193,12 +1335,14 @@ export class Partida {
     if (tipo === "penalti") xg = 0.76 * (habilidade / 75) ** 0.4;
     else if (tipo === "falta") xg = 0.065 * (habilidade / 70) ** 2;
     else {
-      xg = tipo === "cabeca" ? 0.6 * Math.exp(-d / 5.5) : 0.95 * Math.exp(-d / 7.2);
+      xg = tipo === "cabeca" ? 0.5 * Math.exp(-d / 5.5) : 0.95 * Math.exp(-d / 7.2);
       xg *= limitar(1.15 - Math.max(0, angulo - 4) / 22, 0.25, 1.1);
       xg *= 1 - 0.18 * Math.min(2, pertos);
+      // Gente na frente do chute (entre a bola e o gol) tira ângulo: o ferrolho funciona.
+      xg *= 0.78 ** Math.min(3, nafrente);
       // Habilidade contra a marcação de quem está perto: craque contra zaga forte vale menos.
       const defesaPerto = this.marcacaoPerto(dono, this.emCampoDe(defesa));
-      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.72;
+      xg *= (habilidade / Math.max(40, defesaPerto)) ** 1.6 * 0.62;
     }
     xg = limitar(xg, 0.005, 0.95);
     time.est.chutes++;
@@ -1219,8 +1363,12 @@ export class Partida {
       valor: Math.round(xg * 1000) / 1000,
     };
 
-    if (tipo === "pe" && this.rng.chance(0.1 + 0.07 * pertos)) {
-      this.registrar("bloqueio", base);
+    // Para onde a bola vai em cada desfecho (o mini-campo anima o chute até lá antes do destaque).
+    const destino = (tipoDestino: "gol" | "fora" | "trave" | "bloqueio") =>
+      this.destinoDoChute(q, direita, tipoDestino);
+
+    if (tipo === "pe" && this.rng.chance(0.08 + 0.05 * pertos + 0.08 * Math.min(3, nafrente))) {
+      this.registrar("bloqueio", { ...base, destino: destino("bloqueio") });
       this.rebatida(defesa, dono.pos);
       return;
     }
@@ -1232,14 +1380,14 @@ export class Partida {
           : limitar(0.27 + xg * 1.1 + (habilidade - Math.max(40, dono.j.forca)) / 250, 0.15, 0.9);
     if (!this.rng.chance(noAlvo)) {
       if (this.rng.chance(0.06)) {
-        this.registrar("chute-trave", base);
+        this.registrar("chute-trave", { ...base, destino: destino("trave") });
         if (tipo === "penalti") this.registrar("penalti-perdido", base);
         this.bolaSolta(
           noQuadro({ x: COMPRIMENTO - this.rng.float(4, 12), y: this.rng.float(20, 48) }, direita),
         );
         return;
       }
-      this.registrar("chute-fora", base);
+      this.registrar("chute-fora", { ...base, destino: destino("fora") });
       if (tipo === "penalti") this.registrar("penalti-perdido", base);
       this.tiroDeMeta(defesa);
       return;
@@ -1265,14 +1413,24 @@ export class Partida {
     chanceGol = limitar(chanceGol, 0.02, 0.98);
 
     if (this.rng.chance(chanceGol)) {
-      this.gol(dono, tipo !== "penalti" && tipo !== "falta" ? assistente : null, xg);
+      this.gol(
+        dono,
+        tipo !== "penalti" && tipo !== "falta" ? assistente : null,
+        xg,
+        destino("gol"),
+      );
       return;
     }
     if (goleiro) {
       this.times[defesa].est.defesas++;
       goleiro.est.defesas++;
     }
-    this.registrar("defesa", { ...base, ...(goleiro ? { outro: goleiro.j.id } : {}) });
+    this.registrar("defesa", {
+      ...base,
+      ...(goleiro
+        ? { outro: goleiro.j.id, destino: this.xy(goleiro.pos) }
+        : { destino: destino("gol") }),
+    });
     if (tipo === "penalti") this.registrar("penalti-perdido", base);
     const r = this.rng.next();
     if (r < 0.33) this.escanteio(dono.lado);
@@ -1286,7 +1444,34 @@ export class Partida {
       );
   }
 
-  private gol(autor: Atleta, assistente: Atleta | null, xg: number): void {
+  /**
+   * Ponto do campo onde o chute termina: dentro do gol, numa trave, para fora ou na zaga.
+   * Sem sorteio (não muda a partida): o lugar sai do segundo de jogo e da posição do chute.
+   */
+  private destinoDoChute(
+    q: Ponto,
+    direita: boolean,
+    tipo: "gol" | "fora" | "trave" | "bloqueio",
+  ): { x: number; y: number } {
+    const u = ((this.t * 37 + Math.round(q.y * 10)) % 100) / 100;
+    const lado = q.y >= MEIO_Y ? 1 : -1;
+    let alvo: Ponto;
+    if (tipo === "gol") alvo = { x: COMPRIMENTO + 1.2, y: MEIO_Y + (u * 2 - 1) * 3.2 };
+    else if (tipo === "trave") alvo = { x: COMPRIMENTO, y: MEIO_Y + lado * 3.66 };
+    else if (tipo === "fora") alvo = { x: COMPRIMENTO + 1.5, y: MEIO_Y + lado * (4.5 + u * 6) };
+    else {
+      const d = distanciaAoGol(q) || 1;
+      alvo = { x: q.x + ((COMPRIMENTO - q.x) / d) * 2, y: q.y + ((MEIO_Y - q.y) / d) * 2 };
+    }
+    return this.xy(noQuadro(alvo, direita));
+  }
+
+  private gol(
+    autor: Atleta,
+    assistente: Atleta | null,
+    xg: number,
+    destino?: { x: number; y: number },
+  ): void {
     const lado = autor.lado;
     const indice = lado === "casa" ? 0 : 1;
     this.placarAtual[indice]++;
@@ -1300,8 +1485,11 @@ export class Partida {
       ...(assistente ? { outro: assistente.j.id } : {}),
       ...this.xy(autor.pos),
       valor: Math.round(xg * 1000) / 1000,
+      ...(destino ? { destino } : {}),
       placar: [...this.placarAtual] as [number, number],
     });
+    this.times.casa.reavaliar = true;
+    this.times.fora.reavaliar = true;
     this.saidaDeBola(outro(lado));
     this.acaoEm = this.t + 25;
   }
@@ -1310,6 +1498,8 @@ export class Partida {
 
   private expulsar(a: Atleta, segundoAmarelo: boolean): void {
     const time = this.times[a.lado];
+    this.times.casa.reavaliar = true;
+    this.times.fora.reavaliar = true;
     time.est.vermelhos++;
     a.est.vermelho = true;
     this.registrar("cartao-vermelho", {
@@ -1407,9 +1597,16 @@ export class Partida {
       for (const a of this.emCampoDe(time.lado))
         if (this.rng.chance(0.0001 * (1 + (100 - a.condicao) / 40))) this.lesionar(a);
 
+    const minuto = this.minutoDe(this.s).minuto;
+    // O técnico da CPU lê o jogo: a cada 5 minutos e logo depois de gol ou expulsão.
+    for (const time of Object.values(this.times))
+      if (time.dados.cpu && minuto >= 20 && (minuto % 5 === 0 || time.reavaliar)) {
+        time.reavaliar = false;
+        this.tecnicoCpu(time, minuto);
+      }
+
     // A CPU troca os mais cansados no 2º tempo e na prorrogação.
     if (this.periodo < 2) return;
-    const minuto = this.minutoDe(this.s).minuto;
     if (minuto < 58 || minuto % 6 !== 0) return;
     for (const time of Object.values(this.times)) {
       if (!time.dados.cpu) continue;
@@ -1422,6 +1619,147 @@ export class Partida {
         if (entra && this.podeTrocar(time)) this.trocar(time, sai, entra);
       }
     }
+  }
+
+  // ---------------------------------------------------------------- técnico da CPU
+
+  /**
+   * O técnico da CPU olha placar, minuto, diferença de força e número de jogadores e decide uma
+   * postura de -2 (fechar a casinha) a +2 (todo mundo no ataque): perdendo no fim, vai para cima;
+   * ganhando, cadencia e fecha a defesa; levando goleada, recua para não piorar. Muda estilo,
+   * marcação, formação e, se der, faz uma troca tática. Sem sorteio: a mesma leitura sempre.
+   */
+  private tecnicoCpu(time: Time, minuto: number): void {
+    const adv = this.times[outro(time.lado)];
+    const meus = this.placarAtual[time.lado === "casa" ? 0 : 1];
+    const deles = this.placarAtual[time.lado === "casa" ? 1 : 0];
+    const saldo = meus - deles;
+    const forca = (t: Time) =>
+      (this.emCampoDe(t.lado).reduce((s, a) => s + a.j.forca, 0) / 11) * (t.dados.ajuste ?? 1);
+    const diferenca = forca(time) - forca(adv);
+    const final = minuto >= 60;
+    // Antes dos 60 minutos, só mexe se o placar já estiver aberto por 2 ou mais.
+    if (!final && Math.abs(saldo) < 2 && time.planoCpu === undefined) return;
+
+    let postura = diferenca > 6 ? 1 : diferenca < -6 ? -1 : 0;
+    let estilo: Estilo | null = null;
+    let motivo: string;
+    if (final) {
+      if (saldo === 0) {
+        postura = diferenca >= 3 && minuto >= 70 ? Math.max(postura, 1) : postura;
+        motivo = postura > 0 ? "vai para cima em busca da vitória" : "aceita o empate e se protege";
+      } else if (saldo === -1) {
+        postura = minuto >= 82 ? 2 : minuto >= 65 ? 1 : 0;
+        motivo =
+          postura === 2
+            ? "vai para o tudo ou nada atrás do empate"
+            : "adianta o time atrás do empate";
+      } else if (saldo === -2) {
+        postura = minuto >= 80 ? 1 : 2;
+        motivo = "se lança ao ataque para tentar a virada";
+      } else if (saldo <= -3) {
+        postura = -1;
+        estilo = "contra-ataque";
+        motivo = "recua para não tomar uma goleada ainda maior";
+      } else if (saldo === 1) {
+        postura = minuto >= 85 ? -2 : minuto >= 75 ? -1 : 0;
+        estilo = postura < 0 ? "contra-ataque" : diferenca > 5 ? "cadenciado" : "equilibrado";
+        motivo = "fecha a defesa para segurar a vantagem";
+      } else {
+        postura = -1;
+        estilo = "cadenciado";
+        motivo = "cadencia o jogo com a vantagem garantida";
+      }
+    } else if (saldo <= -2) {
+      postura = Math.max(postura, 1);
+      motivo = "adianta o time para diminuir o placar";
+    } else if (saldo >= 2) {
+      postura = Math.min(postura, 0);
+      estilo = "cadenciado";
+      motivo = "toca a bola e administra o placar";
+    } else motivo = "volta ao equilíbrio";
+    const meusEmCampo = this.emCampoDe(time.lado).length;
+    if (meusEmCampo < this.emCampoDe(adv.lado).length && !(saldo < 0 && minuto >= 70)) {
+      postura -= 1;
+      motivo += " com um a menos";
+    }
+    postura = limitar(postura, -2, 2);
+    estilo ??= postura >= 1 ? "ataque" : postura <= -1 ? "contra-ataque" : "equilibrado";
+    const amarelados = this.emCampoDe(time.lado).filter((a) => a.amarelos > 0).length;
+    const marcacao: Marcacao = postura >= 2 && amarelados < 2 ? "pesada" : "leve";
+    const chave = `${postura}|${estilo}|${marcacao}`;
+    if (chave === time.planoCpu) return;
+    time.planoCpu = chave;
+    time.tatica = { ...time.tatica, estilo, marcacao };
+
+    const mudouPostura = postura !== time.posturaCpu;
+    time.posturaCpu = postura;
+    let nomeFormacao = "";
+    if (mudouPostura) {
+      const formacao = postura === 0 ? null : FORMACAO_POR_POSTURA[postura];
+      this.reorganizar(
+        time,
+        formacao ? FORMACOES[formacao] : vagasDaEscalacao(time.dados.escalacao),
+      );
+      nomeFormacao = formacao ?? "formação original";
+      // Troca tática: atacante no lugar de defensor para buscar o gol; o contrário para segurar.
+      if (minuto >= 55 && postura >= 2) this.trocaTatica(time, ["Z", "M"], ["A"]);
+      if (minuto >= 70 && postura <= -1 && saldo > 0) this.trocaTatica(time, ["A"], ["Z", "M"]);
+    }
+    const textoEstilo = {
+      ataque: "ataque total",
+      equilibrado: "equilibrado",
+      cadenciado: "cadenciado",
+      "contra-ataque": "contra-ataque",
+    }[estilo];
+    this.registrar("mudanca-tatica", {
+      time: time.lado,
+      detalhe: `${motivo} (${[nomeFormacao, textoEstilo].filter(Boolean).join(", ")})`,
+    });
+  }
+
+  /** Redistribui quem está em campo nas vagas de outra formação, cada um onde rende mais. */
+  private reorganizar(time: Time, vagas: readonly Vaga[]): void {
+    const goleiro = time.vagas[0] ?? null;
+    const livres = new Set(this.emCampoDe(time.lado).filter((a) => a !== goleiro));
+    const novas: (Atleta | null)[] = vagas.map(() => null);
+    novas[0] = goleiro;
+    const ordem = vagas
+      .map((v, i) => ({ v, i }))
+      .filter(({ i }) => i !== 0)
+      .sort((a, b) => PRIORIDADE_VAGA.indexOf(a.v.posicao) - PRIORIDADE_VAGA.indexOf(b.v.posicao));
+    for (const { v, i } of ordem) {
+      let melhor: Atleta | null = null;
+      for (const a of livres)
+        if (!melhor || a.j.forca * encaixe(a.j, v) > melhor.j.forca * encaixe(melhor.j, v))
+          melhor = a;
+      if (!melhor) continue;
+      livres.delete(melhor);
+      novas[i] = melhor;
+    }
+    time.formacao = vagas;
+    time.vagas = novas;
+    this.cacheEmCampo[time.lado] = null;
+    novas.forEach((a, i) => {
+      if (!a) return;
+      a.vaga = i;
+      a.fator = encaixe(a.j, vagas[i] as Vaga);
+      a.marcado = null;
+      this.renovar(a);
+    });
+  }
+
+  private trocaTatica(time: Time, sai: readonly Posicao[], entra: readonly Posicao[]): void {
+    if (!this.podeTrocar(time)) return;
+    const quemSai = this.emCampoDe(time.lado)
+      .filter((a) => a.vaga !== 0 && sai.includes(a.j.posicao))
+      .sort((a, b) => a.j.forca * a.condicao - b.j.forca * b.condicao)[0];
+    const quemEntra = time.atletas
+      .filter((a) => !a.usado && entra.includes(a.j.posicao))
+      .sort((a, b) => b.j.forca - a.j.forca)[0];
+    if (!quemSai || !quemEntra) return;
+    this.trocar(time, quemSai, quemEntra);
+    this.reorganizar(time, time.formacao);
   }
 
   // ---------------------------------------------------------------- pênaltis

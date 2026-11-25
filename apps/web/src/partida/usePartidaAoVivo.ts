@@ -12,12 +12,14 @@ import { Partida } from "@newbras/engine";
 export type Velocidade = "rapida" | "normal" | "lenta";
 
 /** Segundos de jogo por segundo real, já contando que os lances de perigo andam devagar. */
-export const RITMO: Record<Velocidade, number> = { rapida: 34, normal: 26, lenta: 21 };
+export const RITMO: Record<Velocidade, number> = { rapida: 40, normal: 22, lenta: 10.8 };
 export const NOME_VELOCIDADE: Record<Velocidade, string> = {
   rapida: "Rápida (3 min)",
-  normal: "Normal (4 min)",
-  lenta: "Lenta (5 min)",
+  normal: "Normal (5 min)",
+  lenta: "Lenta (10 min)",
 };
+/** Quanto tempo real a bola leva voando até o gol, a trave ou o goleiro (milissegundos). */
+const VOO = 550;
 /** Quanto o ritmo cai com a bola perto de um dos gols. */
 const RITMO_PERIGO = 0.55;
 /** Quanto tempo real a tela segura em cada lance (milissegundos). */
@@ -28,6 +30,8 @@ const SEGURAR: Partial<Record<Evento["tipo"], number>> = {
   "penalti-perdido": 1500,
   "chute-trave": 1100,
   defesa: 700,
+  "chute-fora": 450,
+  bloqueio: 250,
   "cartao-vermelho": 1500,
   lesao: 1200,
 };
@@ -47,6 +51,13 @@ export class ControleAoVivo {
   destaque: Evento | null = null;
   aviso: string | null = null;
   resultado: ResultadoPartida | null = null;
+  /** Chute em andamento na tela: a bola voa até o destino antes do destaque aparecer. */
+  voo: { de: readonly [number, number]; para: readonly [number, number]; inicio: number } | null =
+    null;
+  /** Posições congeladas no instante do chute (a partida já seguiu, a tela ainda mostra o lance). */
+  congelado: Instantaneo | null = null;
+  /** Último instante do relógio da animação, para a tela saber onde o voo está. */
+  agora = 0;
   private seguraAte = 0;
   private acumulado = 0;
 
@@ -63,8 +74,11 @@ export class ControleAoVivo {
    */
   passo(agora: number, dt: number, velocidade: Velocidade): "segue" | "pausa" {
     const p = this.partida;
+    this.agora = agora;
     if (this.seguraAte > agora) return "segue";
     this.destaque = null;
+    this.voo = null;
+    this.congelado = null;
     const bola = this.atual.bola[0];
     const perigo = bola < 25 || bola > 80;
     this.acumulado += (Math.min(250, dt) / 1000) * RITMO[velocidade] * (perigo ? RITMO_PERIGO : 1);
@@ -79,7 +93,17 @@ export class ControleAoVivo {
         const importante = novos.find((ev) => SEGURAR[ev.tipo]);
         if (importante) {
           this.destaque = importante;
-          this.seguraAte = agora + (SEGURAR[importante.tipo] ?? 0);
+          const chute = novos.find((ev) => ev.destino && ev.x !== undefined && ev.y !== undefined);
+          if (chute?.destino && chute.x !== undefined && chute.y !== undefined) {
+            // Mostra o lance como ele foi: a bola sai do pé e só depois vem o "GOL!".
+            this.congelado = this.anterior;
+            this.voo = {
+              de: [chute.x, chute.y],
+              para: [chute.destino.x, chute.destino.y],
+              inicio: agora,
+            };
+          }
+          this.seguraAte = agora + (this.voo ? VOO : 0) + (SEGURAR[importante.tipo] ?? 0);
           this.acumulado = 0;
           break;
         }
@@ -101,6 +125,39 @@ export class ControleAoVivo {
       return "pausa";
     }
     return "segue";
+  }
+
+  /**
+   * O que o mini-campo mostra agora: as posições congeladas do lance com a bola voando, ou o jogo
+   * correndo normalmente. O destaque ("GOL!") só aparece quando a bola chega.
+   */
+  exibicao(): {
+    anterior: Instantaneo;
+    atual: Instantaneo;
+    fracao: number;
+    destaque: Evento | null;
+  } {
+    if (this.voo && this.congelado) {
+      const f = Math.min(1, (this.agora - this.voo.inicio) / VOO);
+      const suave = 1 - (1 - f) * (1 - f);
+      const bola: [number, number] = [
+        this.voo.de[0] + (this.voo.para[0] - this.voo.de[0]) * suave,
+        this.voo.de[1] + (this.voo.para[1] - this.voo.de[1]) * suave,
+      ];
+      const quadro = { ...this.congelado, bola, dono: null };
+      return {
+        anterior: quadro,
+        atual: quadro,
+        fracao: 1,
+        destaque: f >= 1 ? this.destaque : null,
+      };
+    }
+    return {
+      anterior: this.anterior,
+      atual: this.atual,
+      fracao: this.fracao,
+      destaque: this.destaque,
+    };
   }
 
   /** Joga o resto de uma vez. */
@@ -128,6 +185,8 @@ export class ControleAoVivo {
     this.fracao = 0;
     this.aviso = null;
     this.destaque = null;
+    this.voo = null;
+    this.congelado = null;
   }
 }
 
