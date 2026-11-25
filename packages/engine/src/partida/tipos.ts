@@ -20,7 +20,8 @@ export interface JogadorPartida {
   condicao?: number;
 }
 
-export type Estilo = "equilibrado" | "ataque" | "contra-ataque";
+/** Cadenciado: toque de bola para segurar o resultado e esfriar o jogo. */
+export type Estilo = "equilibrado" | "ataque" | "contra-ataque" | "cadenciado";
 export type Marcacao = "leve" | "pesada" | "muito-pesada";
 export type Concentracao = "equilibrada" | "meio" | "laterais";
 
@@ -95,7 +96,9 @@ export type TipoEvento =
   | "penalti-perdido"
   | "lesao"
   | "substituicao"
-  | "disputa-penaltis";
+  | "disputa-penaltis"
+  | "mudanca-tatica"
+  | "acrescimo";
 
 /** 1 e 2: tempos normais; 3 e 4: prorrogação; 5: disputa de pênaltis. */
 export type Periodo = 1 | 2 | 3 | 4 | 5;
@@ -117,6 +120,10 @@ export interface Evento {
   y?: number;
   /** Para chutes: probabilidade de gol do lance (xG). Para pênaltis da disputa: convertido. */
   valor?: number;
+  /** Texto livre do lance (a mudança tática da CPU, por exemplo). */
+  detalhe?: string;
+  /** Onde a bola terminou (chutes e gols): no gol, na trave, fora ou nas mãos do goleiro. */
+  destino?: { x: number; y: number };
   /** Placar logo depois do evento. */
   placar?: readonly [number, number];
 }

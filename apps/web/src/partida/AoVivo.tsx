@@ -28,6 +28,7 @@ const NOME_ESTILO: Record<Estilo, string> = {
   equilibrado: "Equilibrado",
   ataque: "Ataque total",
   "contra-ataque": "Contra-ataque",
+  cadenciado: "Cadenciado (toque de bola)",
 };
 const NOME_MARCACAO: Record<Marcacao, string> = {
   leve: "Leve",
@@ -116,6 +117,8 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
   }, [ao, ao.rodando]);
 
   const fim = estado.resultado;
+  const exibicao = estado.exibicao();
+  const acrescimo = partida.acrescimoDado;
   const relogio = fim
     ? "Fim de jogo"
     : estado.aviso
@@ -142,6 +145,11 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
             {relogio}
             {fim?.penaltis ? ` (pênaltis ${fim.penaltis[0]} x ${fim.penaltis[1]})` : ""}
           </p>
+          {!fim && !estado.aviso && acrescimo !== null && (
+            <p className="mt-1 inline-block rounded bg-canarinho px-2 py-0.5 text-xs font-black text-placar">
+              +{acrescimo} de acréscimo
+            </p>
+          )}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {clubes.fora && <Escudo clube={clubes.fora} tamanho={48} />}
@@ -156,14 +164,14 @@ export function AoVivo({ opcoes, clubes, humano, onNovo }: Props) {
           {!classico && (
             <div className="rounded-md border-2 border-placar-borda bg-placar p-2">
               <MiniCampo
-                anterior={estado.anterior}
-                atual={estado.atual}
-                fracao={estado.fracao}
+                anterior={exibicao.anterior}
+                atual={exibicao.atual}
+                fracao={exibicao.fracao}
                 cores={cores}
                 numeros={numeros}
-                destaque={estado.destaque}
-                {...(estado.destaque && ROTULO_DESTAQUE[estado.destaque.tipo]
-                  ? { rotuloDestaque: ROTULO_DESTAQUE[estado.destaque.tipo] }
+                destaque={exibicao.destaque}
+                {...(exibicao.destaque && ROTULO_DESTAQUE[exibicao.destaque.tipo]
+                  ? { rotuloDestaque: ROTULO_DESTAQUE[exibicao.destaque.tipo] }
                   : {})}
               />
               <p className="px-1 pt-1 text-xs text-suave">

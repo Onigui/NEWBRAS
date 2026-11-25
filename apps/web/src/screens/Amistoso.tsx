@@ -24,6 +24,7 @@ const NOME_ESTILO: Record<Estilo, string> = {
   equilibrado: "Equilibrado",
   ataque: "Ataque total",
   "contra-ataque": "Contra-ataque",
+  cadenciado: "Cadenciado (toque de bola)",
 };
 
 interface Escolha {

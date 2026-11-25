@@ -29,6 +29,8 @@ export const PRINCIPAIS = new Set<Evento["tipo"]>([
   "lesao",
   "substituicao",
   "disputa-penaltis",
+  "acrescimo",
+  "mudanca-tatica",
 ]);
 
 export function LanceALance({

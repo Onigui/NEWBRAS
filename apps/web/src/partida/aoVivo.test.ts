@@ -49,17 +49,32 @@ function assistir(velocidade: Velocidade) {
 }
 
 describe("partida ao vivo", () => {
-  it("dura de 3 a 5 minutos reais conforme a velocidade e para no intervalo", () => {
+  it("dura 3, 5 ou 10 minutos reais conforme a velocidade e para no intervalo", () => {
     const rapida = assistir("rapida");
     const normal = assistir("normal");
     const lenta = assistir("lenta");
     expect(rapida.minutos).toBeGreaterThan(2.5);
     expect(rapida.minutos).toBeLessThan(3.8);
-    expect(normal.minutos).toBeGreaterThan(3.3);
-    expect(normal.minutos).toBeLessThan(4.8);
-    expect(lenta.minutos).toBeGreaterThan(4.2);
-    expect(lenta.minutos).toBeLessThan(6);
+    expect(normal.minutos).toBeGreaterThan(4.2);
+    expect(normal.minutos).toBeLessThan(6);
+    expect(lenta.minutos).toBeGreaterThan(8.5);
+    expect(lenta.minutos).toBeLessThan(12);
     expect(normal.pausas).toBe(1);
+    // O "GOL!" só aparece depois que a bola chega na rede.
+    const c = new ControleAoVivo({ semente: "voo", casa: time("A"), fora: time("B") });
+    let agora = 0;
+    let viuVoo = false;
+    while (!c.resultado && agora < 30 * 60_000) {
+      agora += 16;
+      if (c.passo(agora, 16, "rapida") === "pausa") c.continuar();
+      if (c.voo) {
+        const tela = c.exibicao();
+        viuVoo = true;
+        if (agora - c.voo.inicio < 500) expect(tela.destaque).toBeNull();
+        expect(tela.atual.dono).toBeNull();
+      }
+    }
+    expect(viuVoo).toBe(true);
     // Assistir ou pular dá o mesmo jogo.
     const pulada = new ControleAoVivo({ semente: "ao-vivo", casa: time("A"), fora: time("B") });
     pulada.pular();

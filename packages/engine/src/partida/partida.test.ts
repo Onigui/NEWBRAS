@@ -54,7 +54,8 @@ describe("formações", () => {
       validarFormacao(formacaoPersonalizada([...pontos.slice(0, 10), pontos[1]!])),
     ).not.toEqual([]);
 
-    const casa = timeDeTeste("A", 70);
+    // Time do humano: a CPU não mexe na formação que ele desenhou.
+    const casa = timeDeTeste("A", 70, { cpu: false });
     casa.escalacao = escalacaoAutomatica(casa.jogadores, vagas);
     expect(casa.escalacao.formacao).toBe("personalizada");
     const r = simularPartida({
@@ -211,8 +212,10 @@ describe("partida", () => {
     const agora = p.instantaneo();
     expect(agora.posicoes).toHaveLength(44);
     expect(agora.t).toBe(p.tempo);
-    expect(p.reservas("casa")).toHaveLength(humano.escalacao.reservas.length);
-    expect(p.trocasRestantes("casa")).toBe(5);
+    // Uma lesão pode ter forçado uma troca: reservas que sobram + trocas feitas = banco inteiro.
+    expect(p.reservas("casa").length + (5 - p.trocasRestantes("casa"))).toBe(
+      humano.escalacao.reservas.length,
+    );
     expect(p.condicoes("casa").every((c) => c === null || (c > 0 && c <= 100))).toBe(true);
     // Recua todo mundo para um 5-4-1: quem estava em cada vaga continua, só muda o lugar.
     const antes = p.emCampo("casa");
@@ -224,6 +227,86 @@ describe("partida", () => {
     expect(p.tatica("casa").estilo).toBe("contra-ataque");
     expect(p.simular().placar).toHaveLength(2);
   });
+
+  it("o chute termina num lugar: gol dentro da rede, trave, fora ou nas mãos do goleiro", () => {
+    for (const r of lote(20, (i) => jogo(`destino-${i}`))) {
+      for (const e of r.eventos) {
+        if (e.tipo === "gol" || e.tipo === "chute-fora" || e.tipo === "chute-trave") {
+          expect(e.destino, e.tipo).toBeDefined();
+          // Fim do campo: além da linha de fundo de um dos lados.
+          expect(e.destino!.x <= 0.1 || e.destino!.x >= 104.9).toBe(true);
+          if (e.tipo === "gol") expect(Math.abs(e.destino!.y - 34)).toBeLessThan(3.66);
+        }
+        if (e.tipo === "defesa") expect(e.destino).toBeDefined();
+      }
+    }
+  });
+
+  it("a placa de acréscimo aparece no fim de cada tempo", () => {
+    const r = jogo("acrescimo");
+    const placas = r.eventos.filter((e) => e.tipo === "acrescimo");
+    expect(placas.map((e) => e.periodo)).toEqual([1, 2]);
+    for (const p of placas) {
+      expect(p.valor).toBeGreaterThanOrEqual(1);
+      expect(p.minuto).toBe(p.periodo === 1 ? 45 : 90);
+    }
+  });
+
+  it(
+    "o técnico da CPU lê o jogo: reage ao placar e o humano decide sozinho",
+    { timeout: 120_000 },
+    () => {
+      // Mesmo jogo com e sem o técnico da CPU no time da casa (o visitante nunca reage).
+      const medir = (cpu: boolean) => {
+        let liderando = 0;
+        let segurou = 0;
+        let perdendo = 0;
+        let buscou = 0;
+        let mudancas = 0;
+        let mudancasVisitante = 0;
+        for (let i = 0; i < 250; i++) {
+          const r = simularPartida({
+            semente: `tecnico-${i}`,
+            casa: timeDeTeste("A", 70, { cpu }),
+            fora: timeDeTeste("B", 70, { cpu: false }),
+          });
+          const ate60 = r.eventos.filter(
+            (e) => (e.tipo === "gol" && e.periodo === 1) || (e.tipo === "gol" && e.minuto <= 60),
+          );
+          const c = ate60.filter((e) => e.time === "casa").length;
+          const f = ate60.length - c;
+          if (c > f) {
+            liderando++;
+            if (r.placar[0] > r.placar[1]) segurou++;
+          }
+          if (c < f) {
+            perdendo++;
+            if (r.placar[0] >= r.placar[1]) buscou++;
+          }
+          mudancas += r.eventos.filter(
+            (e) => e.tipo === "mudanca-tatica" && e.time === "casa",
+          ).length;
+          mudancasVisitante += r.eventos.filter(
+            (e) => e.tipo === "mudanca-tatica" && e.time === "fora",
+          ).length;
+        }
+        return {
+          segurou: segurou / liderando,
+          buscou: buscou / perdendo,
+          mudancas,
+          mudancasVisitante,
+        };
+      };
+      const com = medir(true);
+      const sem = medir(false);
+      expect(com.mudancas).toBeGreaterThan(100);
+      expect(sem.mudancas).toBe(0);
+      expect(com.mudancasVisitante).toBe(0);
+      // Atrás no placar, a CPU busca o empate mais vezes; na frente, segura pelo menos tão bem.
+      expect(com.buscou).toBeGreaterThan(sem.buscou);
+      expect(com.segurou).toBeGreaterThanOrEqual(sem.segurou - 0.05);
+    },
+  );
 
   it("expulsão deixa a vaga vazia nos quadros do mini-campo", () => {
     for (let i = 0; i < 300; i++) {
