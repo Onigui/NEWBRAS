@@ -1,4 +1,9 @@
-import { gerarAtributos, type ClubeEntrada, type JogadorEntrada } from "@newbras/data";
+import {
+  escalarAtributos,
+  gerarAtributos,
+  type ClubeEntrada,
+  type JogadorEntrada,
+} from "@newbras/data";
 import { Rng, gerarJogador, salarioBase } from "@newbras/engine";
 import { pais } from "../mundo/paises";
 import { DATA_FONTE_ELENCOS, DATA_REFERENCIA } from "../referencia";
@@ -249,18 +254,20 @@ export function jogadoresReais(
         forca,
         potencial,
         caracteristicas: notavel?.caracteristicas ?? caracteristicas(rng, codigo),
-        ...(notavel?.destaques
-          ? {
-              atributos: gerarAtributos({
-                semente: id,
-                posicao,
-                forca,
-                ...(notavel.caracteristicas ? { caracteristicas: notavel.caracteristicas } : {}),
-                destaques: notavel.destaques,
-                ...(forcaAuge !== undefined ? { forcaAuge: Math.max(forcaAuge, forca) } : {}),
-              }),
-            }
-          : {}),
+        ...(notavel?.atributosAuge
+          ? { atributos: escalarAtributos(posicao, notavel.atributosAuge, forca) }
+          : notavel?.destaques
+            ? {
+                atributos: gerarAtributos({
+                  semente: id,
+                  posicao,
+                  forca,
+                  ...(notavel.caracteristicas ? { caracteristicas: notavel.caracteristicas } : {}),
+                  destaques: notavel.destaques,
+                  ...(forcaAuge !== undefined ? { forcaAuge: Math.max(forcaAuge, forca) } : {}),
+                }),
+              }
+            : {}),
         estrela: (forcaAuge ?? 0) >= 85 || forca >= 82,
         clube: clube.id,
         contrato: { fim: fimContrato, salario: salarioBase(forca) },

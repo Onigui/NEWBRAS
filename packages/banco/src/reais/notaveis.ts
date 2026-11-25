@@ -8,7 +8,8 @@ type Caracteristicas = NonNullable<JogadorEntrada["caracteristicas"]>;
  * - forcaAuge: a força do auge da carreira; é o potencial quando a lenda renascer;
  * - nascimento: data exata, conhecida;
  * - contratoFim: fim de contrato divulgado;
- * - destaques: atributos marcantes, na escala do auge (a velocidade do Werner, o chute do CR7).
+ * - destaques: atributos marcantes, na escala do auge (a velocidade do Werner);
+ * - atributosAuge: o perfil inteiro no auge, à mão; a força do auge tem de sair dele (CR7 e Messi).
  * Escala do jogo: 99 é o topo absoluto; titulares de Premier League ficam perto de 85.
  */
 export interface Notavel {
@@ -20,18 +21,33 @@ export interface Notavel {
   posicao?: JogadorEntrada["posicao"];
   contratoFim?: string;
   destaques?: Atributos;
+  atributosAuge?: Atributos;
 }
 
 export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
   // MLS
   "Lionel Messi": {
     forca: 86,
-    forcaAuge: 99,
+    // O segundo maior da história: gênio com a bola, mas sem a altura, o cabeceio e o corpo do CR7.
+    forcaAuge: 97,
     caracteristicas: ["drible", "finalizacao"],
     nascimento: "1987-06-24",
     posicao: "A",
     contratoFim: "2028-12-31",
-    destaques: { drible: 99, finalizacao: 97, armacao: 96 },
+    atributosAuge: {
+      finalizacao: 99,
+      drible: 100,
+      velocidade: 97,
+      chuteLonge: 99,
+      passe: 99,
+      cabeceio: 86,
+      forcaFisica: 87,
+      armacao: 99,
+      cruzamento: 88,
+      resistencia: 82,
+      desarme: 38,
+      marcacao: 32,
+    },
   },
   "Luis Suárez": {
     forca: 76,
@@ -139,11 +155,26 @@ export const NOTAVEIS: Readonly<Record<string, Notavel>> = {
   // Saudi Pro League
   "Cristiano Ronaldo": {
     forca: 82,
-    forcaAuge: 98,
+    // O único 99 do jogo: o jogador mais completo da história, quase tudo no máximo.
+    forcaAuge: 99,
     caracteristicas: ["finalizacao", "cabeceio"],
     nascimento: "1985-02-05",
+    posicao: "A",
     contratoFim: "2027-06-30",
-    destaques: { finalizacao: 99, cabeceio: 96, chuteLonge: 95, velocidade: 95 },
+    atributosAuge: {
+      finalizacao: 100,
+      cabeceio: 100,
+      chuteLonge: 99,
+      velocidade: 99,
+      drible: 98,
+      forcaFisica: 99,
+      passe: 94,
+      armacao: 86,
+      cruzamento: 89,
+      resistencia: 97,
+      desarme: 52,
+      marcacao: 48,
+    },
   },
   "Sadio Mané": {
     forca: 78,

@@ -55,10 +55,10 @@ export const PESOS: Readonly<Record<Posicao, Atributos>> = {
     finalizacao: 3,
     velocidade: 2,
     drible: 2,
-    cabeceio: 1.5,
+    cabeceio: 1,
     chuteLonge: 1,
-    forcaFisica: 1,
-    passe: 0.5,
+    passe: 1,
+    forcaFisica: 0.5,
   },
 };
 

@@ -2,12 +2,15 @@ import {
   atributosDaPosicao,
   CONFEDERACOES,
   elencoValido,
+  FORCA_RECORDE,
+  FORCA_TETO,
   forcaDosAtributos,
   validarIntegridade,
 } from "@newbras/data";
 import { gruposDeNomes, idadeEm } from "@newbras/engine";
 import { describe, expect, it } from "vitest";
 import { TOTAL_ICONES } from "./lendas/icones";
+import { NOTAVEIS } from "./reais/notaveis";
 import { DATA_REFERENCIA, montarBanco } from "./montar";
 import { PAISES } from "./mundo/paises";
 
@@ -146,6 +149,30 @@ describe("atributos", () => {
       expect(Object.keys(j.atributos)).toHaveLength(atributosDaPosicao(j.posicao).length);
       expect(j.forca).toBe(forcaDosAtributos(j.posicao, j.atributos));
     }
+  });
+
+  it("só o Cristiano Ronaldo chega a 99; Messi é o segundo, com 97, e ninguém mais passa de 97", () => {
+    const nome = (n: string) => banco.jogadores.find((j) => j.nome === n);
+    const cr7 = nome("Cristiano Ronaldo");
+    const messi = nome("Lionel Messi");
+    expect(cr7?.forcaAuge).toBe(FORCA_RECORDE);
+    expect(messi?.forcaAuge).toBe(97);
+    for (const j of banco.jogadores) {
+      if (j === cr7) continue;
+      expect(Math.max(j.forca, j.potencial, j.forcaAuge ?? 0), j.id).toBeLessThanOrEqual(
+        FORCA_TETO,
+      );
+    }
+    // O CR7 é mais completo: cabeceio e força física bem acima dos do Messi.
+    expect(cr7?.atributos.cabeceio ?? 0).toBeGreaterThan(messi?.atributos.cabeceio ?? 0);
+    expect(cr7?.caracteristicas).toEqual(["finalizacao", "cabeceio"]);
+    expect(messi?.caracteristicas).toEqual(["drible", "finalizacao"]);
+  });
+
+  it("os perfis do auge feitos à mão dão exatamente a força do auge", () => {
+    for (const n of Object.values(NOTAVEIS))
+      if (n.atributosAuge)
+        expect(forcaDosAtributos(n.posicao ?? "A", n.atributosAuge)).toBe(n.forcaAuge);
   });
 
   it("uma parte pequena dos jogadores mostra só uma característica, como no Brasfoot", () => {
@@ -344,10 +371,10 @@ describe("MLS e Saudi Pro League com jogadores reais", () => {
   it("as lendas estão nos clubes certos, com a força do auge guardada para o renascimento", () => {
     const messi = jogador("Lionel Messi");
     expect(messi.clube).toBe("usa-inter-miami");
-    expect(messi.forcaAuge).toBe(99);
+    expect(messi.forcaAuge).toBe(97);
     expect(messi.estrela).toBe(true);
     expect(jogador("Cristiano Ronaldo").clube).toBe("ksa-al-nassr");
-    expect(jogador("Cristiano Ronaldo").forcaAuge).toBe(98);
+    expect(jogador("Cristiano Ronaldo").forcaAuge).toBe(99);
     expect(jogador("Robert Lewandowski").clube).toBe("usa-chicago-fire");
     expect(jogador("Antoine Griezmann").clube).toBe("usa-orlando-city");
     expect(jogador("Thomas Müller").clube).toBe("can-vancouver-whitecaps");

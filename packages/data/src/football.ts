@@ -72,6 +72,13 @@ export const NOME_CARACTERISTICA: Record<Caracteristica, string> = {
 export const FORCA_MIN = 1;
 export const FORCA_MAX = 100;
 
+/**
+ * Regra do NewBras: só o Cristiano Ronaldo, o jogador mais completo da história, chega a 99 de força
+ * (no auge). Messi vem em segundo, com 97. Nenhum outro jogador passa de 97: nem força, nem potencial.
+ */
+export const FORCA_RECORDE = 99;
+export const FORCA_TETO = 97;
+
 /** Características válidas para a posição. */
 export function caracteristicasDaPosicao(posicao: Posicao): readonly Caracteristica[] {
   return posicao === "G" ? CARACTERISTICAS_GOLEIRO : CARACTERISTICAS_LINHA;
