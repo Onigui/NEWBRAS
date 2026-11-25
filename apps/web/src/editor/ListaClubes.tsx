@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { NOME_POSICAO, type Banco, type Jogador } from "@newbras/data";
 import { Escudo } from "../components/Escudo";
-import { procurar, type Indices } from "./indices";
+import { gruposDoPais, procurar, type Indices } from "./indices";
 import { estiloCampo } from "./ui";
 
 interface Props {
@@ -31,6 +31,11 @@ export function ListaClubes({
   const resultado = useMemo(() => procurar(banco, busca), [banco, busca]);
   const buscando = busca.trim().length >= 2;
   const clubes = indices.clubesDoPais.get(pais) ?? [];
+  const grupos = useMemo(() => gruposDoPais(banco, indices, pais), [banco, indices, pais]);
+  const [filtro, setFiltro] = useState<{ pais: string; grupo: string }>({ pais, grupo: "" });
+  // O filtro de liga vale só para o país em que foi escolhido.
+  const grupoEscolhido = filtro.pais === pais ? filtro.grupo : "";
+  const visiveis = grupoEscolhido ? grupos.filter((g) => g.id === grupoEscolhido) : grupos;
   const invalidosNoPais = clubes.filter((c) => indices.invalidos.has(c.id)).length;
 
   const linhaClube = (c: (typeof clubes)[number], mostrarPais = false) => {
@@ -48,8 +53,8 @@ export function ListaClubes({
           <span className={`flex-1 truncate ${invalido ? "font-bold text-[#ff8a7e]" : ""}`}>
             {c.nome}
           </span>
-          <span className="shrink-0 text-xs text-suave">
-            {mostrarPais ? c.pais : liga?.divisao ? `${liga.divisao}ª` : ""}
+          <span className="max-w-[9rem] shrink-0 truncate text-xs text-suave">
+            {mostrarPais ? (liga?.nomeCurto ?? liga?.nome ?? c.pais) : c.abreviacao}
           </span>
         </button>
       </li>
@@ -87,11 +92,27 @@ export function ListaClubes({
                 </option>
               ))}
             </select>
+            <label className="mt-1 text-xs font-bold text-suave" htmlFor="editor-liga">
+              Liga
+            </label>
+            <select
+              id="editor-liga"
+              className={estiloCampo}
+              value={grupoEscolhido}
+              onChange={(e) => setFiltro({ pais, grupo: e.target.value })}
+            >
+              <option value="">Todas ({clubes.length})</option>
+              {grupos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nome} ({g.clubes.length})
+                </option>
+              ))}
+            </select>
           </>
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-1">
         {buscando ? (
           <>
             <h3 className="px-3 pt-2 pb-1 text-xs font-bold text-suave">
@@ -135,7 +156,17 @@ export function ListaClubes({
             )}
           </>
         ) : (
-          <ul>{clubes.map((c) => linhaClube(c))}</ul>
+          visiveis.map((g) => (
+            <section key={g.id} aria-label={g.nome}>
+              <h3 className="sticky top-0 z-[1] border-y border-placar-borda bg-[#24364a] px-3 py-1.5 font-placar text-base font-bold text-canarinho">
+                {g.nome}{" "}
+                <span className="font-texto text-xs font-normal text-suave">
+                  ({g.clubes.length})
+                </span>
+              </h3>
+              <ul>{g.clubes.map((c) => linhaClube(c))}</ul>
+            </section>
+          ))
         )}
       </div>
       {!buscando && (

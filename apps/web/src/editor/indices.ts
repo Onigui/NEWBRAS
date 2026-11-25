@@ -76,6 +76,48 @@ export function montarIndices(banco: Banco): Indices {
   };
 }
 
+export interface GrupoClubes {
+  /** Id da liga, "estado-XX" para quem só joga estadual, ou "sem-liga". */
+  id: string;
+  nome: string;
+  clubes: Clube[];
+}
+
+/**
+ * Times do país agrupados por liga, da 1ª divisão para baixo.
+ * Quem não está em liga nacional vem depois, por estado (no Brasil, os que só jogam o estadual).
+ */
+export function gruposDoPais(banco: Banco, indices: Indices, pais: string): GrupoClubes[] {
+  const clubes = indices.clubesDoPais.get(pais) ?? [];
+  const grupos: GrupoClubes[] = (indices.ligasDoPais.get(pais) ?? []).map((l) => ({
+    id: l.id,
+    nome: l.nome,
+    clubes: clubes.filter((c) => indices.ligaDoClube.get(c.id)?.id === l.id),
+  }));
+  const nomeEstado = new Map(
+    banco.estados.filter((e) => e.pais === pais).map((e) => [e.sigla, e.nome]),
+  );
+  const porEstado = new Map<string, Clube[]>();
+  const semLiga: Clube[] = [];
+  for (const c of clubes) {
+    if (indices.ligaDoClube.has(c.id)) continue;
+    if (c.estado && nomeEstado.has(c.estado))
+      porEstado.set(c.estado, [...(porEstado.get(c.estado) ?? []), c]);
+    else semLiga.push(c);
+  }
+  const estados = [...porEstado.entries()].sort((a, b) =>
+    nomeEstado.get(a[0])!.localeCompare(nomeEstado.get(b[0])!, "pt-BR"),
+  );
+  for (const [sigla, lista] of estados)
+    grupos.push({
+      id: `estado-${sigla}`,
+      nome: `Só estadual: ${nomeEstado.get(sigla)}`,
+      clubes: lista,
+    });
+  if (semLiga.length) grupos.push({ id: "sem-liga", nome: "Sem liga nacional", clubes: semLiga });
+  return grupos.filter((g) => g.clubes.length);
+}
+
 /** Tira acentos e caixa para comparar nomes. */
 export function normalizar(texto: string): string {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
