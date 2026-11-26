@@ -4,6 +4,7 @@
  */
 import type { EstatisticasJogador, LadoCampo, TimePartida } from "@newbras/engine";
 import { IconeHumor } from "./Resumo";
+import { t } from "@newbras/textos";
 
 const SIGLA = { G: "GOL", L: "LAT", Z: "ZAG", M: "MEI", A: "ATA" } as const;
 
@@ -44,20 +45,23 @@ export function NotasAoVivo({
             <table className="w-full text-xs">
               <thead className="text-left text-suave">
                 <tr>
-                  <th className="py-0.5 font-normal">Jogador</th>
-                  <th className="py-0.5 text-right font-normal" title="Minutos em campo">
-                    Min
+                  <th className="py-0.5 font-normal">{t("Jogador")}</th>
+                  <th className="py-0.5 text-right font-normal" title={t("Minutos em campo")}>
+                    {t("Min")}
                   </th>
-                  <th className="py-0.5 text-right font-normal" title="Gols / assistências">
+                  <th className="py-0.5 text-right font-normal" title={t("Gols / assistências")}>
                     G/A
                   </th>
-                  <th className="py-0.5 text-right font-normal" title="Passes certos / tentados">
-                    Passes
+                  <th
+                    className="py-0.5 text-right font-normal"
+                    title={t("Passes certos / tentados")}
+                  >
+                    {t("Passes")}
                   </th>
-                  <th className="py-0.5 text-right font-normal" title="Fôlego">
-                    Fôlego
+                  <th className="py-0.5 text-right font-normal" title={t("Fôlego")}>
+                    {t("Fôlego")}
                   </th>
-                  <th className="py-0.5 text-right font-normal">Nota</th>
+                  <th className="py-0.5 text-right font-normal">{t("Nota")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -74,17 +78,17 @@ export function NotasAoVivo({
                         <span className="mr-1 text-suave">{dados ? SIGLA[dados.posicao] : ""}</span>
                         {dados?.nome.split(" ").slice(-2).join(" ")}
                         {j.amarelos > 0 && (
-                          <span className="ml-1 text-[#f5d020]" title="Amarelo">
+                          <span className="ml-1 text-[#f5d020]" title={t("Amarelo")}>
                             ▮
                           </span>
                         )}
                         {j.vermelho && (
-                          <span className="ml-1 text-[#ff5b4a]" title="Expulso">
+                          <span className="ml-1 text-[#ff5b4a]" title={t("Expulso")}>
                             ▮
                           </span>
                         )}
                         {j.lesionado && (
-                          <span className="ml-1" title="Lesionado">
+                          <span className="ml-1" title={t("Lesionado")}>
                             ✚
                           </span>
                         )}

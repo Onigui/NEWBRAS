@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Panel } from "../components/Panel";
 import { MENU, type ScreenId } from "../menu";
 import { APP_VERSION, FASE_ATUAL, TOTAL_FASES } from "../version";
+import { t } from "@newbras/textos";
 
 interface Props {
   onOpen: (id: ScreenId) => void;
@@ -43,13 +44,13 @@ export function MainMenu({ onOpen, initialFocus }: Props) {
   return (
     <Panel>
       <h1 className="font-placar text-[5.5rem] leading-[0.85] font-black tracking-tight text-cal">
-        NewBras
+        {t("NewBras")}
       </h1>
       <p className="mt-4 max-w-[34ch] text-base leading-relaxed text-suave">
-        Monte seu time, escale os titulares e veja a partida acontecer no campo.
+        {t("Monte seu time, escale os titulares e veja a partida acontecer no campo.")}
       </p>
 
-      <nav aria-label="Menu principal" className="mt-8">
+      <nav aria-label={t("Menu principal")} className="mt-8">
         <ul className="flex flex-col gap-1">
           {MENU.map((item, i) => (
             <li key={item.id}>
@@ -72,7 +73,11 @@ export function MainMenu({ onOpen, initialFocus }: Props) {
       </nav>
 
       <p className="mt-8 text-sm text-suave">
-        Versão {APP_VERSION}, em construção (fase {FASE_ATUAL} de {TOTAL_FASES}).
+        {t("Versão {appVersion}, em construção (fase {faseAtual} de {totalFases}).", {
+          appVersion: APP_VERSION,
+          faseAtual: FASE_ATUAL,
+          totalFases: TOTAL_FASES,
+        })}
       </p>
     </Panel>
   );

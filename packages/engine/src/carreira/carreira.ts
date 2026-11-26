@@ -39,6 +39,7 @@ import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
 import { escalacaoAutomatica } from "../partida/escalacao";
 import { rotuloMinuto } from "../partida/narracao";
+import { chave, marcar, t } from "@newbras/textos";
 import { FORMACOES, type Formacao, type Vaga } from "../partida/formacoes";
 import {
   CHANCE_HUMOR,
@@ -124,7 +125,9 @@ export interface FormacaoSalva {
 export interface Noticia {
   data: string;
   tipo: "calendario" | "jogo" | "elenco" | "carreira";
+  /** Texto em português, que é a chave da tradução (mostrado com `t(texto, params)`). */
   texto: string;
+  params?: Readonly<Record<string, string | number>>;
 }
 
 export interface Carreira {
@@ -291,7 +294,14 @@ export function novaCarreira(mundo: Mundo, o: OpcoesNovaCarreira): Carreira {
       {
         data: inicio,
         tipo: "carreira",
-        texto: `${o.tecnico.trim() || "O novo técnico"} assume o ${clube.nomeCurto}. A pré-temporada começa hoje, com ${agenda.length} amistosos marcados.`,
+        ...marcar(
+          "{tecnico} assume o {clube}. A pré-temporada começa hoje, com {amistosos} amistosos marcados.",
+          {
+            tecnico: o.tecnico.trim() || "Técnico",
+            clube: clube.nomeCurto,
+            amistosos: agenda.length,
+          },
+        ),
       },
     ],
   };
@@ -360,11 +370,11 @@ export function proximoCompromisso(c: Carreira): Compromisso | undefined {
 
 /** Nome do compromisso: "Amistoso" ou a competição e a rodada. */
 export function nomeDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): string {
-  if (x.tipo !== "oficial" || !x.competicao) return "Amistoso";
+  if (x.tipo !== "oficial" || !x.competicao) return t("Amistoso");
   const comp = mundo.competicao(x.competicao);
   const e = c.competicoes.competicoes[x.competicao];
   const j = e?.jogos[x.indice ?? -1];
-  if (!comp || !e || !j) return comp ? nomeCurtoDaCompeticao(comp) : "Jogo oficial";
+  if (!comp || !e || !j) return comp ? nomeCurtoDaCompeticao(comp) : t("Jogo oficial");
   return `${nomeCurtoDaCompeticao(comp)}, ${nomeDaRodada(comp, e, j)}`;
 }
 
@@ -446,7 +456,12 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
   let noticias = c.noticias;
   const novidades: Noticia[] = [];
   for (const ev of eventos) {
-    const n: Noticia = { data, tipo: "calendario", texto: ev.texto };
+    const n: Noticia = {
+      data,
+      tipo: "calendario",
+      texto: ev.texto,
+      ...(ev.params ? { params: ev.params } : {}),
+    };
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
@@ -462,7 +477,11 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
       const n: Noticia = {
         data,
         tipo: "carreira",
-        texto: `${nomeCurtoDaCompeticao(comp)} ${v.temporada}: ${mundo.clube(h.campeao)?.nomeCurto ?? h.campeao} campeão.`,
+        ...marcar("{competicao} {temporada}: {campeao} campeão.", {
+          competicao: nomeCurtoDaCompeticao(comp),
+          temporada: v.temporada,
+          campeao: mundo.clube(h.campeao)?.nomeCurto ?? h.campeao,
+        }),
       };
       novidades.unshift(n);
       noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -472,10 +491,15 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
       const n: Noticia = {
         data,
         tipo: "carreira",
-        texto:
+        ...marcar(
           mv.tipo === "acesso"
-            ? `Acesso! O ${clube?.nomeCurto} vai disputar a ${destino?.nomeCurto ?? destino?.nome ?? mv.para} na próxima temporada.`
-            : `Rebaixado: o ${clube?.nomeCurto} vai para a ${destino?.nomeCurto ?? destino?.nome ?? mv.para} na próxima temporada.`,
+            ? "Acesso! O {clube} vai disputar a {destino} na próxima temporada."
+            : "Rebaixado: o {clube} vai para a {destino} na próxima temporada.",
+          {
+            clube: clube?.nomeCurto ?? c.clube,
+            destino: destino?.nomeCurto ?? destino?.nome ?? mv.para,
+          },
+        ),
       };
       novidades.unshift(n);
       noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -488,7 +512,15 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     const n: Noticia = {
       data,
       tipo: "jogo",
-      texto: `Dia de jogo: ${nomeDoCompromisso(proximo, mundo, jogo)}, ${jogo.mando === "casa" ? "contra o" : "na casa do"} ${adv?.nomeCurto ?? jogo.adversario}.`,
+      ...marcar(
+        jogo.mando === "casa"
+          ? "Dia de jogo: {jogo}, contra o {adversario}."
+          : "Dia de jogo: {jogo}, na casa do {adversario}.",
+        {
+          jogo: nomeDoCompromisso(proximo, mundo, jogo),
+          adversario: adv?.nomeCurto ?? jogo.adversario,
+        },
+      ),
     };
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -525,15 +557,16 @@ export function problemasDoAmistoso(
   pedido: { data: string; adversario: string },
 ): string[] {
   const problemas: string[] = [];
-  if (pedido.data <= c.data) problemas.push("escolha uma data a partir de amanhã");
-  if (pedido.adversario === c.clube) problemas.push("o time não pode jogar contra ele mesmo");
-  if (!mundo.clube(pedido.adversario)) problemas.push("adversário não encontrado");
+  // Textos em português (chaves da tradução): a interface mostra com t().
+  const p = (texto: string) => problemas.push(texto);
+  if (pedido.data <= c.data) p(chave("escolha uma data a partir de amanhã"));
+  if (pedido.adversario === c.clube) p(chave("o time não pode jogar contra ele mesmo"));
+  if (!mundo.clube(pedido.adversario)) p(chave("adversário não encontrado"));
   else if (mundo.elenco(pedido.adversario).length < 11)
-    problemas.push("o adversário não tem 11 jogadores");
-  if (agendaCompleta(c).some((x) => x.data === pedido.data))
-    problemas.push("já há um jogo nesse dia");
+    p(chave("o adversário não tem 11 jogadores"));
+  if (agendaCompleta(c).some((x) => x.data === pedido.data)) p(chave("já há um jogo nesse dia"));
   else if (jogosDoClube(c.competicoes, pedido.adversario).some((x) => x.data === pedido.data))
-    problemas.push("o adversário tem jogo oficial nesse dia");
+    p(chave("o adversário tem jogo oficial nesse dia"));
   return problemas;
 }
 
@@ -555,7 +588,12 @@ export function marcarAmistoso(
     noticias: noticia(c, {
       data: c.data,
       tipo: "jogo",
-      texto: `Amistoso marcado: ${adv?.nomeCurto ?? pedido.adversario} em ${dataCurta(pedido.data)} (${pedido.mando === "casa" ? "em casa" : "fora"}).`,
+      ...marcar(
+        pedido.mando === "casa"
+          ? "Amistoso marcado: {adversario} em {data} (em casa)."
+          : "Amistoso marcado: {adversario} em {data} (fora).",
+        { adversario: adv?.nomeCurto ?? pedido.adversario, data: dataCurta(pedido.data) },
+      ),
     }),
   };
 }
@@ -795,7 +833,13 @@ export function registrarJogo(
   const adv = mundo.clube(x.adversario);
   const [casa, fora] =
     nosso === "casa" ? [clube?.nomeCurto, adv?.nomeCurto] : [adv?.nomeCurto, clube?.nomeCurto];
-  const placarTexto = `${casa} ${gc} x ${gf} ${fora}${r.penaltis ? ` (pênaltis ${r.penaltis[0]} x ${r.penaltis[1]})` : ""}`;
+  const placar = {
+    casa: casa ?? "",
+    gc,
+    gf,
+    fora: fora ?? "",
+    ...(r.penaltis ? { pc: r.penaltis[0], pf: r.penaltis[1] } : {}),
+  };
 
   if (x.tipo !== "oficial" || !x.competicao || x.indice === undefined) {
     return {
@@ -803,7 +847,16 @@ export function registrarJogo(
       jogadores,
       moral,
       agenda: c.agenda.map((y) => (y.id === x.id ? { ...y, resultado } : y)),
-      noticias: noticia(c, { data: c.data, tipo: "jogo", texto: `Amistoso: ${placarTexto}.` }),
+      noticias: noticia(c, {
+        data: c.data,
+        tipo: "jogo",
+        ...marcar(
+          r.penaltis
+            ? "Amistoso: {casa} {gc} x {gf} {fora} (pênaltis {pc} x {pf})."
+            : "Amistoso: {casa} {gc} x {gf} {fora}.",
+          placar,
+        ),
+      }),
     };
   }
 
@@ -865,14 +918,24 @@ export function registrarJogo(
   let noticias = noticia(c, {
     data: c.data,
     tipo: "jogo",
-    texto: `${nomeDoCompromisso(c, mundo, x)}: ${placarTexto}.`,
+    ...marcar(
+      r.penaltis
+        ? "{jogo}: {casa} {gc} x {gf} {fora} (pênaltis {pc} x {pf})."
+        : "{jogo}: {casa} {gc} x {gf} {fora}.",
+      { jogo: nomeDoCompromisso(c, mundo, x), ...placar },
+    ),
   });
   for (const e of suspensos)
     noticias = [
       {
         data: c.data,
         tipo: "elenco" as const,
-        texto: `${mundo.jogador(e.id)?.nome ?? e.id} está suspenso para o próximo jogo da ${competicao ? nomeCurtoDaCompeticao(competicao) : "competição"}.`,
+        ...marcar("{jogador} está suspenso para o próximo jogo da {competicao}.", {
+          jogador: mundo.jogador(e.id)?.nome ?? e.id,
+          competicao: competicao
+            ? nomeCurtoDaCompeticao(competicao)
+            : (c.competicoes.competicoes[comp]?.id ?? comp),
+        }),
       },
       ...noticias,
     ].slice(0, MAX_NOTICIAS);

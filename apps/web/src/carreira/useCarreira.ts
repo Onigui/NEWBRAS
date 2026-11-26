@@ -79,8 +79,8 @@ export function useCarreira(inicial: Carreira) {
       void salvar(carreira, nomeClube).then((s) => setSalvoEm(s.resumo.salvoEm));
       return;
     }
-    const t = setTimeout(() => void salvarAgora(carreira), 600);
-    return () => clearTimeout(t);
+    const espera = setTimeout(() => void salvarAgora(carreira), 600);
+    return () => clearTimeout(espera);
   }, [carreira, nomeClube, salvarAgora]);
 
   const mudar = useCallback((f: (c: Carreira) => Carreira) => setCarreira(f), []);

@@ -17,6 +17,7 @@ import { Escudo } from "../components/Escudo";
 import { procurar } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
+import { t } from "@newbras/textos";
 
 export function Jogos({
   c,
@@ -33,8 +34,8 @@ export function Jogos({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div>
-        <h2 className="mb-2 font-placar text-2xl font-bold">Agenda</h2>
-        {agenda.length === 0 && <p className="text-sm text-suave">Nenhum jogo marcado.</p>}
+        <h2 className="mb-2 font-placar text-2xl font-bold">{t("Agenda")}</h2>
+        {agenda.length === 0 && <p className="text-sm text-suave">{t("Nenhum jogo marcado.")}</p>}
         <ul className="flex flex-col">
           {agenda.map((x) => {
             const adv = mundo.clube(x.adversario);
@@ -59,7 +60,10 @@ export function Jogos({
                     {r ? `${r.placar[0]} x ${r.placar[1]}` : "x"}
                     {r?.penaltis ? (
                       <span className="block text-[0.65rem] font-normal text-suave">
-                        pên. {r.penaltis[0]}x{r.penaltis[1]}
+                        {t("pên. {penaltis}x{penaltis2}", {
+                          penaltis: r.penaltis[0],
+                          penaltis2: r.penaltis[1],
+                        })}
                       </span>
                     ) : null}
                   </span>
@@ -73,14 +77,16 @@ export function Jogos({
                       className="rounded px-1 text-xs text-suave hover:bg-white/10"
                       onClick={() => mudar((y) => desmarcarAmistoso(y, x.id))}
                     >
-                      desmarcar
+                      {t("desmarcar")}
                     </button>
                   )}
                 </div>
                 {r && r.gols.length > 0 && (
                   <p className="pl-20 text-xs text-suave">
                     {r.gols
-                      .map((g) => `${nomes(g.jogador)} ${g.minuto}${g.contra ? " (contra)" : ""}`)
+                      .map(
+                        (g) => `${nomes(g.jogador)} ${g.minuto}${g.contra ? t(" (contra)") : ""}`,
+                      )
                       .join(", ")}
                   </p>
                 )}
@@ -90,7 +96,7 @@ export function Jogos({
         </ul>
       </div>
       <div className="rounded border border-placar-borda p-3">
-        <h2 className="mb-2 font-placar text-2xl font-bold">Marcar amistoso</h2>
+        <h2 className="mb-2 font-placar text-2xl font-bold">{t("Marcar amistoso")}</h2>
         <MarcarAmistoso c={c} montado={montado} mudar={mudar} dataInicial={somarDias(c.data, 7)} />
       </div>
     </div>
@@ -123,7 +129,7 @@ export function MarcarAmistoso({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="grid grid-cols-2 gap-2">
-        <Campo rotulo="Data">
+        <Campo rotulo={t("Data")}>
           <input
             type="date"
             className={estiloCampo}
@@ -132,22 +138,22 @@ export function MarcarAmistoso({
             onChange={(e) => setData(e.target.value)}
           />
         </Campo>
-        <Campo rotulo="Onde">
+        <Campo rotulo={t("Onde")}>
           <select
             className={estiloCampo}
             value={mando}
             onChange={(e) => setMando(e.target.value as "casa" | "fora")}
           >
-            <option value="casa">Em casa</option>
-            <option value="fora">Fora</option>
+            <option value="casa">{t("Em casa")}</option>
+            <option value="fora">{t("Fora")}</option>
           </select>
         </Campo>
       </div>
-      <Campo rotulo="Adversário">
+      <Campo rotulo={t("Adversário")}>
         <input
           className={estiloCampo}
           value={busca}
-          placeholder="Procure qualquer clube do mundo"
+          placeholder={t("Procure qualquer clube do mundo")}
           onChange={(e) => setBusca(e.target.value)}
         />
       </Campo>
@@ -165,7 +171,9 @@ export function MarcarAmistoso({
               >
                 <Escudo clube={x} tamanho={18} />
                 <span className="flex-1 truncate">{x.nome}</span>
-                <span className="text-xs text-suave">nível {x.nivel}</span>
+                <span className="text-xs text-suave">
+                  {t("nível")} {x.nivel}
+                </span>
               </button>
             </li>
           ))}
@@ -174,10 +182,14 @@ export function MarcarAmistoso({
       {adv && (
         <p className="flex items-center gap-2">
           <Escudo clube={adv} tamanho={20} /> {adv.nome}{" "}
-          <span className="text-xs text-suave">nível {adv.nivel}</span>
+          <span className="text-xs text-suave">
+            {t("nível")} {adv.nivel}
+          </span>
         </p>
       )}
-      {problemas.length > 0 && <p className="text-[#ff8a7e]">{problemas.join("; ")}.</p>}
+      {problemas.length > 0 && (
+        <p className="text-[#ff8a7e]">{problemas.map((p) => t(p)).join("; ")}.</p>
+      )}
       <Botao
         variante="primario"
         disabled={!adversario || problemas.length > 0}
@@ -187,7 +199,7 @@ export function MarcarAmistoso({
           setAdversario(null);
         }}
       >
-        Marcar
+        {t("Marcar")}
       </Botao>
     </div>
   );

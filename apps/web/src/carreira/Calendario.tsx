@@ -3,13 +3,20 @@
  * Clicar num dia livre a partir de amanhã marca um amistoso nele.
  */
 import { useState } from "react";
-import { agendaCompleta, marcasDoMes, NOMES_MES, type Carreira } from "@newbras/engine";
+import {
+  agendaCompleta,
+  diasDaSemanaCurtos,
+  marcasDoMes,
+  mesEAno,
+  type Carreira,
+} from "@newbras/engine";
 import { Escudo } from "../components/Escudo";
 import { Botao } from "../editor/ui";
 import { MarcarAmistoso } from "./Jogos";
 import type { MundoMontado } from "./useCarreira";
+import { t } from "@newbras/textos";
 
-const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const DIAS = diasDaSemanaCurtos();
 
 export function Calendario({
   c,
@@ -34,21 +41,21 @@ export function Calendario({
   const jogoNoDia = new Map(agendaCompleta(c).map((x) => [x.data, x]));
   const andar = (d: number) =>
     setMes((m) => {
-      const t = m.ano * 12 + (m.mes - 1) + d;
-      return { ano: Math.floor(t / 12), mes: (t % 12) + 1 };
+      const total = m.ano * 12 + (m.mes - 1) + d;
+      return { ano: Math.floor(total / 12), mes: (total % 12) + 1 };
     });
   const selecionado = dia ? dias.find((d) => d.data === dia) : undefined;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Botao onClick={() => andar(-1)} aria-label="Mês anterior">
+        <Botao onClick={() => andar(-1)} aria-label={t("Mês anterior")}>
           ◀
         </Botao>
         <h2 className="w-56 text-center font-placar text-3xl font-bold">
-          {(NOMES_MES[mes.mes - 1] ?? "").replace(/^./, (l) => l.toUpperCase())} de {mes.ano}
+          {mesEAno(mes.ano, mes.mes)}
         </h2>
-        <Botao onClick={() => andar(1)} aria-label="Próximo mês">
+        <Botao onClick={() => andar(1)} aria-label={t("Próximo mês")}>
           ▶
         </Botao>
         <Botao
@@ -56,7 +63,7 @@ export function Calendario({
             setMes({ ano: Number(c.data.slice(0, 4)), mes: Number(c.data.slice(5, 7)) })
           }
         >
-          Hoje
+          {t("Hoje")}
         </Botao>
       </div>
       <div className="grid grid-cols-7 gap-1 text-sm">
@@ -78,7 +85,7 @@ export function Calendario({
               key={d.data}
               type="button"
               onClick={() => setDia(d.data === dia ? null : d.data)}
-              aria-label={`${Number(d.data.slice(8))}${jogo ? `, jogo contra ${adv?.nomeCurto}` : ""}${d.dataFifa ? `, ${d.dataFifa}` : ""}${d.janela ? ", janela aberta" : ""}`}
+              aria-label={`${Number(d.data.slice(8))}${jogo ? t(", jogo contra {nomeCurto}", { nomeCurto: adv?.nomeCurto }) : ""}${d.dataFifa ? `, ${d.dataFifa}` : ""}${d.janela ? t(", janela aberta") : ""}`}
               className={`relative flex min-h-20 flex-col items-start gap-0.5 rounded border p-1 text-left ${
                 d.temporada ? "bg-white/[0.04]" : "bg-black/20"
               } ${hoje ? "border-canarinho" : dia === d.data ? "border-cal/60" : "border-white/5"} ${livre ? "hover:border-white/30" : ""}`}
@@ -88,7 +95,7 @@ export function Calendario({
               </span>
               {d.dataFifa && (
                 <span className="rounded-sm bg-[#9b8cff]/25 px-1 text-[0.65rem] font-bold text-[#cfc6ff]">
-                  FIFA
+                  {t("FIFA")}
                 </span>
               )}
               {jogo && adv && (
@@ -110,25 +117,26 @@ export function Calendario({
         })}
       </div>
       <p className="text-xs text-suave">
-        Fundo claro: temporada em andamento; escuro: férias. Faixa azul: janela de transferências
-        aberta. FIFA: data FIFA (as ligas param). Clique num dia livre a partir de amanhã para
-        marcar um amistoso.
+        {t(
+          "Fundo claro: temporada em andamento; escuro: férias. Faixa azul: janela de transferências aberta. FIFA: data FIFA (as ligas param). Clique num dia livre a partir de amanhã para marcar um amistoso.",
+        )}
       </p>
       {selecionado && (
         <div className="rounded border border-placar-borda p-3 text-sm">
           {selecionado.eventos.map((ev) => (
-            <p key={ev.tipo}>{ev.texto}</p>
+            <p key={ev.tipo}>{t(ev.texto, ev.params)}</p>
           ))}
           {jogoNoDia.get(selecionado.data) ? (
             <p>
-              Jogo marcado contra o{" "}
-              {mundo.clube(jogoNoDia.get(selecionado.data)!.adversario)?.nomeCurto}.
+              {t("Jogo marcado contra o {nomeCurto}.", {
+                nomeCurto: mundo.clube(jogoNoDia.get(selecionado.data)!.adversario)?.nomeCurto,
+              })}
             </p>
           ) : selecionado.data > c.data ? (
             <MarcarAmistoso c={c} montado={montado} mudar={mudar} dataInicial={selecionado.data} />
           ) : (
             selecionado.eventos.length === 0 && (
-              <p className="text-suave">Nada marcado nesse dia.</p>
+              <p className="text-suave">{t("Nada marcado nesse dia.")}</p>
             )
           )}
         </div>

@@ -11,14 +11,15 @@ import {
   type ResultadoPartida,
   type TimePartida,
 } from "@newbras/engine";
+import { t } from "@newbras/textos";
 
 /** Rótulo e símbolo de cada humor (o técnico vê antes e durante o jogo). */
 export const HUMOR: Record<Humor, { nome: string; simbolo: string; cor: string }> = {
-  otimo: { nome: "Ótimo", simbolo: "▲▲", cor: "text-[#5fd36b]" },
-  bom: { nome: "Bom", simbolo: "▲", cor: "text-[#9bd36b]" },
-  normal: { nome: "Normal", simbolo: "●", cor: "text-suave" },
-  ruim: { nome: "Ruim", simbolo: "▼", cor: "text-[#f0a35a]" },
-  pessimo: { nome: "Péssimo", simbolo: "▼▼", cor: "text-[#ff6b5e]" },
+  otimo: { nome: t("Ótimo"), simbolo: "▲▲", cor: "text-[#5fd36b]" },
+  bom: { nome: t("Bom"), simbolo: "▲", cor: "text-[#9bd36b]" },
+  normal: { nome: t("Normal"), simbolo: "●", cor: "text-suave" },
+  ruim: { nome: t("Ruim"), simbolo: "▼", cor: "text-[#f0a35a]" },
+  pessimo: { nome: t("Péssimo"), simbolo: "▼▼", cor: "text-[#ff6b5e]" },
 };
 
 export function IconeHumor({ humor }: { humor: Humor }) {
@@ -26,8 +27,8 @@ export function IconeHumor({ humor }: { humor: Humor }) {
   return (
     <span
       className={`mr-1 inline-block w-5 text-[10px] font-black ${h.cor}`}
-      title={`Humor: ${h.nome}`}
-      aria-label={`Humor ${h.nome}`}
+      title={t("Humor: {nome}", { nome: h.nome })}
+      aria-label={t("Humor {nome}", { nome: h.nome })}
     >
       {h.simbolo}
     </span>
@@ -76,10 +77,10 @@ export function LanceALance({
   return (
     <section className="min-w-0 rounded-md border-2 border-placar-borda bg-placar p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-placar text-2xl font-bold">Lance a lance</h2>
+        <h2 className="font-placar text-2xl font-bold">{t("Lance a lance")}</h2>
         <label className="flex items-center gap-2 text-sm text-suave">
           <input type="checkbox" checked={todos} onChange={onTodos} />
-          Todos os lances
+          {t("Todos os lances")}
         </label>
       </div>
       <ol className={`${altura} overflow-y-auto text-sm`} aria-live="polite">
@@ -106,22 +107,22 @@ export function Estatisticas({
 }) {
   const { casa: c, fora: f } = estatisticas;
   const linhas: Array<[string, string | number, string | number]> = [
-    ["Posse de bola", `${c.posse}%`, `${f.posse}%`],
-    ["Chutes", c.chutes, f.chutes],
-    ["Chutes no gol", c.chutesNoGol, f.chutesNoGol],
-    ["Gols esperados (xG)", c.xg.toFixed(2), f.xg.toFixed(2)],
-    ["Passes certos", `${c.passesCertos}/${c.passes}`, `${f.passesCertos}/${f.passes}`],
-    ["Desarmes", c.desarmes, f.desarmes],
-    ["Escanteios", c.escanteios, f.escanteios],
-    ["Faltas", c.faltas, f.faltas],
-    ["Impedimentos", c.impedimentos, f.impedimentos],
-    ["Cartões amarelos", c.amarelos, f.amarelos],
-    ["Cartões vermelhos", c.vermelhos, f.vermelhos],
-    ["Defesas do goleiro", c.defesas, f.defesas],
+    [t("Posse de bola"), `${c.posse}%`, `${f.posse}%`],
+    [t("Chutes"), c.chutes, f.chutes],
+    [t("Chutes no gol"), c.chutesNoGol, f.chutesNoGol],
+    [t("Gols esperados (xG)"), c.xg.toFixed(2), f.xg.toFixed(2)],
+    [t("Passes certos"), `${c.passesCertos}/${c.passes}`, `${f.passesCertos}/${f.passes}`],
+    [t("Desarmes"), c.desarmes, f.desarmes],
+    [t("Escanteios"), c.escanteios, f.escanteios],
+    [t("Faltas"), c.faltas, f.faltas],
+    [t("Impedimentos"), c.impedimentos, f.impedimentos],
+    [t("Cartões amarelos"), c.amarelos, f.amarelos],
+    [t("Cartões vermelhos"), c.vermelhos, f.vermelhos],
+    [t("Defesas do goleiro"), c.defesas, f.defesas],
   ];
   return (
     <section className="rounded-md border-2 border-placar-borda bg-placar p-4">
-      <h2 className="mb-2 font-placar text-2xl font-bold">Estatísticas</h2>
+      <h2 className="mb-2 font-placar text-2xl font-bold">{t("Estatísticas")}</h2>
       <table className="w-full text-sm">
         <tbody>
           {linhas.map(([nome, a, b]) => (
@@ -150,19 +151,21 @@ export function Notas({
   const jogadores = resultado.jogadores.filter((j) => j.time === lado);
   return (
     <section className="rounded-md border-2 border-placar-borda bg-placar p-4">
-      <h2 className="mb-2 font-placar text-2xl font-bold">Notas: {time.nome}</h2>
+      <h2 className="mb-2 font-placar text-2xl font-bold">
+        {t("Notas:")} {time.nome}
+      </h2>
       <table className="w-full text-sm">
         <thead className="text-left text-xs text-suave">
           <tr>
-            <th className="py-1">Jogador</th>
-            <th className="py-1">Posição</th>
-            <th className="py-1 text-right">Min.</th>
-            <th className="py-1 text-right">Gols</th>
-            <th className="py-1 text-right" title="Assistências">
-              Assist.
+            <th className="py-1">{t("Jogador")}</th>
+            <th className="py-1">{t("Posição")}</th>
+            <th className="py-1 text-right">{t("Min.")}</th>
+            <th className="py-1 text-right">{t("Gols")}</th>
+            <th className="py-1 text-right" title={t("Assistências")}>
+              {t("Assist.")}
             </th>
-            <th className="py-1 text-right">Fôlego</th>
-            <th className="py-1 text-right">Nota</th>
+            <th className="py-1 text-right">{t("Fôlego")}</th>
+            <th className="py-1 text-right">{t("Nota")}</th>
           </tr>
         </thead>
         <tbody>
@@ -173,7 +176,7 @@ export function Notas({
                 <td className="py-1.5">
                   <IconeHumor humor={j.humor} />
                   {dados?.nome}
-                  {!j.titular && <span className="ml-1 text-xs text-suave">entrou</span>}
+                  {!j.titular && <span className="ml-1 text-xs text-suave">{t("entrou")}</span>}
                   {j.amarelos > 0 && <span className="ml-1 text-xs text-[#f5d020]">▮</span>}
                   {j.vermelho && <span className="ml-1 text-xs text-[#ff5b4a]">▮</span>}
                 </td>

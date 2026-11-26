@@ -11,6 +11,7 @@ import {
   listarSalvamentos,
   type Salvamento,
 } from "./salvamentos";
+import { t, locale } from "@newbras/textos";
 
 export function CarregarJogo({
   onBack,
@@ -34,7 +35,7 @@ export function CarregarJogo({
       if (r.ok) onCarregar(r.carreira);
       else setErro(r.erro);
     } catch {
-      setErro("Não deu para ler o arquivo: ele não é um JSON válido.");
+      setErro(t("Não deu para ler o arquivo: ele não é um JSON válido."));
     }
   };
 
@@ -42,19 +43,21 @@ export function CarregarJogo({
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-4 p-4 lg:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-placar-borda bg-placar px-5 py-3">
         <div>
-          <h1 className="font-placar text-4xl font-extrabold">Carregar jogo</h1>
+          <h1 className="font-placar text-4xl font-extrabold">{t("Carregar jogo")}</h1>
           <p className="text-sm text-suave">
-            As carreiras se salvam sozinhas a cada mudança. F2 salva na hora.
+            {t("As carreiras se salvam sozinhas a cada mudança. F2 salva na hora.")}
           </p>
         </div>
-        <Botao onClick={onBack}>Voltar ao menu</Botao>
+        <Botao onClick={onBack}>{t("Voltar ao menu")}</Botao>
       </header>
 
       <section className="flex flex-col gap-2 rounded-md border-2 border-placar-borda bg-placar p-4">
-        {lista === null && <p className="text-suave">Procurando jogos salvos…</p>}
+        {lista === null && <p className="text-suave">{t("Procurando jogos salvos…")}</p>}
         {lista?.length === 0 && (
           <p className="text-suave">
-            Nenhuma carreira salva neste navegador ainda. Comece um novo jogo ou abra um arquivo.
+            {t(
+              "Nenhuma carreira salva neste navegador ainda. Comece um novo jogo ou abra um arquivo.",
+            )}
           </p>
         )}
         {lista?.map((s) => (
@@ -64,16 +67,21 @@ export function CarregarJogo({
           >
             <div className="min-w-0 flex-1">
               <p className="truncate font-bold">
-                {s.resumo.clube}, técnico {s.resumo.tecnico}
+                {t("{clube}, técnico {tecnico}", {
+                  clube: s.resumo.clube,
+                  tecnico: s.resumo.tecnico,
+                })}
               </p>
               <p className="text-xs text-suave">
-                No jogo: {dataCurta(s.resumo.data)}. Salvo em{" "}
-                {new Date(s.resumo.salvoEm).toLocaleString("pt-BR")}.
+                {t("No jogo: {dataCurta}. Salvo em {data}.", {
+                  dataCurta: dataCurta(s.resumo.data),
+                  data: new Date(s.resumo.salvoEm).toLocaleString(locale()),
+                })}
               </p>
             </div>
             {apagando === s.carreira.id ? (
               <>
-                <span className="text-sm">Apagar de vez?</span>
+                <span className="text-sm">{t("Apagar de vez?")}</span>
                 <Botao
                   onClick={() => {
                     void apagarSalvamento(s.carreira.id).then(() => {
@@ -82,25 +90,25 @@ export function CarregarJogo({
                     });
                   }}
                 >
-                  Apagar
+                  {t("Apagar")}
                 </Botao>
-                <Botao onClick={() => setApagando(null)}>Cancelar</Botao>
+                <Botao onClick={() => setApagando(null)}>{t("Cancelar")}</Botao>
               </>
             ) : (
               <>
                 <Botao onClick={() => exportarCarreira(s.carreira, s.resumo.clube)}>
-                  Baixar arquivo
+                  {t("Baixar arquivo")}
                 </Botao>
-                <Botao onClick={() => setApagando(s.carreira.id)}>Apagar</Botao>
+                <Botao onClick={() => setApagando(s.carreira.id)}>{t("Apagar")}</Botao>
                 <Botao variante="primario" onClick={() => onCarregar(s.carreira)}>
-                  Continuar
+                  {t("Continuar")}
                 </Botao>
               </>
             )}
           </div>
         ))}
         <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 rounded-sm bg-white/10 px-3 py-1.5 text-sm font-bold focus-within:ring-2 focus-within:ring-canarinho hover:bg-white/20">
-          Abrir um arquivo de carreira (.json)
+          {t("Abrir um arquivo de carreira (.json)")}
           <input
             type="file"
             accept="application/json,.json"

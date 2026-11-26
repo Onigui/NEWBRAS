@@ -82,10 +82,10 @@ export function useEditor() {
       primeiro.current = false;
       return;
     }
-    const t = setTimeout(() => {
+    const espera = setTimeout(() => {
       void (totalDeEdicoes(patch) === 0 ? apagarPatch() : salvarPatch(patch));
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(espera);
   }, [patch]);
 
   const mudar = useCallback((f: (p: Patch) => Patch) => {

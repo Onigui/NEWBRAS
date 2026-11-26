@@ -159,8 +159,12 @@ export interface Evento {
   y?: number;
   /** Para chutes: probabilidade de gol do lance (xG). Para pênaltis da disputa: convertido. */
   valor?: number;
-  /** Texto livre do lance (a mudança tática da CPU, por exemplo). */
+  /**
+   * Motivo da mudança tática da CPU, em português (é a chave da tradução: a narração mostra com
+   * t()), com a formação nova e o estilo em `tatica`.
+   */
   detalhe?: string;
+  tatica?: { umAMenos?: boolean; formacao?: string; estilo?: string };
   /** Onde a bola terminou (chutes e gols): no gol, na trave, fora ou nas mãos do goleiro. */
   destino?: { x: number; y: number };
   /** Placar logo depois do evento. */

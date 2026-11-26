@@ -24,6 +24,7 @@ import {
   papelENota,
   type Candidato,
 } from "./EditorFormacao";
+import { t } from "@newbras/textos";
 
 export interface EscalacaoEditavel {
   formacao: Formacao | "personalizada";
@@ -128,9 +129,9 @@ export function EditorEscalacao({
           {aviso && (
             <span
               className="ml-1 rounded-sm bg-[#ffa64d]/20 px-1 text-xs text-[#ffc38a]"
-              title="Melhor poupar"
+              title={t("Melhor poupar")}
             >
-              poupar: {aviso}
+              {t("poupar: {aviso}", { aviso })}
             </span>
           )}
         </td>
@@ -138,7 +139,7 @@ export function EditorEscalacao({
           <span
             className="font-bold"
             style={info ? { color: corDaNotaNaVaga(info.nota, j.forca) } : undefined}
-            title={info ? nomeDoPapel(info.papel) : `força ${j.forca}`}
+            title={info ? nomeDoPapel(info.papel) : t("força {forca}", { forca: j.forca })}
           >
             {info?.nota ?? j.forca}
           </span>
@@ -153,7 +154,7 @@ export function EditorEscalacao({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-2">
-        <Campo rotulo="Formação" className="min-w-40 flex-1">
+        <Campo rotulo={t("Formação")} className="min-w-40 flex-1">
           <select
             className={estiloCampo}
             value={valor.formacao}
@@ -181,10 +182,10 @@ export function EditorEscalacao({
                 {f}
               </option>
             ))}
-            <option value="personalizada">Personalizada</option>
+            <option value="personalizada">{t("Personalizada")}</option>
             {guardadas.map((f) => (
               <option key={f.nome} value={`guardada:${f.nome}`}>
-                Minha: {f.nome}
+                {t("Minha: {nome}", { nome: f.nome })}
               </option>
             ))}
           </select>
@@ -194,9 +195,9 @@ export function EditorEscalacao({
             setSelecionada(null);
             onMudar(escalacaoSugerida(jogadores, valor.formacao, valor.vagas));
           }}
-          title="Os melhores para cada vaga, já descontando cansaço e humor"
+          title={t("Os melhores para cada vaga, já descontando cansaço e humor")}
         >
-          Escalação automática
+          {t("Escalação automática")}
         </Botao>
       </div>
 
@@ -216,7 +217,7 @@ export function EditorEscalacao({
           ocupante={ocupantes[selecionada] ?? null}
           escolhido={valor.papeis[selecionada] ?? null}
           candidatos={candidatos}
-          rotuloTroca={(c) => (c.origem !== "banco" ? "Trocar de vaga" : "Escalar")}
+          rotuloTroca={(c) => (c.origem !== "banco" ? t("Trocar de vaga") : t("Escalar"))}
           onPapel={(papel) => {
             const papeis = valor.vagas.map((_, i) => valor.papeis[i] ?? null);
             papeis[selecionada] = papel;
@@ -232,7 +233,7 @@ export function EditorEscalacao({
           <input
             className={estiloCampo}
             value={nomeGuardar}
-            placeholder="Nome para guardar esta formação"
+            placeholder={t("Nome para guardar esta formação")}
             onChange={(e) => setNomeGuardar(e.target.value)}
           />
           <Botao
@@ -243,14 +244,14 @@ export function EditorEscalacao({
               setNomeGuardar("");
             }}
           >
-            Guardar
+            {t("Guardar")}
           </Botao>
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div>
-          <h3 className="mb-1 text-sm font-bold">Titulares</h3>
+          <h3 className="mb-1 text-sm font-bold">{t("Titulares")}</h3>
           <table className="w-full table-fixed text-sm">
             <tbody>
               {valor.titulares.map((id, i) => {
@@ -265,7 +266,7 @@ export function EditorEscalacao({
                       linha(j, i)
                     ) : (
                       <td colSpan={4} className="py-1 text-suave">
-                        Vaga vazia
+                        {t("Vaga vazia")}
                       </td>
                     )}
                   </tr>
@@ -274,12 +275,15 @@ export function EditorEscalacao({
             </tbody>
           </table>
           <p className="mt-1 text-xs text-suave">
-            Clique num titular (ou no campo) para escolher a função ou trocar quem joga ali.
+            {t("Clique num titular (ou no campo) para escolher a função ou trocar quem joga ali.")}
           </p>
         </div>
         <div>
           <h3 className="mb-1 text-sm font-bold">
-            Reservas ({valor.reservas.length} de {TAMANHO_BANCO})
+            {t("Reservas ({reservas} de {tamanhoBanco})", {
+              reservas: valor.reservas.length,
+              tamanhoBanco: TAMANHO_BANCO,
+            })}
           </h3>
           <table className="w-full table-fixed text-sm">
             <tbody>
@@ -293,9 +297,9 @@ export function EditorEscalacao({
                         type="button"
                         className="rounded px-1 text-xs text-suave hover:bg-white/10"
                         onClick={() => alternarReserva(id)}
-                        aria-label={`Tirar ${j.nome} do banco`}
+                        aria-label={t("Tirar {nome} do banco", { nome: j.nome })}
                       >
-                        tirar
+                        {t("tirar")}
                       </button>
                     </td>
                   </tr>
@@ -306,7 +310,9 @@ export function EditorEscalacao({
           {jogadores.some((j) => !naLista.has(j.id)) && (
             <details className="mt-2 text-sm">
               <summary className="cursor-pointer text-suave">
-                Fora da lista ({jogadores.filter((j) => !naLista.has(j.id)).length})
+                {t("Fora da lista ({jogadores})", {
+                  jogadores: jogadores.filter((j) => !naLista.has(j.id)).length,
+                })}
               </summary>
               <table className="mt-1 w-full table-fixed">
                 <tbody>
@@ -322,7 +328,7 @@ export function EditorEscalacao({
                             className="rounded px-1 text-xs text-suave hover:bg-white/10 disabled:opacity-40"
                             onClick={() => alternarReserva(j.id)}
                           >
-                            ao banco
+                            {t("ao banco")}
                           </button>
                         </td>
                       </tr>
@@ -342,7 +348,10 @@ export function Folego({ valor }: { valor: number }) {
   const cor =
     valor >= 85 ? "#7ed37a" : valor >= 70 ? "#f4e04d" : valor >= 55 ? "#ffa64d" : "#ff6b5c";
   return (
-    <div className="flex items-center gap-1" title={`Condição física ${Math.round(valor)}%`}>
+    <div
+      className="flex items-center gap-1"
+      title={t("Condição física {valor}%", { valor: Math.round(valor) })}
+    >
       <div className="h-1.5 flex-1 rounded-full bg-white/10">
         <div
           className="h-full rounded-full"

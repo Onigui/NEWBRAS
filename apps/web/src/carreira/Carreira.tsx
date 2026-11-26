@@ -45,37 +45,38 @@ import { Plantel } from "./Plantel";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
+import { t, locale } from "@newbras/textos";
 
 type Aba = "inicio" | "plantel" | "escalacao" | "calendario" | "jogos" | "competicoes";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
-  { id: "inicio", nome: "Início", tecla: "1" },
-  { id: "plantel", nome: "Plantel", tecla: "2" },
-  { id: "escalacao", nome: "Escalação", tecla: "3" },
-  { id: "calendario", nome: "Calendário", tecla: "4" },
-  { id: "jogos", nome: "Jogos", tecla: "5" },
-  { id: "competicoes", nome: "Competições", tecla: "6" },
+  { id: "inicio", nome: t("Início"), tecla: "1" },
+  { id: "plantel", nome: t("Plantel"), tecla: "2" },
+  { id: "escalacao", nome: t("Escalação"), tecla: "3" },
+  { id: "calendario", nome: t("Calendário"), tecla: "4" },
+  { id: "jogos", nome: t("Jogos"), tecla: "5" },
+  { id: "competicoes", nome: t("Competições"), tecla: "6" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
-  equilibrado: "Equilibrado",
-  ataque: "Ataque total",
-  "contra-ataque": "Contra-ataque",
-  cadenciado: "Cadenciado (toque de bola)",
+  equilibrado: t("Equilibrado"),
+  ataque: t("Ataque total"),
+  "contra-ataque": t("Contra-ataque"),
+  cadenciado: t("Cadenciado (toque de bola)"),
 };
 const NOME_MARCACAO: Record<Marcacao, string> = {
-  leve: "Leve",
-  pesada: "Pesada",
-  "muito-pesada": "Muito pesada",
+  leve: t("Leve"),
+  pesada: t("Pesada"),
+  "muito-pesada": t("Muito pesada"),
 };
 const NOME_CONCENTRACAO: Record<Concentracao, string> = {
-  equilibrada: "Equilibrada",
-  meio: "Pelo meio",
-  laterais: "Pelas laterais",
+  equilibrada: t("Equilibrada"),
+  meio: t("Pelo meio"),
+  laterais: t("Pelas laterais"),
 };
 
 export function Carreira({ inicial, onSair }: { inicial: CarreiraT; onSair: () => void }) {
   const cr = useCarreira(inicial);
-  if (!cr.montado) return <TelaDeEspera titulo="Carreira" carga={cr.carga} onBack={onSair} />;
+  if (!cr.montado) return <TelaDeEspera titulo={t("Carreira")} carga={cr.carga} onBack={onSair} />;
   return <TelaCarreira cr={{ ...cr, montado: cr.montado }} onSair={onSair} />;
 }
 
@@ -161,7 +162,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             fora: mundo.clube(jogo.opcoes.fora.id),
           }}
           humano={lado}
-          rotuloNovo="Voltar à carreira"
+          rotuloNovo={t("Voltar à carreira")}
           onTerminou={(r) => mudar((x) => registrarJogo(x, mundo, jogo.x.id, r))}
           plantao={(agora) => (
             <Plantao c={jogo.antes} mundo={mundo} x={jogo.x} jogos={jogo.plantao} agora={agora} />
@@ -188,29 +189,37 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
           </h1>
           <p className="text-sm text-suave">
             {c.tecnico}, {dataPorExtenso(c.data)}
-            {pais ? `, temporada ${nomeTemporada(pais, c.data)}` : ""}
+            {pais
+              ? t(", temporada {nomeTemporada}", { nomeTemporada: nomeTemporada(pais, c.data) })
+              : ""}
           </p>
         </div>
         <Moral valor={c.moral} />
         <div className="flex flex-wrap gap-2">
           {hoje ? (
             <Botao variante="primario" onClick={() => setDia("pre-jogo")}>
-              Dia de jogo: {adversarioHoje?.nomeCurto ?? hoje.adversario}
+              {t("Dia de jogo: {nomeCurto}", {
+                nomeCurto: adversarioHoje?.nomeCurto ?? hoje.adversario,
+              })}
             </Botao>
           ) : (
             <>
               <Botao onClick={() => mudar((x) => avancarDia(x, mundo).carreira)}>
-                Avançar um dia
+                {t("Avançar um dia")}
               </Botao>
               <Botao
                 variante="primario"
                 disabled={!proximo}
-                title={proximo ? undefined : "Nenhum jogo marcado: marque um amistoso na aba Jogos"}
+                title={
+                  proximo ? undefined : t("Nenhum jogo marcado: marque um amistoso na aba Jogos")
+                }
                 onClick={() => mudar((x) => avancarAteJogo(x, mundo).carreira)}
               >
                 {proximo
-                  ? `Ir até o próximo jogo (${diasEntre(c.data, proximo.data)} dias)`
-                  : "Sem jogos marcados"}
+                  ? t("Ir até o próximo jogo ({diasEntre} dias)", {
+                      diasEntre: diasEntre(c.data, proximo.data),
+                    })
+                  : t("Sem jogos marcados")}
               </Botao>
             </>
           )}
@@ -219,9 +228,10 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
 
       {c.versaoBanco !== montado.banco.meta.versao && (
         <p className="rounded border border-[#ffa64d]/40 bg-[#ffa64d]/10 px-3 py-2 text-sm text-[#ffc38a]">
-          O banco do jogo foi atualizado ({c.versaoBanco} para {montado.banco.meta.versao}) depois
-          que esta carreira começou. Ela continua, mas jogadores que mudaram no banco podem aparecer
-          diferentes.
+          {t(
+            "O banco do jogo foi atualizado ({versaoBanco} para {versao}) depois que esta carreira começou. Ela continua, mas jogadores que mudaram no banco podem aparecer diferentes.",
+            { versaoBanco: c.versaoBanco, versao: montado.banco.meta.versao },
+          )}
         </p>
       )}
       {dia === "pre-jogo" && hoje ? (
@@ -229,10 +239,10 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-placar text-3xl font-bold">
               {nomeDoCompromisso(c, mundo, hoje)}:{" "}
-              {hoje.mando === "casa" ? "contra o" : "na casa do"} {adversarioHoje?.nomeCurto}
+              {hoje.mando === "casa" ? t("contra o") : t("na casa do")} {adversarioHoje?.nomeCurto}
             </h2>
             <div className="flex gap-2">
-              <Botao onClick={() => setDia("hub")}>Voltar</Botao>
+              <Botao onClick={() => setDia("hub")}>{t("Voltar")}</Botao>
               <Botao
                 variante="primario"
                 onClick={() => {
@@ -245,7 +255,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                   setDia("jogo");
                 }}
               >
-                Começar o jogo
+                {t("Começar o jogo")}
               </Botao>
             </div>
           </div>
@@ -266,7 +276,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         </section>
       ) : (
         <>
-          <nav className="flex flex-wrap gap-1" aria-label="Seções da carreira">
+          <nav className="flex flex-wrap gap-1" aria-label={t("Seções da carreira")}>
             {ABAS.map((a) => (
               <button
                 key={a.id}
@@ -281,14 +291,19 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             <div className="ml-auto flex items-center gap-2 text-xs text-suave">
               <span role="status">
                 {cr.erroSalvar
-                  ? `Não salvou: ${cr.erroSalvar}`
+                  ? t("Não salvou: {erroSalvar}", { erroSalvar: cr.erroSalvar })
                   : cr.salvoEm
-                    ? `Salvo às ${new Date(cr.salvoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                    : "Salvando…"}
+                    ? t("Salvo às {hora}", {
+                        hora: new Date(cr.salvoEm).toLocaleTimeString(locale(), {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }),
+                      })
+                    : t("Salvando…")}
               </span>
-              <Botao onClick={() => void cr.salvarAgora()}>Salvar (F2)</Botao>
-              <Botao onClick={() => exportarCarreira(c, cr.nomeClube)}>Baixar arquivo</Botao>
-              <Botao onClick={onSair}>Menu</Botao>
+              <Botao onClick={() => void cr.salvarAgora()}>{t("Salvar (F2)")}</Botao>
+              <Botao onClick={() => exportarCarreira(c, cr.nomeClube)}>{t("Baixar arquivo")}</Botao>
+              <Botao onClick={onSair}>{t("Menu")}</Botao>
             </div>
           </nav>
           <section className="-mt-4 rounded-md rounded-tl-none border-2 border-placar-borda bg-placar p-4">
@@ -333,17 +348,20 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
 function Moral({ valor }: { valor: number }) {
   const texto =
     valor >= 75
-      ? "Empolgado"
+      ? t("Empolgado")
       : valor >= 58
-        ? "Confiante"
+        ? t("Confiante")
         : valor >= 42
-          ? "Tranquilo"
+          ? t("Tranquilo")
           : valor >= 25
-            ? "Abalado"
-            : "Em crise";
+            ? t("Abalado")
+            : t("Em crise");
   return (
-    <div className="w-32 text-sm" title={`Moral do time: ${Math.round(valor)} de 100`}>
-      <p className="text-xs text-suave">Moral do time</p>
+    <div
+      className="w-32 text-sm"
+      title={t("Moral do time: {valor} de 100", { valor: Math.round(valor) })}
+    >
+      <p className="text-xs text-suave">{t("Moral do time")}</p>
       <p className="font-bold">{texto}</p>
       <div className="mt-0.5 h-1.5 rounded-full bg-white/10">
         <div className="h-full rounded-full bg-canarinho" style={{ width: `${valor}%` }} />
@@ -353,15 +371,15 @@ function Moral({ valor }: { valor: number }) {
 }
 
 function Tatica({ c, mudar }: { c: CarreiraT; mudar: (f: (x: CarreiraT) => CarreiraT) => void }) {
-  const t = c.tatica;
+  const tat = c.tatica;
   const set = (parte: Partial<CarreiraT["tatica"]>) =>
     mudar((x) => ({ ...x, tatica: { ...x.tatica, ...parte } }));
   return (
     <div className="grid gap-2 sm:grid-cols-3">
-      <Campo rotulo="Estilo">
+      <Campo rotulo={t("Estilo")}>
         <select
           className={estiloCampo}
-          value={t.estilo}
+          value={tat.estilo}
           onChange={(e) => set({ estilo: e.target.value as Estilo })}
         >
           {(Object.keys(NOME_ESTILO) as Estilo[]).map((v) => (
@@ -371,10 +389,10 @@ function Tatica({ c, mudar }: { c: CarreiraT; mudar: (f: (x: CarreiraT) => Carre
           ))}
         </select>
       </Campo>
-      <Campo rotulo="Marcação">
+      <Campo rotulo={t("Marcação")}>
         <select
           className={estiloCampo}
-          value={t.marcacao}
+          value={tat.marcacao}
           onChange={(e) => set({ marcacao: e.target.value as Marcacao })}
         >
           {(Object.keys(NOME_MARCACAO) as Marcacao[]).map((v) => (
@@ -384,10 +402,10 @@ function Tatica({ c, mudar }: { c: CarreiraT; mudar: (f: (x: CarreiraT) => Carre
           ))}
         </select>
       </Campo>
-      <Campo rotulo="Ataques">
+      <Campo rotulo={t("Ataques")}>
         <select
           className={estiloCampo}
-          value={t.concentracao}
+          value={tat.concentracao}
           onChange={(e) => set({ concentracao: e.target.value as Concentracao })}
         >
           {(Object.keys(NOME_CONCENTRACAO) as Concentracao[]).map((v) => (
@@ -425,7 +443,7 @@ function Inicio({
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <div className="flex flex-col gap-4">
         <div className="rounded border border-placar-borda p-3">
-          <p className="text-xs font-bold text-suave">Próximo jogo</p>
+          <p className="text-xs font-bold text-suave">{t("Próximo jogo")}</p>
           {proximo && adv ? (
             <div className="mt-2 flex items-center gap-3">
               <Escudo clube={adv} tamanho={44} />
@@ -433,27 +451,27 @@ function Inicio({
                 <p className="font-placar text-2xl font-bold">{adv.nomeCurto}</p>
                 <p className="text-sm text-suave">
                   {nomeDoCompromisso(c, montado.mundo, proximo)},{" "}
-                  {proximo.mando === "casa" ? "em casa" : "fora"}, {dataCurta(proximo.data)}
+                  {proximo.mando === "casa" ? t("em casa") : "fora"}, {dataCurta(proximo.data)}
                   {proximo.data === c.data
-                    ? " (hoje)"
-                    : ` (em ${diasEntre(c.data, proximo.data)} dias)`}
+                    ? t(" (hoje)")
+                    : t(" (em {diasEntre} dias)", { diasEntre: diasEntre(c.data, proximo.data) })}
                 </p>
               </div>
             </div>
           ) : (
             <p className="mt-2 text-sm text-suave">
-              Nenhum jogo marcado.{" "}
+              {t("Nenhum jogo marcado.")}
               <button type="button" className="underline" onClick={onJogos}>
-                Marque um amistoso
+                {t("Marque um amistoso")}
               </button>
               .
             </p>
           )}
         </div>
         <div className="rounded border border-placar-borda p-3">
-          <p className="text-xs font-bold text-suave">Melhor poupar</p>
+          <p className="text-xs font-bold text-suave">{t("Melhor poupar")}</p>
           {avisos.size === 0 ? (
-            <p className="mt-1 text-sm text-suave">Todo mundo descansado e de bem.</p>
+            <p className="mt-1 text-sm text-suave">{t("Todo mundo descansado e de bem.")}</p>
           ) : (
             <ul className="mt-1 text-sm">
               {[...avisos].map(([id, aviso]) => (
@@ -466,13 +484,13 @@ function Inicio({
           )}
           {avisos.size > 0 && (
             <button type="button" className="mt-1 text-xs underline" onClick={onEscalacao}>
-              Revisar a escalação
+              {t("Revisar a escalação")}
             </button>
           )}
         </div>
         {ultimos.length > 0 && (
           <div className="rounded border border-placar-borda p-3">
-            <p className="text-xs font-bold text-suave">Últimos resultados</p>
+            <p className="text-xs font-bold text-suave">{t("Últimos resultados")}</p>
             <ul className="mt-1 text-sm">
               {ultimos.map((x) => {
                 const r = x.resultado!;
@@ -501,12 +519,12 @@ function Inicio({
         )}
       </div>
       <div className="rounded border border-placar-borda p-3">
-        <p className="text-xs font-bold text-suave">Notícias</p>
+        <p className="text-xs font-bold text-suave">{t("Notícias")}</p>
         <ul className="mt-1 flex max-h-[32rem] flex-col overflow-y-auto text-sm">
           {c.noticias.slice(0, 40).map((n, i) => (
             <li key={`${n.data}-${i}`} className="flex gap-3 border-b border-white/5 py-1.5">
               <span className="w-20 shrink-0 text-xs text-suave">{dataCurta(n.data)}</span>
-              <span>{n.texto}</span>
+              <span>{t(n.texto, n.params)}</span>
             </li>
           ))}
         </ul>

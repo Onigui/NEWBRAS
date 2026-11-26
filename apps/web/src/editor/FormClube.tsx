@@ -9,13 +9,14 @@ import {
 import type { Indices } from "./indices";
 import { normalizar } from "./indices";
 import { Botao, Campo, ListaProblemas, estiloCampo } from "./ui";
+import { t } from "@newbras/textos";
 
 export const NOME_REPUTACAO = [
-  "Municipal",
-  "Estadual",
-  "Nacional",
-  "Continental",
-  "Mundial",
+  t("Municipal"),
+  t("Estadual"),
+  t("Nacional"),
+  t("Continental"),
+  t("Mundial"),
 ] as const;
 
 interface Props {
@@ -47,10 +48,10 @@ export function FormClube({
   const estados = banco.estados.filter((e) => e.pais === c.pais);
   const ligas = indices.ligasDoPais.get(c.pais) ?? [];
   const sugestoesRival = useMemo(() => {
-    const t = normalizar(rival);
-    if (t.length < 2) return [];
+    const alvo = normalizar(rival);
+    if (alvo.length < 2) return [];
     return banco.clubes
-      .filter((x) => x.id !== c.id && !c.rivais.includes(x.id) && normalizar(x.nome).includes(t))
+      .filter((x) => x.id !== c.id && !c.rivais.includes(x.id) && normalizar(x.nome).includes(alvo))
       .slice(0, 8);
   }, [rival, banco.clubes, c.id, c.rivais]);
 
@@ -77,7 +78,7 @@ export function FormClube({
 
   return (
     <form noValidate onSubmit={salvar} className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
-      <Campo rotulo="Nome" className="col-span-2">
+      <Campo rotulo={t("Nome")} className="col-span-2">
         <input
           className={estiloCampo}
           value={c.nome}
@@ -86,7 +87,7 @@ export function FormClube({
           onChange={(e) => mudar({ nome: e.target.value })}
         />
       </Campo>
-      <Campo rotulo="Nome curto" dica="Em tabelas e placares">
+      <Campo rotulo={t("Nome curto")} dica={t("Em tabelas e placares")}>
         <input
           className={estiloCampo}
           value={c.nomeCurto}
@@ -95,7 +96,7 @@ export function FormClube({
           onChange={(e) => mudar({ nomeCurto: e.target.value })}
         />
       </Campo>
-      <Campo rotulo="Abreviação" dica="3 letras">
+      <Campo rotulo={t("Abreviação")} dica={t("3 letras")}>
         <input
           className={`${estiloCampo} uppercase`}
           value={c.abreviacao}
@@ -107,7 +108,7 @@ export function FormClube({
         />
       </Campo>
 
-      <Campo rotulo="País">
+      <Campo rotulo={t("País")}>
         <select
           className={estiloCampo}
           value={c.pais}
@@ -126,14 +127,14 @@ export function FormClube({
             ))}
         </select>
       </Campo>
-      <Campo rotulo="Estado">
+      <Campo rotulo={t("Estado")}>
         <select
           className={estiloCampo}
           value={c.estado ?? ""}
           disabled={!estados.length}
           onChange={(e) => opcional("estado", e.target.value || undefined)}
         >
-          <option value="">{estados.length ? "Nenhum" : "Sem estados"}</option>
+          <option value="">{estados.length ? t("Nenhum") : t("Sem estados")}</option>
           {estados.map((e) => (
             <option key={e.sigla} value={e.sigla}>
               {e.nome}
@@ -141,7 +142,7 @@ export function FormClube({
           ))}
         </select>
       </Campo>
-      <Campo rotulo="Cidade">
+      <Campo rotulo={t("Cidade")}>
         <input
           className={estiloCampo}
           value={c.cidade}
@@ -149,7 +150,7 @@ export function FormClube({
           onChange={(e) => mudar({ cidade: e.target.value })}
         />
       </Campo>
-      <Campo rotulo="Técnico">
+      <Campo rotulo={t("Técnico")}>
         <input
           className={estiloCampo}
           value={c.tecnico ?? ""}
@@ -157,7 +158,7 @@ export function FormClube({
         />
       </Campo>
 
-      <Campo rotulo="Estádio" className="col-span-2">
+      <Campo rotulo={t("Estádio")} className="col-span-2">
         <input
           className={estiloCampo}
           value={c.estadio.nome}
@@ -165,7 +166,7 @@ export function FormClube({
           onChange={(e) => mudar({ estadio: { ...c.estadio, nome: e.target.value } })}
         />
       </Campo>
-      <Campo rotulo="Capacidade">
+      <Campo rotulo={t("Capacidade")}>
         <input
           className={estiloCampo}
           type="number"
@@ -175,7 +176,7 @@ export function FormClube({
           onChange={(e) => mudar({ estadio: { ...c.estadio, capacidade: Number(e.target.value) } })}
         />
       </Campo>
-      <Campo rotulo="Fundação">
+      <Campo rotulo={t("Fundação")}>
         <input
           className={estiloCampo}
           type="number"
@@ -188,7 +189,7 @@ export function FormClube({
         />
       </Campo>
 
-      <Campo rotulo="Reputação">
+      <Campo rotulo={t("Reputação")}>
         <select
           className={estiloCampo}
           value={c.reputacao}
@@ -201,7 +202,7 @@ export function FormClube({
           ))}
         </select>
       </Campo>
-      <Campo rotulo="Nível (1 a 100)" dica="Base para gerar jogadores">
+      <Campo rotulo={t("Nível (1 a 100)")} dica={t("Base para gerar jogadores")}>
         <input
           className={estiloCampo}
           type="number"
@@ -211,9 +212,9 @@ export function FormClube({
           onChange={(e) => mudar({ nivel: Number(e.target.value) })}
         />
       </Campo>
-      <Campo rotulo="Liga" className="col-span-2">
+      <Campo rotulo={t("Liga")} className="col-span-2">
         <select className={estiloCampo} value={liga} onChange={(e) => setLiga(e.target.value)}>
-          <option value="">Nenhuma liga nacional</option>
+          <option value="">{t("Nenhuma liga nacional")}</option>
           {ligas.map((l) => (
             <option key={l.id} value={l.id}>
               {l.nome}
@@ -223,7 +224,7 @@ export function FormClube({
       </Campo>
 
       <fieldset className="col-span-full flex flex-wrap items-end gap-4">
-        <legend className="mb-1 text-sm font-bold text-suave">Cores</legend>
+        <legend className="mb-1 text-sm font-bold text-suave">{t("Cores")}</legend>
         {(["primaria", "secundaria"] as const).map((k) => (
           <label key={k} className="flex items-center gap-2 text-sm">
             <input
@@ -232,7 +233,7 @@ export function FormClube({
               onChange={(e) => mudar({ cores: { ...c.cores, [k]: e.target.value.toUpperCase() } })}
               className="h-8 w-10 cursor-pointer rounded-sm border border-placar-borda bg-transparent"
             />
-            {k === "primaria" ? "Principal" : "Secundária"}
+            {k === "primaria" ? t("Principal") : t("Secundária")}
           </label>
         ))}
         <label className="flex items-center gap-2 text-sm">
@@ -245,7 +246,7 @@ export function FormClube({
               mudar({ cores: e.target.checked ? { ...cores, terciaria: "#FFFFFF" } : cores });
             }}
           />
-          Terceira cor
+          {t("Terceira cor")}
         </label>
         {c.cores.terciaria && (
           <input
@@ -260,7 +261,7 @@ export function FormClube({
       </fieldset>
 
       <div className="col-span-full">
-        <span className="text-sm font-bold text-suave">Clássicos</span>
+        <span className="text-sm font-bold text-suave">{t("Clássicos")}</span>
         <div className="mt-1 flex flex-wrap gap-2">
           {c.rivais.map((r) => (
             <span
@@ -270,7 +271,9 @@ export function FormClube({
               {indices.clubePorId.get(r)?.nome ?? r}
               <button
                 type="button"
-                aria-label={`Tirar ${indices.clubePorId.get(r)?.nome ?? r} dos clássicos`}
+                aria-label={t("Tirar {nome} dos clássicos", {
+                  nome: indices.clubePorId.get(r)?.nome ?? r,
+                })}
                 className="text-suave hover:text-canarinho"
                 onClick={() => mudar({ rivais: c.rivais.filter((x) => x !== r) })}
               >
@@ -281,7 +284,7 @@ export function FormClube({
           <div className="relative">
             <input
               className={`${estiloCampo} w-56`}
-              placeholder="Adicionar rival pelo nome"
+              placeholder={t("Adicionar rival pelo nome")}
               value={rival}
               onChange={(e) => setRival(e.target.value)}
             />
@@ -311,11 +314,13 @@ export function FormClube({
         <ListaProblemas problemas={problemas} />
         {clube.aConferir.length > 0 && (
           <p className="mt-3 text-sm text-canarinho">
-            Ainda a conferir na fonte: {clube.aConferir.join(", ")}. Salvar marca como conferido.
+            {t("Ainda a conferir na fonte: {aConferir}. Salvar marca como conferido.", {
+              aConferir: clube.aConferir.join(", "),
+            })}
           </p>
         )}
         <div className="mt-4 flex justify-end gap-2">
-          {onCancelar && <Botao onClick={onCancelar}>Cancelar</Botao>}
+          {onCancelar && <Botao onClick={onCancelar}>{t("Cancelar")}</Botao>}
           <Botao type="submit" variante="primario">
             {rotuloSalvar}
           </Botao>

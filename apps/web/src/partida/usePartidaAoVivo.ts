@@ -8,15 +8,16 @@
 import { useEffect, useState } from "react";
 import type { Evento, OpcoesPartida, Quadro, ResultadoPartida } from "@newbras/engine";
 import { Partida } from "@newbras/engine";
+import { t } from "@newbras/textos";
 
 export type Velocidade = "rapida" | "normal" | "lenta";
 
 /** Segundos de jogo por segundo real, já contando que os lances de perigo andam devagar. */
 export const RITMO: Record<Velocidade, number> = { rapida: 50, normal: 28, lenta: 13.5 };
 export const NOME_VELOCIDADE: Record<Velocidade, string> = {
-  rapida: "Rápida (3 min)",
-  normal: "Normal (5 min)",
-  lenta: "Lenta (10 min)",
+  rapida: t("Rápida (3 min)"),
+  normal: t("Normal (5 min)"),
+  lenta: t("Lenta (10 min)"),
 };
 /** Quanto tempo real a bola leva voando até o gol, a trave ou o goleiro (milissegundos). */
 const VOO = 550;
@@ -112,8 +113,8 @@ export class ControleAoVivo {
       if (periodo !== periodoAntes && !p.terminada && periodo !== 5) {
         this.aviso =
           periodoAntes === 2
-            ? "Fim do tempo normal: vai ter prorrogação. Faça suas mudanças e continue."
-            : "Intervalo: faça suas mudanças e continue.";
+            ? t("Fim do tempo normal: vai ter prorrogação. Faça suas mudanças e continue.")
+            : t("Intervalo: faça suas mudanças e continue.");
         this.anterior = this.atual;
         this.acumulado = 0;
         return "pausa";

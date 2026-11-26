@@ -26,6 +26,7 @@ import { Folego } from "../components/EditorEscalacao";
 import { corDaNotaNaVaga } from "../components/EditorFormacao";
 import { HUMOR, IconeHumor } from "../partida/Resumo";
 import type { MundoMontado } from "./useCarreira";
+import { t, locale } from "@newbras/textos";
 
 type Coluna =
   | "numero"
@@ -136,18 +137,18 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
         <table className="w-full min-w-[46rem] text-sm">
           <thead className="text-left text-xs text-suave">
             <tr className="border-b border-placar-borda">
-              {cab("numero", "Nº", "Número da camisa")}
-              {cab("nome", "Jogador", undefined, false)}
-              {cab("posicao", "Posição", undefined, false)}
-              {cab("idade", "Idade")}
-              {cab("forca", "Força")}
-              {cab("potencial", "Pot.", "Potencial: a maior força que ele pode atingir")}
-              {cab("condicao", "Condição")}
-              {cab("jogos", "J", "Jogos na carreira")}
-              {cab("gols", "G", "Gols")}
-              {cab("assistencias", "A", "Assistências")}
-              {cab("media", "Média", "Média das notas")}
-              {cab("contrato", "Contrato", "Fim do contrato")}
+              {cab("numero", "Nº", t("Número da camisa"))}
+              {cab("nome", t("Jogador"), undefined, false)}
+              {cab("posicao", t("Posição"), undefined, false)}
+              {cab("idade", t("Idade"))}
+              {cab("forca", t("Força"))}
+              {cab("potencial", t("Pot."), t("Potencial: a maior força que ele pode atingir"))}
+              {cab("condicao", t("Condição"))}
+              {cab("jogos", "J", t("Jogos na carreira"))}
+              {cab("gols", "G", t("Gols"))}
+              {cab("assistencias", "A", t("Assistências"))}
+              {cab("media", t("Média"), t("Média das notas"))}
+              {cab("contrato", t("Contrato"), t("Fim do contrato"))}
             </tr>
           </thead>
           <tbody>
@@ -164,11 +165,11 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
                     <IconeHumor humor={l.e.humor} />
                     {l.j.nome}
                     {l.j.estrela && (
-                      <span className="ml-1 text-canarinho" title="Estrela">
+                      <span className="ml-1 text-canarinho" title={t("Estrela")}>
                         ★
                       </span>
                     )}
-                    {aviso && <span className="ml-1 text-xs text-[#ffc38a]">poupar</span>}
+                    {aviso && <span className="ml-1 text-xs text-[#ffc38a]">{t("poupar")}</span>}
                   </td>
                   <td className="py-1 pr-2 text-suave">
                     {l.j.posicoesCampo?.slice(0, 2).join(", ") ?? NOME_POSICAO[l.j.posicao]}
@@ -186,7 +187,7 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
                     {l.media !== null ? l.media.toFixed(1) : ""}
                   </td>
                   <td className="py-1 pr-2 text-right text-suave">
-                    {l.j.contrato ? dataCurta(l.j.contrato.fim) : "sem contrato"}
+                    {l.j.contrato ? dataCurta(l.j.contrato.fim) : t("sem contrato")}
                   </td>
                 </tr>
               );
@@ -194,15 +195,18 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
           </tbody>
         </table>
         <p className="mt-2 text-xs text-suave">
-          {linhas.length} jogadores profissionais. Clique num jogador para ver a ficha. A condição
-          se recupera a cada dia; o humor muda aos poucos, puxado pela moral, pelo cansaço e pelos
-          jogos.
+          {t(
+            "{linhas} jogadores profissionais. Clique num jogador para ver a ficha. A condição se recupera a cada dia; o humor muda aos poucos, puxado pela moral, pelo cansaço e pelos jogos.",
+            { linhas: linhas.length },
+          )}
         </p>
       </div>
       {ficha ? (
         <Ficha l={ficha} />
       ) : (
-        <p className="hidden text-sm text-suave xl:block">Clique num jogador para ver a ficha.</p>
+        <p className="hidden text-sm text-suave xl:block">
+          {t("Clique num jogador para ver a ficha.")}
+        </p>
       )}
     </div>
   );
@@ -216,17 +220,22 @@ function Ficha({ l }: { l: Linha }) {
       <div>
         <p className="font-placar text-3xl font-bold">{j.nome}</p>
         <p className="text-sm text-suave">
-          {NOME_POSICAO[j.posicao]}, {l.idade} anos, força {j.forca} (potencial {j.potencial})
-          {j.estrela ? ", estrela" : ""}
+          {t("{nomePosicao}, {idade} anos, força {forca} (potencial {potencial}){estrela}", {
+            nomePosicao: NOME_POSICAO[j.posicao],
+            idade: l.idade,
+            forca: j.forca,
+            potencial: j.potencial,
+            estrela: j.estrela ? t(", estrela") : "",
+          })}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
-          <p className="text-xs text-suave">Condição física</p>
+          <p className="text-xs text-suave">{t("Condição física")}</p>
           <Folego valor={e.condicao} />
         </div>
         <div>
-          <p className="text-xs text-suave">Humor</p>
+          <p className="text-xs text-suave">{t("Humor")}</p>
           <p>
             <IconeHumor humor={e.humor} />
             {HUMOR[e.humor].nome}
@@ -234,7 +243,7 @@ function Ficha({ l }: { l: Linha }) {
         </div>
       </div>
       <div>
-        <p className="mb-1 text-xs font-bold text-suave">Atributos</p>
+        <p className="mb-1 text-xs font-bold text-suave">{t("Atributos")}</p>
         <ul className="grid grid-cols-2 gap-x-4 text-sm">
           {atributosDaPosicao(j.posicao).map((a) => (
             <li key={a} className="flex justify-between border-b border-white/5 py-0.5">
@@ -248,8 +257,11 @@ function Ficha({ l }: { l: Linha }) {
       </div>
       <div>
         <p className="mb-1 text-xs font-bold text-suave">
-          Nota em cada posição{" "}
-          {naturais.length ? `(onde rende: ${naturais.map((p) => p).join(", ")})` : ""}
+          {t("Nota em cada posição {naturais}", {
+            naturais: naturais.length
+              ? t("(onde rende: {map})", { map: naturais.map((p) => p).join(", ") })
+              : "",
+          })}
         </p>
         <ul className="grid grid-cols-3 gap-1 text-sm sm:grid-cols-4">
           {POSICOES_CAMPO.map((p) => {
@@ -270,17 +282,31 @@ function Ficha({ l }: { l: Linha }) {
         </ul>
       </div>
       <div className="text-sm">
-        <p className="mb-1 text-xs font-bold text-suave">Na carreira</p>
+        <p className="mb-1 text-xs font-bold text-suave">{t("Na carreira")}</p>
         <p>
-          {e.jogos} jogos, {e.minutos} minutos, {e.gols} gols, {e.assistencias} assistências
-          {e.jogos ? `, média ${(e.somaNotas / e.jogos).toFixed(1)}` : ""}
-          {e.amarelos ? `, ${e.amarelos} amarelos` : ""}
-          {e.vermelhos ? `, ${e.vermelhos} vermelhos` : ""}.
+          {t(
+            "{jogos} jogos, {minutos} minutos, {gols} gols, {assistencias} assistências{jogos2}{amarelos}{vermelhos}.",
+            {
+              jogos: e.jogos,
+              minutos: e.minutos,
+              gols: e.gols,
+              assistencias: e.assistencias,
+              jogos2: e.jogos
+                ? t(", média {somaNotas}", { somaNotas: (e.somaNotas / e.jogos).toFixed(1) })
+                : "",
+              amarelos: e.amarelos ? t(", {amarelos} amarelos", { amarelos: e.amarelos }) : "",
+              vermelhos: e.vermelhos
+                ? t(", {vermelhos} vermelhos", { vermelhos: e.vermelhos })
+                : "",
+            },
+          )}
         </p>
         {j.contrato && (
           <p className="text-suave">
-            Contrato até {dataCurta(j.contrato.fim)}, salário de{" "}
-            {j.contrato.salario.toLocaleString("pt-BR")} por mês.
+            {t("Contrato até {dataCurta}, salário de {salario} por mês.", {
+              dataCurta: dataCurta(j.contrato.fim),
+              salario: j.contrato.salario.toLocaleString(locale()),
+            })}
           </p>
         )}
       </div>

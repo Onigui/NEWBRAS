@@ -11,31 +11,32 @@ import {
 import { Camisa } from "../components/Camisa";
 import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "./ui";
+import { t } from "@newbras/textos";
 
 const NOME_FORMA = {
-  classico: "Clássico",
-  redondo: "Redondo",
-  diamante: "Diamante",
-  flamula: "Flâmula",
-  moderno: "Moderno",
+  classico: t("Clássico"),
+  redondo: t("Redondo"),
+  diamante: t("Diamante"),
+  flamula: t("Flâmula"),
+  moderno: t("Moderno"),
 } as const;
 const NOME_PADRAO_ESCUDO = {
-  liso: "Liso",
-  faixa: "Faixa",
-  listras: "Listras",
-  metades: "Metades",
-  cruz: "Cruz",
-  chevron: "Divisa",
+  liso: t("Liso"),
+  faixa: t("Faixa"),
+  listras: t("Listras"),
+  metades: t("Metades"),
+  cruz: t("Cruz"),
+  chevron: t("Divisa"),
 } as const;
 const NOME_PADRAO_CAMISA = {
-  lisa: "Lisa",
-  "listras-verticais": "Listras verticais",
-  "listras-horizontais": "Listras horizontais",
-  "faixa-diagonal": "Faixa diagonal",
-  metades: "Metades",
-  "gola-contraste": "Gola e mangas",
+  lisa: t("Lisa"),
+  "listras-verticais": t("Listras verticais"),
+  "listras-horizontais": t("Listras horizontais"),
+  "faixa-diagonal": t("Faixa diagonal"),
+  metades: t("Metades"),
+  "gola-contraste": t("Gola e mangas"),
 } as const;
-const NOME_CAMISA = ["Titular", "Reserva", "Terceira"] as const;
+const NOME_CAMISA = [t("Titular"), t("Reserva"), t("Terceira")] as const;
 
 /** Escudo e até 3 camisas, desenhados pelo jogo nas cores escolhidas. */
 export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: Clube) => void }) {
@@ -55,9 +56,9 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
 
   return (
     <div className="grid gap-8 md:grid-cols-[auto_1fr]">
-      <section aria-label="Escudo" className="flex flex-col items-center gap-3">
+      <section aria-label={t("Escudo")} className="flex flex-col items-center gap-3">
         <Escudo clube={previa} tamanho={120} />
-        <Campo rotulo="Forma" className="w-44">
+        <Campo rotulo={t("Forma")} className="w-44">
           <select
             className={estiloCampo}
             value={escudo.forma}
@@ -70,7 +71,7 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
             ))}
           </select>
         </Campo>
-        <Campo rotulo="Desenho" className="w-44">
+        <Campo rotulo={t("Desenho")} className="w-44">
           <select
             className={estiloCampo}
             value={escudo.padrao}
@@ -86,11 +87,11 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
           </select>
         </Campo>
         <p className="max-w-[16rem] text-center text-xs text-suave">
-          As cores vêm dos dados do time. O jogo nunca usa logotipos oficiais.
+          {t("As cores vêm dos dados do time. O jogo nunca usa logotipos oficiais.")}
         </p>
       </section>
 
-      <section aria-label="Camisas">
+      <section aria-label={t("Camisas")}>
         <div className="grid gap-4 sm:grid-cols-3">
           {camisas.map((cam, i) => (
             <div
@@ -98,10 +99,15 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
               className="flex flex-col items-center gap-2 rounded-sm border border-placar-borda p-3"
             >
               <span className="font-placar text-xl font-bold">{NOME_CAMISA[i]}</span>
-              <Camisa camisa={cam} numero={10} tamanho={84} rotulo={`Camisa ${NOME_CAMISA[i]}`} />
+              <Camisa
+                camisa={cam}
+                numero={10}
+                tamanho={84}
+                rotulo={t("Camisa {nomeCamisa}", { nomeCamisa: NOME_CAMISA[i] })}
+              />
               <select
                 className={estiloCampo}
-                aria-label={`Desenho da camisa ${NOME_CAMISA[i]}`}
+                aria-label={t("Desenho da camisa {nomeCamisa}", { nomeCamisa: NOME_CAMISA[i] })}
                 value={cam.padrao}
                 onChange={(e) => mudarCamisa(i, { padrao: e.target.value as CamisaT["padrao"] })}
               >
@@ -119,7 +125,7 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
                     onChange={(e) => mudarCamisa(i, { cor1: e.target.value.toUpperCase() })}
                     className="h-7 w-9 cursor-pointer rounded-sm border border-placar-borda bg-transparent"
                   />
-                  Fundo
+                  {t("Fundo")}
                 </label>
                 <label className="flex items-center gap-1">
                   <input
@@ -128,7 +134,7 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
                     onChange={(e) => mudarCamisa(i, { cor2: e.target.value.toUpperCase() })}
                     className="h-7 w-9 cursor-pointer rounded-sm border border-placar-borda bg-transparent"
                   />
-                  Detalhes
+                  {t("Detalhes")}
                 </label>
               </div>
               {camisas.length > 1 && (
@@ -136,7 +142,7 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
                   variante="discreto"
                   onClick={() => setCamisas((cs) => cs.filter((_, k) => k !== i))}
                 >
-                  Tirar camisa
+                  {t("Tirar camisa")}
                 </Botao>
               )}
             </div>
@@ -156,12 +162,12 @@ export function EditorVisual({ clube, onSalvar }: { clube: Clube; onSalvar: (c: 
                 ])
               }
             >
-              Adicionar camisa
+              {t("Adicionar camisa")}
             </Botao>
           )}
-          <Botao onClick={automatico}>Voltar ao automático</Botao>
+          <Botao onClick={automatico}>{t("Voltar ao automático")}</Botao>
           <Botao variante="primario" onClick={() => onSalvar({ ...clube, escudo, camisas })}>
-            Salvar escudo e camisas
+            {t("Salvar escudo e camisas")}
           </Botao>
         </div>
       </section>

@@ -15,6 +15,7 @@ import {
 import { baixarArquivo, lerArquivo } from "./arquivos";
 import type { Indices } from "./indices";
 import { Botao, Dialogo, ListaProblemas } from "./ui";
+import { t, locale } from "@newbras/textos";
 
 interface Props {
   banco: Banco;
@@ -57,17 +58,22 @@ export function Arquivos({
       try {
         dados = JSON.parse(texto);
       } catch {
-        setAviso("O arquivo não é um JSON válido.");
+        setAviso(t("O arquivo não é um JSON válido."));
         return;
       }
       const r = lerPatch(dados);
       if (!r.ok) {
         setProblemas(r.problemas);
-        setAviso("O patch tem erros e não foi aplicado.");
+        setAviso(t("O patch tem erros e não foi aplicado."));
         return;
       }
       onPatch(r.valor);
-      setAviso(`Patch "${r.valor.meta.nome}" aplicado: ${totalDeEdicoes(r.valor)} mudanças.`);
+      setAviso(
+        t('Patch "{nome}" aplicado: {totalDeEdicoes} mudanças.', {
+          nome: r.valor.meta.nome,
+          totalDeEdicoes: totalDeEdicoes(r.valor),
+        }),
+      );
       return;
     }
     const cabecalho = texto.split(/\r?\n/, 1)[0]?.toLowerCase() ?? "";
@@ -87,18 +93,30 @@ export function Arquivos({
       onImportar({ clubes });
       setProblemas(r.problemas);
       setAviso(
-        `${clubes.length} times importados${r.problemas.length ? `; ${r.problemas.length} problemas nas outras linhas` : ""}.`,
+        t("{clubes} times importados{problemas}.", {
+          clubes: clubes.length,
+          problemas: r.problemas.length
+            ? t("; {problemas} problemas nas outras linhas", { problemas: r.problemas.length })
+            : "",
+        }),
       );
     } else if (cabecalho.includes("posicao")) {
       const r = importarJogadoresCsv(texto);
       onImportar({ jogadores: r.itens });
       setProblemas(r.problemas);
       setAviso(
-        `${r.itens.length} jogadores importados${r.problemas.length ? `; ${r.problemas.length} problemas nas outras linhas` : ""}.`,
+        t("{itens} jogadores importados{problemas}.", {
+          itens: r.itens.length,
+          problemas: r.problemas.length
+            ? t("; {problemas} problemas nas outras linhas", { problemas: r.problemas.length })
+            : "",
+        }),
       );
     } else {
       setAviso(
-        "Não reconheci a planilha: a primeira linha precisa ter as colunas de times (com abreviacao) ou de jogadores (com posicao).",
+        t(
+          "Não reconheci a planilha: a primeira linha precisa ter as colunas de times (com abreviacao) ou de jogadores (com posicao).",
+        ),
       );
     }
   };
@@ -111,11 +129,13 @@ export function Arquivos({
       .replace(/[^a-z0-9]+/g, "-");
 
   return (
-    <Dialogo titulo="Planilhas e patches" onFechar={onFechar} largura="max-w-2xl">
+    <Dialogo titulo={t("Planilhas e patches")} onFechar={onFechar} largura="max-w-2xl">
       <section>
-        <h3 className="font-placar text-xl font-bold text-canarinho">Exportar planilha</h3>
+        <h3 className="font-placar text-xl font-bold text-canarinho">{t("Exportar planilha")}</h3>
         <p className="mt-1 text-sm text-suave">
-          CSV que abre no Excel, no LibreOffice e no Google Planilhas. Edite e importe de volta.
+          {t(
+            "CSV que abre no Excel, no LibreOffice e no Google Planilhas. Edite e importe de volta.",
+          )}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {clube && (
@@ -128,7 +148,7 @@ export function Arquivos({
                 )
               }
             >
-              Jogadores do {clube.nomeCurto}
+              {t("Jogadores do {nomeCurto}", { nomeCurto: clube.nomeCurto })}
             </Botao>
           )}
           <Botao
@@ -140,7 +160,7 @@ export function Arquivos({
               )
             }
           >
-            Times de {nomePais}
+            {t("Times de {nomePais}", { nomePais })}
           </Botao>
           <Botao
             onClick={() =>
@@ -154,17 +174,18 @@ export function Arquivos({
               )
             }
           >
-            Jogadores de {nomePais}
+            {t("Jogadores de {nomePais}", { nomePais })}
           </Botao>
         </div>
       </section>
 
       <section className="mt-6">
-        <h3 className="font-placar text-xl font-bold text-canarinho">Patch</h3>
+        <h3 className="font-placar text-xl font-bold text-canarinho">{t("Patch")}</h3>
         <p className="mt-1 text-sm text-suave">
-          O patch guarda só o que você mudou ({edicoes} {edicoes === 1 ? "mudança" : "mudanças"}).
-          Exporte para guardar ou compartilhar; importe o patch de outra pessoa para aplicar as
-          mudanças dela por cima das suas.
+          {t(
+            "O patch guarda só o que você mudou ({edicoes} {edicoes2}). Exporte para guardar ou compartilhar; importe o patch de outra pessoa para aplicar as mudanças dela por cima das suas.",
+            { edicoes, edicoes2: edicoes === 1 ? t("mudança") : t("mudanças") },
+          )}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Botao
@@ -177,36 +198,37 @@ export function Arquivos({
               )
             }
           >
-            Exportar minhas edições
+            {t("Exportar minhas edições")}
           </Botao>
           {!confirmar ? (
             <Botao variante="perigo" disabled={!edicoes} onClick={() => setConfirmar(true)}>
-              Descartar todas as edições
+              {t("Descartar todas as edições")}
             </Botao>
           ) : (
             <span className="flex items-center gap-2 text-sm">
-              Volta ao banco oficial e não dá para desfazer.
+              {t("Volta ao banco oficial e não dá para desfazer.")}
               <Botao
                 variante="perigo"
                 onClick={() => {
                   onDescartar();
                   setConfirmar(false);
-                  setAviso("Edições descartadas. O banco voltou ao oficial.");
+                  setAviso(t("Edições descartadas. O banco voltou ao oficial."));
                 }}
               >
-                Confirmar
+                {t("Confirmar")}
               </Botao>
-              <Botao onClick={() => setConfirmar(false)}>Cancelar</Botao>
+              <Botao onClick={() => setConfirmar(false)}>{t("Cancelar")}</Botao>
             </span>
           )}
         </div>
       </section>
 
       <section className="mt-6">
-        <h3 className="font-placar text-xl font-bold text-canarinho">Importar</h3>
+        <h3 className="font-placar text-xl font-bold text-canarinho">{t("Importar")}</h3>
         <p className="mt-1 text-sm text-suave">
-          Planilha de times ou de jogadores (.csv) ou patch (.json). Linhas com o mesmo id
-          substituem; ids novos entram no banco.
+          {t(
+            "Planilha de times ou de jogadores (.csv) ou patch (.json). Linhas com o mesmo id substituem; ids novos entram no banco.",
+          )}
         </p>
         <input
           ref={entrada}
@@ -225,7 +247,7 @@ export function Arquivos({
           onClick={() => entrada.current?.click()}
           data-foco
         >
-          Escolher arquivo
+          {t("Escolher arquivo")}
         </Botao>
         {aviso && (
           <p role="status" className="mt-3 text-sm text-cal">
@@ -234,8 +256,10 @@ export function Arquivos({
         )}
         <ListaProblemas problemas={problemas} />
         <p className="mt-3 text-xs text-suave">
-          {banco.clubes.length.toLocaleString("pt-BR")} times e{" "}
-          {banco.jogadores.length.toLocaleString("pt-BR")} jogadores no banco atual.
+          {t("{clubes} times e {jogadores} jogadores no banco atual.", {
+            clubes: banco.clubes.length.toLocaleString(locale()),
+            jogadores: banco.jogadores.length.toLocaleString(locale()),
+          })}
         </p>
       </section>
     </Dialogo>

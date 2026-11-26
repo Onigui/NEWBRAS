@@ -4,6 +4,7 @@
  * defendendo). Como no Brasfoot, a formação é só uma sugestão: o técnico escolhe quem joga em
  * cada vaga, e jogador fora da posição da vaga rende menos.
  */
+import { t } from "@newbras/textos";
 import type { Lado, Posicao } from "@newbras/data";
 
 export interface Vaga {
@@ -372,18 +373,19 @@ export function formacaoPersonalizada(pontos: ReadonlyArray<{ x: number; y: numb
   });
 }
 
-/** Problemas de uma formação personalizada, em português (lista vazia = pode jogar). */
+/** Problemas de uma formação personalizada, no idioma da interface (lista vazia = pode jogar). */
 export function validarFormacao(vagas: readonly Vaga[]): string[] {
   const problemas: string[] = [];
-  if (vagas.length !== 11) problemas.push(`a formação precisa de 11 vagas (tem ${vagas.length})`);
-  if (vagas[0]?.posicao !== "G") problemas.push("a primeira vaga é a do goleiro");
-  if (vagas.slice(1).some((v) => v.posicao === "G")) problemas.push("só pode haver um goleiro");
+  if (vagas.length !== 11)
+    problemas.push(t("a formação precisa de 11 vagas (tem {vagas})", { vagas: vagas.length }));
+  if (vagas[0]?.posicao !== "G") problemas.push(t("a primeira vaga é a do goleiro"));
+  if (vagas.slice(1).some((v) => v.posicao === "G")) problemas.push(t("só pode haver um goleiro"));
   for (let i = 1; i < vagas.length; i++)
     for (let j = i + 1; j < vagas.length; j++) {
       const a = vagas[i] as Vaga;
       const b = vagas[j] as Vaga;
       if (Math.hypot(a.x - b.x, a.y - b.y) < LIMITES_VAGA.distanciaMinima) {
-        problemas.push("há jogadores em cima um do outro: afaste-os pelo menos 4 metros");
+        problemas.push(t("há jogadores em cima um do outro: afaste-os pelo menos 4 metros"));
         return problemas;
       }
     }

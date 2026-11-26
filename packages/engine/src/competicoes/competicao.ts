@@ -8,6 +8,7 @@ import { somarDias } from "../carreira/datas";
 import { datasDaCompeticao, datasDasRodadas, rodadasDoGrupo, todosContraTodos } from "./rodadas";
 import { potesSemCompatriotas, sortearFaseDeLiga } from "./faseDeLiga";
 import { ordenarTabela, type Criterio, type LinhaTabela } from "./tabela";
+import { t } from "@newbras/textos";
 
 export interface JogoCompeticao {
   fase: number;
@@ -1109,24 +1110,27 @@ export function nomeDaRodada(c: Competicao, e: EstadoCompeticao, j: JogoCompetic
   if (fase.tipo !== "mata-mata") {
     const ef = e.fases[j.fase];
     const r = j.rodada - (ef?.rodadaInicial ?? 0) + 1;
-    return c.fases.length > 1 ? `${fase.nome}, ${r}ª rodada` : `${r}ª rodada`;
+    return c.fases.length > 1
+      ? t("{nome}, {r}ª rodada", { nome: fase.nome, r })
+      : t("{r}ª rodada", { r });
   }
   const confrontos = e.fases[j.fase]?.chaves?.[j.chave ?? 0]?.length ?? 1;
-  const nome =
-    c.fases.length - 1 !== j.fase
-      ? fase.nome
-      : confrontos === 1
-        ? "Final"
-        : confrontos === 2
-          ? "Semifinal"
-          : confrontos === 4
-            ? "Quartas de final"
-            : confrontos === 8
-              ? "Oitavas de final"
-              : fase.nome;
+  const ultima = c.fases.length - 1 === j.fase;
+  const ehFinal = (ultima && confrontos === 1) || fase.nome === "Final";
+  const nome = !ultima
+    ? fase.nome
+    : confrontos === 1
+      ? t("Final")
+      : confrontos === 2
+        ? t("Semifinal")
+        : confrontos === 4
+          ? t("Quartas de final")
+          : confrontos === 8
+            ? t("Oitavas de final")
+            : fase.nome;
   return j.perna === 1
-    ? `${nome} (ida)`
-    : fase.jogos === 2 && !(fase.finalJogoUnico && nome === "Final")
-      ? `${nome} (volta)`
+    ? t("{nome} (ida)", { nome })
+    : fase.jogos === 2 && !(fase.finalJogoUnico && ehFinal)
+      ? t("{nome} (volta)", { nome })
       : nome;
 }

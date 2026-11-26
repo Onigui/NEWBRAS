@@ -25,6 +25,7 @@ import {
   type Posicao,
 } from "@newbras/data";
 import { MarcacoesCampo } from "./Pitch";
+import { t } from "@newbras/textos";
 
 const COR: Record<Posicao, string> = {
   G: "#f4c430",
@@ -127,7 +128,9 @@ export function EditorFormacao({
           inicio.current = null;
         }}
         role="group"
-        aria-label="Posições do time em campo. Arraste os jogadores; clique para escolher a função. O time ataca para a direita."
+        aria-label={t(
+          "Posições do time em campo. Arraste os jogadores; clique para escolher a função. O time ataca para a direita.",
+        )}
       >
         <MarcacoesCampo />
         {/* Faixas que decidem a família da vaga: defesa, meio-campo, ataque. */}
@@ -156,7 +159,14 @@ export function EditorFormacao({
               tabIndex={0}
               role="button"
               aria-pressed={ativo}
-              aria-label={`${j?.nome ?? "Vaga vazia"}, ${info ? nomeDoPapel(info.papel) : NOME_POSICAO_CAMPO[sigla]}${info ? `, nota ${info.nota}` : ""}. Enter escolhe a função; setas movem o jogador.`}
+              aria-label={t(
+                "{nome}, {info}{info2}. Enter escolhe a função; setas movem o jogador.",
+                {
+                  nome: j?.nome ?? t("Vaga vazia"),
+                  info: info ? nomeDoPapel(info.papel) : NOME_POSICAO_CAMPO[sigla],
+                  info2: info ? t(", nota {nota}", { nota: info.nota }) : "",
+                },
+              )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -232,11 +242,14 @@ export function EditorFormacao({
         })}
       </svg>
       <p className="text-xs text-suave">
-        Desenho {desenhoDaFormacao(vagas)}. Arraste para mudar o lugar; clique para escolher a
-        posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o
-        que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é
-        defesa, até 62 m é meio-campo, depois é ataque. Campo útil de {LIMITES_VAGA.xMin} a{" "}
-        {LIMITES_VAGA.xMax} m.
+        {t(
+          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar; clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa, até 62 m é meio-campo, depois é ataque. Campo útil de {xMin} a {xMax} m.",
+          {
+            desenhoDaFormacao: desenhoDaFormacao(vagas),
+            xMin: LIMITES_VAGA.xMin,
+            xMax: LIMITES_VAGA.xMax,
+          },
+        )}
       </p>
       {problemas.length > 0 && <p className="text-xs text-[#ff8a7e]">{problemas.join("; ")}.</p>}
     </div>
@@ -295,17 +308,23 @@ export function PainelVaga({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs text-suave">
-            Vaga {indice + 1}: {NOME_POSICAO_CAMPO[posicao]}
+            {t("Vaga {indice}: {nomePosicaoCampo}", {
+              indice: indice + 1,
+              nomePosicaoCampo: NOME_POSICAO_CAMPO[posicao],
+            })}
           </p>
           <p className="truncate font-bold">
-            {ocupante?.nome ?? "Vaga vazia"}
+            {ocupante?.nome ?? t("Vaga vazia")}
             {ocupante && atual && (
               <>
                 {" "}
                 <span style={{ color: corDaNotaNaVaga(atual.nota, ocupante.forca) }}>
                   {atual.nota}
                 </span>
-                <span className="text-xs font-normal text-suave"> (força {ocupante.forca})</span>
+                <span className="text-xs font-normal text-suave">
+                  {" "}
+                  {t("(força {forca})", { forca: ocupante.forca })}
+                </span>
               </>
             )}
           </p>
@@ -314,19 +333,21 @@ export function PainelVaga({
           type="button"
           className="rounded px-2 text-sm text-suave hover:bg-white/10"
           onClick={onFechar}
-          aria-label="Fechar a vaga"
+          aria-label={t("Fechar a vaga")}
         >
-          Fechar
+          {t("Fechar")}
         </button>
       </div>
 
       {ocupante && (
         <fieldset className="flex flex-col gap-1">
-          <legend className="mb-1 text-xs font-bold text-suave">Posição e função</legend>
+          <legend className="mb-1 text-xs font-bold text-suave">{t("Posição e função")}</legend>
           <OpcaoPapel
             ativo={!escolhido}
-            titulo={`Automática${automatico ? `: ${nomeDoPapel(automatico.papel)}` : ""}`}
-            descricao="A melhor função para quem estiver na vaga."
+            titulo={t("Automática{automatico}", {
+              automatico: automatico ? `: ${nomeDoPapel(automatico.papel)}` : "",
+            })}
+            descricao={t("A melhor função para quem estiver na vaga.")}
             nota={automatico?.nota}
             forca={ocupante.forca}
             onClick={() => onPapel(null)}
@@ -348,7 +369,9 @@ export function PainelVaga({
       {lista.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="text-xs font-bold text-suave">
-            Quem joga aqui{escolhido ? ` (${nomeDoPapel(escolhido)})` : ""}
+            {t("Quem joga aqui{escolhido}", {
+              escolhido: escolhido ? ` (${nomeDoPapel(escolhido)})` : "",
+            })}
           </p>
           <ul className="flex max-h-64 flex-col overflow-y-auto">
             {lista.map(({ c, nota, papel }) => (
@@ -365,9 +388,11 @@ export function PainelVaga({
                 <span className="min-w-0 flex-1 truncate">
                   {c.jogador.nome}{" "}
                   <span className="text-xs text-suave">
-                    força {c.jogador.forca},{" "}
-                    {c.origem === "banco" ? "banco" : `vaga ${c.origem + 1}`}
-                    {escolhido ? "" : `, ${nomeDoPapel(papel).toLowerCase()}`}
+                    {t("força {forca}, {origem}{escolhido}", {
+                      forca: c.jogador.forca,
+                      origem: c.origem === "banco" ? "banco" : `vaga ${c.origem + 1}`,
+                      escolhido: escolhido ? "" : `, ${nomeDoPapel(papel).toLowerCase()}`,
+                    })}
                   </span>
                 </span>
                 <button

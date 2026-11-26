@@ -8,6 +8,7 @@
  * O registro de eventos alimenta o modo clássico (linha de minutos) e os quadros alimentam o
  * mini-campo (Fase 7). A calibração fina e o mando ficam para a Fase 6.
  */
+import { chave } from "@newbras/textos";
 import {
   DADOS_FUNCAO,
   familiaridade,
@@ -1822,53 +1823,58 @@ export class Partida {
 
     let postura = diferenca > 6 ? 1 : diferenca < -6 ? -1 : 0;
     let estilo: Estilo | null = null;
+    // Motivos em português: são as chaves da tradução (a narração traduz ao mostrar).
     let motivo: string;
+    let umAMenos = false;
     if (final) {
       if (saldo === 0) {
         postura = diferenca >= 3 && minuto >= 70 ? Math.max(postura, 1) : postura;
-        motivo = postura > 0 ? "vai para cima em busca da vitória" : "aceita o empate e se protege";
+        motivo =
+          postura > 0
+            ? chave("vai para cima em busca da vitória")
+            : chave("aceita o empate e se protege");
       } else if (saldo === -1) {
         postura = minuto >= 82 ? 2 : minuto >= 65 ? 1 : 0;
         motivo =
           postura === 2
-            ? "vai para o tudo ou nada atrás do empate"
-            : "adianta o time atrás do empate";
+            ? chave("vai para o tudo ou nada atrás do empate")
+            : chave("adianta o time atrás do empate");
       } else if (saldo === -2) {
         postura = minuto >= 80 ? 1 : 2;
-        motivo = "se lança ao ataque para tentar a virada";
+        motivo = chave("se lança ao ataque para tentar a virada");
       } else if (saldo <= -3) {
         postura = -1;
         estilo = "contra-ataque";
-        motivo = "recua para não tomar uma goleada ainda maior";
+        motivo = chave("recua para não tomar uma goleada ainda maior");
       } else if (saldo === 1) {
         postura = minuto >= 85 ? -2 : minuto >= 75 ? -1 : 0;
         estilo = postura < 0 ? "contra-ataque" : diferenca > 5 ? "cadenciado" : "equilibrado";
-        motivo = "fecha a defesa para segurar a vantagem";
+        motivo = chave("fecha a defesa para segurar a vantagem");
       } else {
         postura = -1;
         estilo = "cadenciado";
-        motivo = "cadencia o jogo com a vantagem garantida";
+        motivo = chave("cadencia o jogo com a vantagem garantida");
       }
     } else if (saldo <= -2) {
       postura = Math.max(postura, 1);
-      motivo = "adianta o time para diminuir o placar";
+      motivo = chave("adianta o time para diminuir o placar");
     } else if (saldo >= 2) {
       postura = Math.min(postura, 0);
       estilo = "cadenciado";
-      motivo = "toca a bola e administra o placar";
-    } else motivo = "volta ao equilíbrio";
+      motivo = chave("toca a bola e administra o placar");
+    } else motivo = chave("volta ao equilíbrio");
     const meusEmCampo = this.emCampoDe(time.lado).length;
     if (meusEmCampo < this.emCampoDe(adv.lado).length && !(saldo < 0 && minuto >= 70)) {
       postura -= 1;
-      motivo += " com um a menos";
+      umAMenos = true;
     }
     postura = limitar(postura, -2, 2);
     estilo ??= postura >= 1 ? "ataque" : postura <= -1 ? "contra-ataque" : "equilibrado";
     const amarelados = this.emCampoDe(time.lado).filter((a) => a.amarelos > 0).length;
     const marcacao: Marcacao = postura >= 2 && amarelados < 2 ? "pesada" : "leve";
-    const chave = `${postura}|${estilo}|${marcacao}`;
-    if (chave === time.planoCpu) return;
-    time.planoCpu = chave;
+    const plano = `${postura}|${estilo}|${marcacao}`;
+    if (plano === time.planoCpu) return;
+    time.planoCpu = plano;
     time.tatica = { ...time.tatica, estilo, marcacao };
 
     const mudouPostura = postura !== time.posturaCpu;
@@ -1880,20 +1886,19 @@ export class Partida {
         time,
         formacao ? FORMACOES[formacao] : vagasDaEscalacao(time.dados.escalacao),
       );
-      nomeFormacao = formacao ?? "formação original";
+      nomeFormacao = formacao ?? "original";
       // Troca tática: atacante no lugar de defensor para buscar o gol; o contrário para segurar.
       if (minuto >= 55 && postura >= 2) this.trocaTatica(time, ["Z", "M"], ["A"]);
       if (minuto >= 70 && postura <= -1 && saldo > 0) this.trocaTatica(time, ["A"], ["Z", "M"]);
     }
-    const textoEstilo = {
-      ataque: "ataque total",
-      equilibrado: "equilibrado",
-      cadenciado: "cadenciado",
-      "contra-ataque": "contra-ataque",
-    }[estilo];
     this.registrar("mudanca-tatica", {
       time: time.lado,
-      detalhe: `${motivo} (${[nomeFormacao, textoEstilo].filter(Boolean).join(", ")})`,
+      detalhe: motivo,
+      tatica: {
+        ...(umAMenos ? { umAMenos } : {}),
+        ...(nomeFormacao ? { formacao: nomeFormacao } : {}),
+        estilo,
+      },
     });
   }
 

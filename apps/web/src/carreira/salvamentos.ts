@@ -3,6 +3,7 @@
  */
 import { FORMATO_CARREIRA, type Carreira } from "@newbras/engine";
 import { LOJAS, operar } from "../dados/idb";
+import { t } from "@newbras/textos";
 
 export interface Salvamento {
   carreira: Carreira;
@@ -22,12 +23,14 @@ export function lerCarreira(
 ): { ok: true; carreira: Carreira } | { ok: false; erro: string } {
   const c = bruto as Partial<Carreira> | null;
   if (!c || typeof c !== "object")
-    return { ok: false, erro: "o arquivo não é uma carreira do NewBras" };
+    return { ok: false, erro: t("o arquivo não é uma carreira do NewBras") };
   // Formatos antigos (1 a 4) são atualizados ao abrir a carreira.
   if (c.formato !== FORMATO_CARREIRA && ![1, 2, 3, 4, 5, 6].includes(Number(c.formato)))
     return {
       ok: false,
-      erro: `formato de salvamento ${String(c.formato)} não é lido por esta versão`,
+      erro: t("formato de salvamento {String} não é lido por esta versão", {
+        String: String(c.formato),
+      }),
     };
   for (const campo of [
     "id",
@@ -38,7 +41,8 @@ export function lerCarreira(
     "jogadores",
     "noticias",
   ] as const)
-    if (c[campo] === undefined) return { ok: false, erro: `salvamento sem o campo "${campo}"` };
+    if (c[campo] === undefined)
+      return { ok: false, erro: t('salvamento sem o campo "{campo}"', { campo }) };
   return { ok: true, carreira: c as Carreira };
 }
 

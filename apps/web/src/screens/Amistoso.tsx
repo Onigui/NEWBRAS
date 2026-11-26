@@ -19,12 +19,13 @@ import { Escudo } from "../components/Escudo";
 import { procurar, type Indices } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { useEditor } from "../editor/useEditor";
+import { t } from "@newbras/textos";
 
 const NOME_ESTILO: Record<Estilo, string> = {
-  equilibrado: "Equilibrado",
-  ataque: "Ataque total",
-  "contra-ataque": "Contra-ataque",
-  cadenciado: "Cadenciado (toque de bola)",
+  equilibrado: t("Equilibrado"),
+  ataque: t("Ataque total"),
+  "contra-ataque": t("Contra-ataque"),
+  cadenciado: t("Cadenciado (toque de bola)"),
 };
 
 interface Escolha {
@@ -140,15 +141,15 @@ export function Amistoso({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6">
         <div className="max-w-md rounded-md border-2 border-placar-borda bg-placar p-8 text-center">
-          <h1 className="font-placar text-5xl font-extrabold">Amistoso</h1>
+          <h1 className="font-placar text-5xl font-extrabold">{t("Amistoso")}</h1>
           <p className="mt-4 text-suave" role="status">
             {ed.carga.status === "erro"
-              ? `Não foi possível montar o banco: ${ed.carga.mensagem}`
-              : "Montando o banco mundial: 3.711 times e 95 mil jogadores…"}
+              ? t("Não foi possível montar o banco: {mensagem}", { mensagem: ed.carga.mensagem })
+              : t("Montando o banco mundial: 3.711 times e 95 mil jogadores…")}
           </p>
           {ed.carga.status === "erro" && (
             <Botao variante="primario" className="mt-6" onClick={onBack}>
-              Voltar ao menu
+              {t("Voltar ao menu")}
             </Botao>
           )}
         </div>
@@ -162,11 +163,11 @@ export function Amistoso({ onBack }: { onBack: () => void }) {
     const tCasa = montarTime(indices, casa);
     const tFora = montarTime(indices, fora);
     if (!tCasa || !tFora) {
-      setErro("Escolha dois times com pelo menos 11 jogadores profissionais.");
+      setErro(t("Escolha dois times com pelo menos 11 jogadores profissionais."));
       return;
     }
     if (tCasa.id === tFora.id) {
-      setErro("Escolha dois times diferentes.");
+      setErro(t("Escolha dois times diferentes."));
       return;
     }
     setErro("");
@@ -184,11 +185,11 @@ export function Amistoso({ onBack }: { onBack: () => void }) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-7xl flex-col gap-4 p-4 lg:p-6">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-placar-borda bg-placar px-5 py-3">
-          <h1 className="font-placar text-4xl font-extrabold">Amistoso</h1>
+          <h1 className="font-placar text-4xl font-extrabold">{t("Amistoso")}</h1>
           <div className="flex gap-2">
-            <Botao onClick={() => setJogo(null)}>Trocar os times</Botao>
+            <Botao onClick={() => setJogo(null)}>{t("Trocar os times")}</Botao>
             <Botao variante="primario" onClick={onBack}>
-              Voltar ao menu
+              {t("Voltar ao menu")}
             </Botao>
           </div>
         </header>
@@ -210,44 +211,45 @@ export function Amistoso({ onBack }: { onBack: () => void }) {
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-4 p-4 lg:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-placar-borda bg-placar px-5 py-3">
         <div>
-          <h1 className="font-placar text-4xl font-extrabold">Amistoso</h1>
+          <h1 className="font-placar text-4xl font-extrabold">{t("Amistoso")}</h1>
           <p className="text-sm text-suave">
-            Escolha os times, a formação e o estilo, e acompanhe o jogo no mini-campo. Pause para
-            trocar jogadores e dar instruções.
+            {t(
+              "Escolha os times, a formação e o estilo, e acompanhe o jogo no mini-campo. Pause para trocar jogadores e dar instruções.",
+            )}
           </p>
         </div>
         <Botao variante="primario" onClick={onBack}>
-          Voltar ao menu
+          {t("Voltar ao menu")}
         </Botao>
       </header>
 
       <section className="grid gap-4 rounded-md border-2 border-placar-borda bg-placar p-4 md:grid-cols-[1fr_auto_1fr]">
         <EscolhaTime
-          titulo="Mandante"
+          titulo={t("Mandante")}
           escolha={casa}
           onMudar={setCasa}
           banco={banco}
           indices={indices}
         />
         <div className="flex flex-col items-center justify-center gap-2">
-          <Campo rotulo="Você comanda">
+          <Campo rotulo={t("Você comanda")}>
             <select
               className={estiloCampo}
               value={humano}
               onChange={(e) => setHumano(e.target.value as LadoCampo | "nenhum")}
             >
-              <option value="casa">O mandante</option>
-              <option value="fora">O visitante</option>
-              <option value="nenhum">Ninguém (só assistir)</option>
+              <option value="casa">{t("O mandante")}</option>
+              <option value="fora">{t("O visitante")}</option>
+              <option value="nenhum">{t("Ninguém (só assistir)")}</option>
             </select>
           </Campo>
           <Botao variante="primario" onClick={jogar}>
-            Começar o jogo
+            {t("Começar o jogo")}
           </Botao>
           {erro && <p className="max-w-48 text-center text-sm text-[#ff8a7e]">{erro}</p>}
         </div>
         <EscolhaTime
-          titulo="Visitante"
+          titulo={t("Visitante")}
           escolha={fora}
           onMudar={setFora}
           banco={banco}
@@ -315,14 +317,14 @@ function EscolhaTime({
       <div className="flex items-center gap-3">
         {clube && <Escudo clube={clube} tamanho={40} />}
         <p className="truncate font-placar text-2xl font-bold">
-          {clube?.nome ?? "Escolha um time"}
+          {clube?.nome ?? t("Escolha um time")}
         </p>
       </div>
-      <Campo rotulo="Trocar de time">
+      <Campo rotulo={t("Trocar de time")}>
         <input
           className={estiloCampo}
           value={busca}
-          placeholder="Ex.: Corinthians, Real Madrid"
+          placeholder={t("Ex.: Corinthians, Real Madrid")}
           onChange={(e) => setBusca(e.target.value)}
         />
       </Campo>
@@ -349,7 +351,7 @@ function EscolhaTime({
         </ul>
       )}
       <div className="grid grid-cols-2 gap-2">
-        <Campo rotulo="Formação">
+        <Campo rotulo={t("Formação")}>
           <select
             className={estiloCampo}
             value={escolha.formacao === "personalizada" ? "personalizada" : escolha.formacao}
@@ -377,15 +379,15 @@ function EscolhaTime({
                 {f}
               </option>
             ))}
-            <option value="personalizada">Personalizada</option>
+            <option value="personalizada">{t("Personalizada")}</option>
             {salvas.map((f) => (
               <option key={f.nome} value={`salva:${f.nome}`}>
-                Minha: {f.nome}
+                {t("Minha: {nome}", { nome: f.nome })}
               </option>
             ))}
           </select>
         </Campo>
-        <Campo rotulo="Estilo">
+        <Campo rotulo={t("Estilo")}>
           <select
             className={estiloCampo}
             value={escolha.estilo}
@@ -425,7 +427,7 @@ function EscolhaTime({
           ocupante={ocupantes[selecionada] ?? null}
           escolhido={papeis[selecionada] ?? null}
           candidatos={candidatos}
-          rotuloTroca={(c) => (c.origem === "banco" ? "Escalar" : "Trocar de vaga")}
+          rotuloTroca={(c) => (c.origem === "banco" ? t("Escalar") : t("Trocar de vaga"))}
           onPapel={(papel) => {
             const novos = escolha.vagas.map((_, i) => papeis[i] ?? null);
             novos[selecionada] = papel;
@@ -440,7 +442,7 @@ function EscolhaTime({
           <input
             className={estiloCampo}
             value={nomeSalvar}
-            placeholder="Nome para guardar esta formação"
+            placeholder={t("Nome para guardar esta formação")}
             onChange={(e) => setNomeSalvar(e.target.value)}
           />
           <Botao
@@ -456,7 +458,7 @@ function EscolhaTime({
               setNomeSalvar("");
             }}
           >
-            Guardar
+            {t("Guardar")}
           </Botao>
         </div>
       )}

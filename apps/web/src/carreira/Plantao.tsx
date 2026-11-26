@@ -17,6 +17,7 @@ import {
 } from "@newbras/engine";
 import { Escudo } from "../components/Escudo";
 import { zonaDaPosicao } from "./Competicoes";
+import { t } from "@newbras/textos";
 
 export interface Agora {
   minuto: number;
@@ -91,16 +92,16 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
   return (
     <section
       className="flex flex-col gap-2 rounded-md border-2 border-placar-borda bg-placar p-3"
-      aria-label="Plantão"
+      aria-label={t("Plantão")}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-placar text-xl font-bold">Plantão</h2>
+        <h2 className="font-placar text-xl font-bold">{t("Plantão")}</h2>
         {tabela && (
-          <div className="flex gap-1" role="tablist" aria-label="Plantão">
+          <div className="flex gap-1" role="tablist" aria-label={t("Plantão")}>
             {(
               [
-                ["gols", "Jogos do dia"],
-                ["tabela", "Tabela ao vivo"],
+                ["gols", t("Jogos do dia")],
+                ["tabela", t("Tabela ao vivo")],
               ] as const
             ).map(([id, rotulo]) => (
               <button
@@ -124,10 +125,18 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
             <ul className="flex flex-col gap-0.5 text-xs" aria-live="polite">
               {ultimos.map(({ j, g, placar }) => (
                 <li key={`${j.competicao}-${j.indice}-${g.minuto}-${g.jogador}`}>
-                  <span className="font-bold text-canarinho tabular-nums">{g.minuto}&apos;</span>{" "}
-                  Gol do {nome(j[g.lado])}
-                  {mundo.jogador(g.jogador) ? ` (${mundo.jogador(g.jogador)?.nome})` : ""}:{" "}
-                  {nome(j.casa)} {placar[0]} x {placar[1]} {nome(j.fora)}
+                  <span className="font-bold text-canarinho tabular-nums">
+                    {g.minuto}
+                    &apos;
+                  </span>{" "}
+                  {t("Gol do {nome}{jogador}: {nome2} {placar} x {placar2} {nome3}", {
+                    nome: nome(j[g.lado]),
+                    jogador: mundo.jogador(g.jogador) ? ` (${mundo.jogador(g.jogador)?.nome})` : "",
+                    nome2: nome(j.casa),
+                    placar: placar[0],
+                    placar2: placar[1],
+                    nome3: nome(j.fora),
+                  })}
                 </li>
               ))}
             </ul>
@@ -156,7 +165,7 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
                           {agora.placar[0]} x {agora.placar[1]}
                         </td>
                         <td className="truncate py-0.5">{nome(nosso.fora)}</td>
-                        <td className="w-12 py-0.5 text-right text-xs">seu jogo</td>
+                        <td className="w-12 py-0.5 text-right text-xs">{t("seu jogo")}</td>
                       </tr>
                     )}
                     {lista.map((j) => {
@@ -177,7 +186,10 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
                           <td className="truncate py-0.5">{nome(j.fora)}</td>
                           <td className="w-12 py-0.5 text-right text-xs text-suave">
                             {agora.fim && j.penaltis
-                              ? `pên. ${j.penaltis[0]}-${j.penaltis[1]}`
+                              ? t("pên. {penaltis}-{penaltis2}", {
+                                  penaltis: j.penaltis[0],
+                                  penaltis2: j.penaltis[1],
+                                })
                               : ""}
                           </td>
                         </tr>
@@ -188,7 +200,7 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
               </div>
             );
           })}
-          {!jogos.length && <p className="text-sm text-suave">Nenhum outro jogo hoje.</p>}
+          {!jogos.length && <p className="text-sm text-suave">{t("Nenhum outro jogo hoje.")}</p>}
         </div>
       )}
 
@@ -198,16 +210,16 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
             <thead className="text-xs text-suave">
               <tr className="border-b border-placar-borda">
                 <th className="w-6 py-1 text-right">#</th>
-                <th className="w-4" aria-label="Mudança" />
-                <th className="py-1 pl-1 text-left">Clube</th>
-                <th className="py-1 text-right" title="Pontos">
+                <th className="w-4" aria-label={t("Mudança")} />
+                <th className="py-1 pl-1 text-left">{t("Clube")}</th>
+                <th className="py-1 text-right" title={t("Pontos")}>
                   P
                 </th>
-                <th className="py-1 text-right" title="Jogos">
+                <th className="py-1 text-right" title={t("Jogos")}>
                   J
                 </th>
-                <th className="py-1 pr-1 text-right" title="Saldo">
-                  SG
+                <th className="py-1 pr-1 text-right" title={t("Saldo")}>
+                  {t("SG")}
                 </th>
               </tr>
             </thead>
@@ -230,11 +242,11 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
                     </td>
                     <td className="text-center text-xs">
                       {antes > i ? (
-                        <span className="text-[#7ed37a]" title="Subiu">
+                        <span className="text-[#7ed37a]" title={t("Subiu")}>
                           ▲
                         </span>
                       ) : antes >= 0 && antes < i ? (
-                        <span className="text-[#ff6b5c]" title="Caiu">
+                        <span className="text-[#ff6b5c]" title={t("Caiu")}>
                           ▼
                         </span>
                       ) : null}
@@ -254,7 +266,7 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
             </tbody>
           </table>
           <p className="mt-1 text-xs text-suave">
-            Com os placares de agora. ▲ e ▼: posição em relação ao começo da rodada.
+            {t("Com os placares de agora. ▲ e ▼: posição em relação ao começo da rodada.")}
           </p>
         </div>
       )}
