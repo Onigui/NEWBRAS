@@ -49,7 +49,7 @@ export function Plantao({ c, mundo, x, jogos, agora }: Props) {
   const estado = x.competicao ? c.competicoes.competicoes[x.competicao] : undefined;
   const nosso = estado && x.indice !== undefined ? estado.jogos[x.indice] : undefined;
   const grupos =
-    comp && nosso && comp.fases[nosso.fase]?.tipo === "grupos" ? nosso.grupo : undefined;
+    comp && nosso && comp.fases[nosso.fase]?.tipo !== "mata-mata" ? nosso.grupo : undefined;
 
   const porCompeticao = useMemo(() => {
     const m = new Map<string, JogoSimulado[]>();

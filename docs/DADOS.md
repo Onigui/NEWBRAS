@@ -49,7 +49,7 @@ Times podem entrar no meio da competição (`entramAqui`), como os classificados
 
 Ligas com playoffs têm a temporada regular seguida de fases de mata-mata. Os melhores colocados podem entrar direto numa fase adiante: na Championship, 5º a 8º jogam a eliminatória e 3º e 4º entram nas semifinais.
 
-Copas, supercopas e copas regionais não têm participantes fixos: as `vagas` dizem de onde vêm (`posicoes` de uma liga ou de um estadual, com `repassa` para a vaga passar ao próximo quando o clube já entrou; `campeao` ou `vice` de uma competição). O jogo resolve as vagas a cada temporada pela classificação da anterior (na primeira, pela força do elenco). A temporada de cada país é ajustada ao montar o banco para conter todas as competições dele.
+Copas, supercopas e copas regionais não têm participantes fixos: as `vagas` dizem de onde vêm (`posicoes` de uma liga ou de um estadual, com `repassa` para a vaga passar ao próximo quando o clube já entrou; `campeao` ou `vice` de uma competição). O jogo resolve as vagas a cada temporada pela classificação da anterior (na primeira, pela força do elenco). A temporada de cada país é ajustada ao montar o banco para conter todas as competições dele. As continentais seguem o mesmo esquema, com `exclui`: as competições da mesma temporada cujos participantes não entram (a Sul-Americana exclui os da Libertadores). A temporada continental é a da confederação (ano civil na CONMEBOL, CONCACAF e OFC; julho a junho na UEFA, AFC e CAF).
 Acesso e rebaixamento (`movimentos`) usam as posições da tabela final. Em ligas divididas em grupos (Primera Federación, Serie C), `porGrupo` faz as posições valerem dentro de cada grupo. Repescagens entre divisões, como a da Bundesliga (16º contra o 3º da 2. Bundesliga), aparecem como `playoff-rebaixamento` na divisão de cima e `playoff-acesso` na de baixo.
 
 Clubes que jogam o sistema de outro país mantêm o próprio país: Cardiff, Swansea, Wrexham e Newport (País de Gales) na Inglaterra, e o FC Andorra na Espanha. O AS Monaco fica com país França, porque Mônaco não é membro da FIFA.
@@ -77,7 +77,7 @@ O Editor de Equipes grava tudo o que o usuário muda num patch com id `usuario/m
 
 ## Carreira salva
 
-Cada carreira é um objeto JSON (formato `2`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
+Cada carreira é um objeto JSON (formato `3`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
 
 | Campo                                    | O que é                                                                                                                                                                                                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

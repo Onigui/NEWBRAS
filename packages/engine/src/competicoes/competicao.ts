@@ -71,8 +71,13 @@ function planoDasFases(c: Competicao, n: number) {
   const rodadas: number[] = [];
   c.fases.forEach((f, i) => {
     const vindos = i === 0 ? n : (saem[i - 1] ?? 0);
+    // Os classificados direto da fase de liga entram depois do playoff (Champions League).
+    const liga = c.fases[i - 2];
+    const diretos = liga?.tipo === "fase-de-liga" && liga.playoff ? liga.classificamDireto : 0;
     const e =
-      vindos + (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0));
+      vindos +
+      diretos +
+      (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0));
     entram.push(e);
     const ultima = i === c.fases.length - 1;
     if (f.tipo === "mata-mata") {
@@ -93,7 +98,9 @@ function planoDasFases(c: Competicao, n: number) {
           ? f.faixaClassificada
             ? f.faixaClassificada.ate - f.faixaClassificada.de + 1
             : f.classificamPorGrupo * f.grupos + (f.melhores?.quantidade ?? 0)
-          : f.classificamDireto + (f.playoff ? f.playoff.ate - f.playoff.de + 1 : 0);
+          : f.playoff
+            ? f.playoff.ate - f.playoff.de + 1
+            : f.classificamDireto;
       saem.push(q);
     }
   });
@@ -136,6 +143,36 @@ export interface OpcoesMontagem {
   temporada: string;
   /** Datas já ocupadas por competições mais importantes do país (para não coincidir). */
   bloqueadas?: ReadonlySet<string>;
+  /**
+   * Planeja as datas para esta quantidade de participantes (e não pela lista real). As
+   * continentais usam a quantidade prevista: assim as datas delas são conhecidas antes de abrirem
+   * e as ligas de cada país conseguem fugir delas.
+   */
+  quantidadePlanejada?: number;
+}
+
+/**
+ * Dias da semana de jogo: ligas e supercopas aos domingos; estaduais, regionais, copas e a
+ * principal continental às quartas; a segunda continental (Sul-Americana, Europa League) às quintas.
+ */
+export function semanaDaCompeticao(c: Competicao): number[] {
+  if (c.tipo === "continental" || c.tipo === "intercontinental")
+    return c.participantes.exclui.length ? [4] : [3];
+  if (c.tipo === "estadual" || c.tipo === "regional" || c.tipo === "copa") return [3];
+  return [0];
+}
+
+/** Datas das rodadas da competição na temporada, sem olhar as outras competições. */
+export function datasPlanejadas(
+  c: Competicao,
+  inicioTemporada: string,
+  datasFifa: readonly DataFifa[],
+  quantidade = c.participantes.quantidade,
+  bloqueadas?: ReadonlySet<string>,
+): string[] {
+  const { inicio, fim } = datasDaCompeticao(c.calendario, inicioTemporada);
+  const total = planoDasFases(c, quantidade).rodadas.reduce((s, r) => s + r, 0);
+  return datasDasRodadas(total, inicio, fim, datasFifa, semanaDaCompeticao(c), bloqueadas);
 }
 
 /** Monta a competição da temporada: datas de todas as rodadas e a primeira fase. */
@@ -147,11 +184,13 @@ export function montarCompeticao(
 ): EstadoCompeticao {
   const { inicio, fim } = datasDaCompeticao(c.calendario, inicioTemporada);
   const plano = planoDasFases(c, participantes.length);
-  const total = plano.rodadas.reduce((s, r) => s + r, 0);
-  // Estaduais e regionais no meio de semana e sábado; ligas e copas aos domingos.
-  const semana =
-    c.tipo === "estadual" || c.tipo === "regional" ? [3] : c.tipo === "copa" ? [3] : [0];
-  const datas = datasDasRodadas(total, inicio, fim, o.datasFifa, semana, o.bloqueadas);
+  const datas = datasPlanejadas(
+    c,
+    inicioTemporada,
+    o.datasFifa,
+    o.quantidadePlanejada ?? participantes.length,
+    o.bloqueadas,
+  );
   const rodadasDaFase = plano.rodadas;
   const estado: EstadoCompeticao = {
     id: c.id,
@@ -209,7 +248,16 @@ function abrirFase(
     times.forEach((t, i) => grupos[Math.min(numGrupos - 1, Math.floor(i / tamanho))]?.push(t));
   }
   grupos.forEach((g, gi) => {
-    todosContraTodos(g.length, turnos, rng).forEach((rodada, r) => {
+    let rodadas = todosContraTodos(g.length, turnos, rng);
+    // Fase de liga: cada um joga só `jogosPorTime` vezes, contra adversários de todo o grupo.
+    if (fase.tipo === "fase-de-liga") {
+      const k = Math.min(fase.jogosPorTime, rodadas.length);
+      rodadas = Array.from(
+        { length: k },
+        (_, i) => rodadas[Math.floor((i * rodadas.length) / k)] as [number, number][],
+      );
+    }
+    rodadas.forEach((rodada, r) => {
       if (r >= (e.rodadasDaFase[f] ?? 0)) return;
       for (const [a, b] of rodada)
         jogos.push({
@@ -378,7 +426,10 @@ function classificadosDosGrupos(c: Competicao, e: EstadoCompeticao, f: number): 
   const fase = c.fases[f];
   if (!fase || fase.tipo === "mata-mata") return [];
   const geral = classificacaoDosGrupos(c, e, f);
-  if (fase.tipo === "fase-de-liga") return geral.slice(0, fase.classificamDireto);
+  if (fase.tipo === "fase-de-liga")
+    return fase.playoff
+      ? geral.slice(fase.playoff.de - 1, fase.playoff.ate)
+      : geral.slice(0, fase.classificamDireto);
   if (fase.faixaClassificada) {
     const t = tabelaDoGrupo(c, e, f, 0);
     return t.slice(fase.faixaClassificada.de - 1, fase.faixaClassificada.ate).map((l) => l.clube);
@@ -484,6 +535,10 @@ export function avancarCompeticao(
     }
     // Quem entra direto na próxima fase pela colocação numa fase anterior desta competição.
     const extras: string[] = [];
+    const liga = c.fases[f - 1];
+    if (liga?.tipo === "fase-de-liga" && liga.playoff)
+      for (const l of tabelaDoGrupo(c, e, f - 1, 0).slice(0, liga.classificamDireto))
+        extras.push(l.clube);
     for (const v of proxima.entramAqui) {
       if (v.de !== c.id) continue;
       const tabela = tabelaDoGrupo(c, e, 0, 0);

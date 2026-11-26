@@ -15,6 +15,7 @@ import {
   escalacaoDoTecnico,
   estadoDe,
   FORMACOES,
+  FORMATO_CARREIRA,
   nomeTemporada,
   partidaDoCompromisso,
   plantaoDoCompromisso,
@@ -111,7 +112,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
 
   // Salvamento de uma versão anterior: ganha as competições ao abrir.
   useEffect(() => {
-    if (c.formato !== 2 || !c.competicoes) mudar((x) => atualizarCarreira(x, mundo));
+    if (c.formato !== FORMATO_CARREIRA || !c.competicoes) mudar((x) => atualizarCarreira(x, mundo));
   }, [c.formato, c.competicoes, mudar, mundo]);
 
   const escalacao: EscalacaoEditavel = useMemo(() => {

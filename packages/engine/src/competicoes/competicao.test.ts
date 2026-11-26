@@ -276,4 +276,59 @@ describe("competições", () => {
     e = { ...e };
     expect(movimentosDaTemporada(c, e)).toHaveLength(3);
   });
+
+  it("fase de liga da Champions: 8 jogos para cada, 1º ao 8º direto às oitavas e playoff do 9º ao 24º", () => {
+    const c = comp({
+      tipo: "continental",
+      escopo: { tipo: "confederacao", confederacao: "UEFA" },
+      divisao: undefined,
+      calendario: { inicio: "09-15", fim: "05-31" },
+      participantes: { fixos: [], quantidade: 36 },
+      fases: [
+        {
+          id: "liga",
+          nome: "Fase de liga",
+          tipo: "fase-de-liga",
+          jogosPorTime: 8,
+          potes: 4,
+          classificamDireto: 8,
+          playoff: { de: 9, ate: 24 },
+        },
+        { id: "playoff", nome: "Playoff", tipo: "mata-mata", jogos: 2, chaveamento: "campanha" },
+        {
+          id: "mata-mata",
+          nome: "Mata-mata",
+          tipo: "mata-mata",
+          jogos: 2,
+          finalJogoUnico: true,
+          chaveamento: "campanha",
+          mando: "neutro",
+        },
+      ],
+    });
+    const times36 = times("u", 36);
+    const e = jogarTudo(c, times36);
+    const liga = e.jogos.filter((j) => j.fase === 0);
+    expect(liga).toHaveLength(36 * 4);
+    for (const t of times36) {
+      const deles = liga.filter((j) => j.casa === t || j.fora === t);
+      expect(deles).toHaveLength(8);
+      // Oito adversários diferentes.
+      expect(new Set(deles.map((j) => (j.casa === t ? j.fora : j.casa))).size).toBe(8);
+    }
+    const tabela = tabelaDoGrupo(c, e, 0, 0).map((l) => l.clube);
+    // O playoff tem só quem ficou do 9º ao 24º.
+    const playoff = new Set(e.jogos.filter((j) => j.fase === 1).flatMap((j) => [j.casa, j.fora]));
+    expect([...playoff].sort()).toEqual(tabela.slice(8, 24).sort());
+    // As oitavas têm os 8 primeiros e os 8 vencedores do playoff.
+    const oitavas = e.jogos.filter((j) => j.fase === 2 && j.chave === 0);
+    const naOitava = new Set(oitavas.flatMap((j) => [j.casa, j.fora]));
+    expect(naOitava.size).toBe(16);
+    for (const t of tabela.slice(0, 8)) expect(naOitava.has(t)).toBe(true);
+    expect(e.encerrada).toBe(true);
+    expect(e.campeao).toBeDefined();
+    const final = e.jogos.at(-1)!;
+    expect(final.neutro).toBe(true);
+    expect(e.classificacao?.[0]).toBe(e.campeao);
+  });
 });

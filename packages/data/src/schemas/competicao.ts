@@ -136,6 +136,11 @@ export const Competicao = z
       /** Clubes (ou países, em competições de seleções) fixos. */
       fixos: z.array(z.union([Id, CodigoPais])).default([]),
       vagas: z.array(Vaga).default([]),
+      /**
+       * Competições da mesma temporada cujos participantes não entram aqui (a Sul-Americana exclui
+       * os da Libertadores): a vaga passa para o próximo da tabela de origem.
+       */
+      exclui: z.array(Id).default([]),
       /** Quantidade esperada de participantes, para validar. */
       quantidade: z.int().min(2),
     }),
