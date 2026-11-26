@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { t } from "@newbras/textos";
 
 /** Estilo comum dos campos de formulário do editor. */
 export const estiloCampo =
@@ -101,7 +102,7 @@ export function Dialogo({
             onClick={onFechar}
             className="text-sm text-suave hover:text-canarinho"
           >
-            Fechar (Esc)
+            {t("Fechar (Esc)")}
           </button>
         </div>
         {children}
@@ -122,7 +123,9 @@ export function ListaProblemas({ problemas }: { problemas: { onde: string; mensa
           <b>{p.onde}:</b> {p.mensagem}
         </li>
       ))}
-      {problemas.length > 12 && <li>… e mais {problemas.length - 12}.</li>}
+      {problemas.length > 12 && (
+        <li>{t("… e mais {problemas}.", { problemas: problemas.length - 12 })}</li>
+      )}
     </ul>
   );
 }

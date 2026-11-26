@@ -30,32 +30,33 @@ import { MiniCampo, type CorTime } from "./MiniCampo";
 import { NotasAoVivo } from "./NotasAoVivo";
 import { Estatisticas, HUMOR, LanceALance, Notas } from "./Resumo";
 import { NOME_VELOCIDADE, usePartidaAoVivo, type Velocidade } from "./usePartidaAoVivo";
+import { t } from "@newbras/textos";
 
 const NOME_ESTILO: Record<Estilo, string> = {
-  equilibrado: "Equilibrado",
-  ataque: "Ataque total",
-  "contra-ataque": "Contra-ataque",
-  cadenciado: "Cadenciado (toque de bola)",
+  equilibrado: t("Equilibrado"),
+  ataque: t("Ataque total"),
+  "contra-ataque": t("Contra-ataque"),
+  cadenciado: t("Cadenciado (toque de bola)"),
 };
 const NOME_MARCACAO: Record<Marcacao, string> = {
-  leve: "Leve",
-  pesada: "Pesada",
-  "muito-pesada": "Muito pesada",
+  leve: t("Leve"),
+  pesada: t("Pesada"),
+  "muito-pesada": t("Muito pesada"),
 };
 const NOME_CONCENTRACAO: Record<Concentracao, string> = {
-  equilibrada: "Equilibrada",
-  meio: "Pelo meio",
-  laterais: "Pelas laterais",
+  equilibrada: t("Equilibrada"),
+  meio: t("Pelo meio"),
+  laterais: t("Pelas laterais"),
 };
 const ROTULO_DESTAQUE: Partial<Record<Evento["tipo"], string>> = {
   gol: "GOL!",
-  "gol-contra": "GOL CONTRA",
-  penalti: "PÊNALTI!",
+  "gol-contra": t("GOL CONTRA"),
+  penalti: t("PÊNALTI!"),
   "penalti-perdido": "PERDEU!",
-  "chute-trave": "NA TRAVE!",
+  "chute-trave": t("NA TRAVE!"),
   defesa: "DEFENDEU!",
   "cartao-vermelho": "EXPULSO!",
-  lesao: "LESÃO",
+  lesao: t("LESÃO"),
 };
 
 interface Props {
@@ -144,9 +145,9 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
   const exibicao = estado.exibicao();
   const acrescimo = partida.acrescimoDado;
   const relogio = fim
-    ? "Fim de jogo"
+    ? t("Fim de jogo")
     : estado.aviso
-      ? "Intervalo"
+      ? t("Intervalo")
       : rotuloMinuto({ ...partida.relogio, minuto: partida.relogio.minuto });
 
   return (
@@ -161,17 +162,22 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
         <div className="text-center">
           <p
             className="font-placar text-6xl font-black text-canarinho tabular-nums"
-            aria-label="Placar"
+            aria-label={t("Placar")}
           >
             {partida.placar[0]} x {partida.placar[1]}
           </p>
           <p className="text-sm font-bold text-suave tabular-nums" aria-live="polite">
             {relogio}
-            {fim?.penaltis ? ` (pênaltis ${fim.penaltis[0]} x ${fim.penaltis[1]})` : ""}
+            {fim?.penaltis
+              ? t(" (pênaltis {penaltis} x {penaltis2})", {
+                  penaltis: fim.penaltis[0],
+                  penaltis2: fim.penaltis[1],
+                })
+              : ""}
           </p>
           {!fim && !estado.aviso && acrescimo !== null && (
             <p className="mt-1 inline-block rounded bg-canarinho px-2 py-0.5 text-xs font-black text-placar">
-              +{acrescimo} de acréscimo
+              {t("+{acrescimo} de acréscimo", { acrescimo })}
             </p>
           )}
         </div>
@@ -199,11 +205,13 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
                   : {})}
               />
               <p className="px-1 pt-1 text-xs text-suave">
-                {opcoes.casa.nome} ataca para a{" "}
-                {partida.relogio.periodo === 1 || partida.relogio.periodo === 3
-                  ? "direita"
-                  : "esquerda"}
-                . Bola com contorno branco: quem está com ela.
+                {t("{nome} ataca para a {periodo}. Bola com contorno branco: quem está com ela.", {
+                  nome: opcoes.casa.nome,
+                  periodo:
+                    partida.relogio.periodo === 1 || partida.relogio.periodo === 3
+                      ? "direita"
+                      : "esquerda",
+                })}
               </p>
             </div>
           )}
@@ -216,12 +224,12 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
             </p>
           )}
           {!fim && (
-            <div className="flex gap-1" role="tablist" aria-label="O que ver durante o jogo">
+            <div className="flex gap-1" role="tablist" aria-label={t("O que ver durante o jogo")}>
               {(
                 [
-                  ["lances", "Lance a lance"],
-                  ["estatisticas", "Estatísticas"],
-                  ["notas", "Notas dos jogadores"],
+                  ["lances", t("Lance a lance")],
+                  ["estatisticas", t("Estatísticas")],
+                  ["notas", t("Notas dos jogadores")],
                 ] as const
               ).map(([id, rotulo]) => (
                 <button
@@ -246,7 +254,7 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
               eventos={estado.eventos}
               contexto={contexto}
               todos={todos}
-              onTodos={() => setTodos((t) => !t)}
+              onTodos={() => setTodos((x) => !x)}
               recentesPrimeiro={!fim}
               altura={classico ? "max-h-[36rem]" : "max-h-72"}
             />
@@ -263,8 +271,9 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
                 destacar={humano}
               />
               <p className="mt-2 text-xs text-suave">
-                Nota parcial, considerando o placar de agora: verde acima de 7, amarela de 6 a 7,
-                vermelha abaixo de 6. Fôlego em vermelho: abaixo de 60%.
+                {t(
+                  "Nota parcial, considerando o placar de agora: verde acima de 7, amarela de 6 a 7, vermelha abaixo de 6. Fôlego em vermelho: abaixo de 60%.",
+                )}
               </p>
             </section>
           )}
@@ -275,24 +284,24 @@ export function AoVivo({ opcoes, clubes, humano, onNovo, rotuloNovo, onTerminou,
             <div className="flex flex-wrap gap-2">
               {fim ? (
                 <Botao variante="primario" onClick={onNovo}>
-                  {rotuloNovo ?? "Novo jogo"}
+                  {rotuloNovo ?? t("Novo jogo")}
                 </Botao>
               ) : ao.rodando ? (
                 <Botao variante="primario" onClick={ao.pausar}>
-                  Pausar (espaço)
+                  {t("Pausar (espaço)")}
                 </Botao>
               ) : (
                 <Botao variante="primario" onClick={ao.continuar}>
-                  Continuar (espaço)
+                  {t("Continuar (espaço)")}
                 </Botao>
               )}
-              {!fim && <Botao onClick={ao.pular}>Pular para o fim</Botao>}
+              {!fim && <Botao onClick={ao.pular}>{t("Pular para o fim")}</Botao>}
               <Botao onClick={() => setClassico((c) => !c)}>
-                {classico ? "Mini-campo" : "Modo clássico"}
+                {classico ? t("Mini-campo") : t("Modo clássico")}
               </Botao>
             </div>
             {!fim && (
-              <Campo rotulo="Velocidade">
+              <Campo rotulo={t("Velocidade")}>
                 <select
                   className={estiloCampo}
                   value={ao.velocidade}
@@ -384,7 +393,7 @@ function Comando({
                   {
                     jogador: j,
                     origem: "banco" as const,
-                    ...(restantes > 0 && emCampo[selecionada] ? {} : { bloqueado: "Sem troca" }),
+                    ...(restantes > 0 && emCampo[selecionada] ? {} : { bloqueado: t("Sem troca") }),
                   },
                 ]
               : [];
@@ -397,36 +406,50 @@ function Comando({
   return (
     <>
       <section className="flex flex-col gap-2 rounded-md border-2 border-placar-borda bg-placar p-4">
-        <h2 className="font-placar text-2xl font-bold">Substituições</h2>
+        <h2 className="font-placar text-2xl font-bold">{t("Substituições")}</h2>
         <p className="text-xs text-suave">
-          {restantes > 0
-            ? `Pode fazer mais ${restantes} ${restantes === 1 ? "troca" : "trocas"}.`
-            : "Sem trocas disponíveis."}{" "}
-          Fôlego e nota de agora entre parênteses.
+          {t("{restantes} Fôlego e nota de agora entre parênteses.", {
+            restantes:
+              restantes > 0
+                ? t("Pode fazer mais {restantes} {restantes2}.", {
+                    restantes,
+                    restantes2: restantes === 1 ? "troca" : "trocas",
+                  })
+                : t("Sem trocas disponíveis."),
+          })}
         </p>
-        <Campo rotulo="Sai">
+        <Campo rotulo={t("Sai")}>
           <select className={estiloCampo} value={sai} onChange={(e) => setSai(e.target.value)}>
-            <option value="">Escolha quem sai</option>
+            <option value="">{t("Escolha quem sai")}</option>
             {emCampo.map((id, i) =>
               id ? (
                 <option key={id} value={id}>
-                  {`${nome(id)} (fôlego ${condicoes[i]}%${notas.has(id) ? `, nota ${notas.get(id)?.toFixed(1)}` : ""}, humor ${HUMOR[humores.get(id) ?? "normal"].nome.toLowerCase()})`}
+                  {t("{nome} (fôlego {condicoes}%{has}, humor {nome2})", {
+                    nome: nome(id),
+                    condicoes: condicoes[i],
+                    has: notas.has(id) ? t(", nota {get}", { get: notas.get(id)?.toFixed(1) }) : "",
+                    nome2: HUMOR[humores.get(id) ?? "normal"].nome.toLowerCase(),
+                  })}
                 </option>
               ) : null,
             )}
           </select>
         </Campo>
-        <Campo rotulo="Entra">
+        <Campo rotulo={t("Entra")}>
           <select className={estiloCampo} value={entra} onChange={(e) => setEntra(e.target.value)}>
-            <option value="">Escolha quem entra</option>
+            <option value="">{t("Escolha quem entra")}</option>
             {reservas.map((id) => {
               const j = porId.get(id);
               const vaga = vagaSai >= 0 ? vagas[vagaSai] : undefined;
               const nota = j && vaga ? papelENota(j, vaga, escolhidos[vagaSai]).nota : null;
               return (
                 <option key={id} value={id}>
-                  {j?.nome} ({j ? NOME_POSICAO[j.posicao] : ""}, força {j?.forca}
-                  {nota !== null ? `, nota ${nota} na vaga` : ""})
+                  {t("{nome} ({j}, força {forca}{nota})", {
+                    nome: j?.nome,
+                    j: j ? NOME_POSICAO[j.posicao] : "",
+                    forca: j?.forca,
+                    nota: nota !== null ? t(", nota {nota} na vaga", { nota }) : "",
+                  })}
                 </option>
               );
             })}
@@ -442,14 +465,14 @@ function Comando({
             }
           }}
         >
-          Fazer a troca
+          {t("Fazer a troca")}
         </Botao>
       </section>
 
       <section className="flex flex-col gap-2 rounded-md border-2 border-placar-borda bg-placar p-4">
-        <h2 className="font-placar text-2xl font-bold">Instruções</h2>
+        <h2 className="font-placar text-2xl font-bold">{t("Instruções")}</h2>
         <div className="grid grid-cols-2 gap-2">
-          <Campo rotulo="Estilo">
+          <Campo rotulo={t("Estilo")}>
             <select
               className={estiloCampo}
               value={tatica.estilo}
@@ -465,7 +488,7 @@ function Comando({
               ))}
             </select>
           </Campo>
-          <Campo rotulo="Marcação">
+          <Campo rotulo={t("Marcação")}>
             <select
               className={estiloCampo}
               value={tatica.marcacao}
@@ -481,7 +504,7 @@ function Comando({
               ))}
             </select>
           </Campo>
-          <Campo rotulo="Ataques" className="col-span-2">
+          <Campo rotulo={t("Ataques")} className="col-span-2">
             <select
               className={estiloCampo}
               value={tatica.concentracao}
@@ -497,7 +520,7 @@ function Comando({
               ))}
             </select>
           </Campo>
-          <Campo rotulo="Formação" className="col-span-2">
+          <Campo rotulo={t("Formação")} className="col-span-2">
             <select
               className={estiloCampo}
               value={formacao}
@@ -513,7 +536,7 @@ function Comando({
                   {f}
                 </option>
               ))}
-              <option value="personalizada">Personalizada</option>
+              <option value="personalizada">{t("Personalizada")}</option>
             </select>
           </Campo>
         </div>
@@ -535,7 +558,7 @@ function Comando({
             ocupante={ocupantes[selecionada] ?? null}
             escolhido={escolhidos[selecionada] ?? null}
             candidatos={candidatos}
-            rotuloTroca={(c) => (c.origem === "banco" ? "Substituir" : "Trocar de vaga")}
+            rotuloTroca={(c) => (c.origem === "banco" ? t("Substituir") : t("Trocar de vaga"))}
             onPapel={(papel) => {
               partida.mudarPapel(lado, selecionada, papel);
               onMudou();

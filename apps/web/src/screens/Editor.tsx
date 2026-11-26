@@ -9,6 +9,7 @@ import { ListaClubes } from "../editor/ListaClubes";
 import { Transferir } from "../editor/Transferir";
 import { Botao, Dialogo } from "../editor/ui";
 import { useEditor } from "../editor/useEditor";
+import { t } from "@newbras/textos";
 
 type Janela =
   | { tipo: "jogador"; jogador: Jogador; novo: boolean }
@@ -38,19 +39,19 @@ export function Editor({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-6">
         <div className="max-w-md rounded-md border-2 border-placar-borda bg-placar p-8 text-center">
-          <h1 className="font-placar text-5xl font-extrabold">Editor de equipes</h1>
+          <h1 className="font-placar text-5xl font-extrabold">{t("Editor de equipes")}</h1>
           {ed.carga.status === "erro" ? (
             <>
               <p className="mt-4 text-[#ff8a7e]">
-                Não foi possível montar o banco: {ed.carga.mensagem}
+                {t("Não foi possível montar o banco: {mensagem}", { mensagem: ed.carga.mensagem })}
               </p>
               <Botao variante="primario" className="mt-6" onClick={onBack}>
-                Voltar ao menu
+                {t("Voltar ao menu")}
               </Botao>
             </>
           ) : (
             <p className="mt-4 text-suave" role="status">
-              Montando o banco mundial: 3.711 times e 95 mil jogadores…
+              {t("Montando o banco mundial: 3.711 times e 95 mil jogadores…")}
             </p>
           )}
         </div>
@@ -75,7 +76,7 @@ export function Editor({ onBack }: { onBack: () => void }) {
       .sort((a, b) => a - b);
     return {
       id: "novo-jogador",
-      nome: "Novo Jogador",
+      nome: t("Novo Jogador"),
       nascimento: `${ano - 22}-01-15`,
       nacionalidade: c.pais,
       posicao: "M",
@@ -102,12 +103,12 @@ export function Editor({ onBack }: { onBack: () => void }) {
 
   const novoClube = (): Clube => ({
     id: "novo-time",
-    nome: "Novo Time",
-    nomeCurto: "Novo Time",
+    nome: t("Novo Time"),
+    nomeCurto: t("Novo Time"),
     abreviacao: "NOV",
     pais,
-    cidade: "Cidade",
-    estadio: { nome: "Estádio Municipal", capacidade: 10_000 },
+    cidade: t("Cidade"),
+    estadio: { nome: t("Estádio Municipal"), capacidade: 10_000 },
     cores: { primaria: "#1F5FAF", secundaria: "#FFFFFF" },
     reputacao: 1,
     nivel: 40,
@@ -118,17 +119,20 @@ export function Editor({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex min-h-dvh flex-col gap-3 p-3 sm:p-4 lg:h-dvh">
       <header className="flex flex-wrap items-center gap-3 rounded-md border-2 border-placar-borda bg-placar px-4 py-2.5">
-        <h1 className="font-placar text-3xl font-extrabold text-cal">Editor de equipes</h1>
+        <h1 className="font-placar text-3xl font-extrabold text-cal">{t("Editor de equipes")}</h1>
         <span className="text-sm text-suave">
           {ed.edicoes
-            ? `${ed.edicoes} ${ed.edicoes === 1 ? "mudança salva" : "mudanças salvas"} neste navegador`
-            : "Banco oficial, sem mudanças"}
+            ? t("{edicoes} {edicoes2} neste navegador", {
+                edicoes: ed.edicoes,
+                edicoes2: ed.edicoes === 1 ? t("mudança salva") : t("mudanças salvas"),
+              })
+            : t("Banco oficial, sem mudanças")}
         </span>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Botao onClick={() => setJanela({ tipo: "novo-clube" })}>Adicionar time</Botao>
-          <Botao onClick={() => setJanela({ tipo: "arquivos" })}>Planilhas e patches</Botao>
+          <Botao onClick={() => setJanela({ tipo: "novo-clube" })}>{t("Adicionar time")}</Botao>
+          <Botao onClick={() => setJanela({ tipo: "arquivos" })}>{t("Planilhas e patches")}</Botao>
           <Botao variante="primario" onClick={onBack}>
-            Voltar ao menu
+            {t("Voltar ao menu")}
           </Botao>
         </div>
       </header>
@@ -179,7 +183,7 @@ export function Editor({ onBack }: { onBack: () => void }) {
           />
         ) : (
           <section className="flex items-center justify-center rounded-md border-2 border-placar-borda bg-placar p-8 text-suave">
-            Este país não tem times. Adicione um.
+            {t("Este país não tem times. Adicione um.")}
           </section>
         )}
       </div>
@@ -217,13 +221,14 @@ export function Editor({ onBack }: { onBack: () => void }) {
       )}
 
       {janela?.tipo === "deletar-jogador" && (
-        <Dialogo titulo="Deletar jogador" onFechar={fechar} largura="max-w-md">
+        <Dialogo titulo={t("Deletar jogador")} onFechar={fechar} largura="max-w-md">
           <p>
-            Deletar {janela.jogador.nome} do banco? Para só tirar do time, use Transferir e deixe
-            livre.
+            {t("Deletar {nome} do banco? Para só tirar do time, use Transferir e deixe livre.", {
+              nome: janela.jogador.nome,
+            })}
           </p>
           <div className="mt-5 flex justify-end gap-2">
-            <Botao onClick={fechar}>Cancelar</Botao>
+            <Botao onClick={fechar}>{t("Cancelar")}</Botao>
             <Botao
               variante="perigo"
               data-foco
@@ -232,20 +237,20 @@ export function Editor({ onBack }: { onBack: () => void }) {
                 fechar();
               }}
             >
-              Deletar
+              {t("Deletar")}
             </Botao>
           </div>
         </Dialogo>
       )}
 
       {janela?.tipo === "novo-clube" && (
-        <Dialogo titulo="Novo time" onFechar={fechar} largura="max-w-3xl">
+        <Dialogo titulo={t("Novo time")} onFechar={fechar} largura="max-w-3xl">
           <FormClube
             clube={novoClube()}
             ligaAtual={undefined}
             banco={banco}
             indices={indices}
-            rotuloSalvar="Criar time"
+            rotuloSalvar={t("Criar time")}
             onCancelar={fechar}
             onSalvar={(c, liga) => {
               const id = novoId(c.pais.toLowerCase(), c.nome, (x) => indices.clubePorId.has(x));

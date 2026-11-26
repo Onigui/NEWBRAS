@@ -15,6 +15,7 @@ import { EditorVisual } from "./EditorVisual";
 import { FormClube, NOME_REPUTACAO } from "./FormClube";
 import type { Indices } from "./indices";
 import { Botao } from "./ui";
+import { t, locale } from "@newbras/textos";
 
 type Aba = "elenco" | "base" | "dados" | "visual";
 
@@ -59,14 +60,32 @@ export function FichaClube(props: Props) {
             {clube.nome}
           </h2>
           <p className="mt-1.5 text-sm text-suave">
-            {liga?.nome ?? "Sem liga nacional"}, {nomePais}. Reputação{" "}
-            {NOME_REPUTACAO[clube.reputacao - 1]?.toLowerCase()}, estádio {clube.estadio.nome} (
-            {clube.estadio.capacidade.toLocaleString("pt-BR")} lugares).
+            {t(
+              "{nome}, {nomePais}. Reputação {nomeReputacao}, estádio {nome2} ({capacidade} lugares).",
+              {
+                nome: liga?.nome ?? t("Sem liga nacional"),
+                nomePais,
+                nomeReputacao: NOME_REPUTACAO[clube.reputacao - 1]?.toLowerCase(),
+                nome2: clube.estadio.nome,
+                capacidade: clube.estadio.capacidade.toLocaleString(locale()),
+              },
+            )}
           </p>
           <p className={`mt-1 text-sm font-bold ${valido ? "text-[#9fd39a]" : "text-[#ff8a7e]"}`}>
             {valido
-              ? `Time válido: ${profissionais.length} de ${ELENCO_MAXIMO} profissionais, força média ${media}${base.length ? `; ${base.length} na base` : ""}.`
-              : `Time inválido: precisa de pelo menos 1 goleiro e 11 jogadores de linha (tem ${goleiros} e ${elenco.length - goleiros}).`}
+              ? t(
+                  "Time válido: {profissionais} de {elencoMaximo} profissionais, força média {media}{base}.",
+                  {
+                    profissionais: profissionais.length,
+                    elencoMaximo: ELENCO_MAXIMO,
+                    media,
+                    base: base.length ? t("; {base} na base", { base: base.length }) : "",
+                  },
+                )
+              : t(
+                  "Time inválido: precisa de pelo menos 1 goleiro e 11 jogadores de linha (tem {goleiros} e {elenco}).",
+                  { goleiros, elenco: elenco.length - goleiros },
+                )}
           </p>
         </div>
         <div className="hidden gap-1 sm:flex">
@@ -75,19 +94,24 @@ export function FichaClube(props: Props) {
               key={i}
               camisa={c}
               tamanho={44}
-              rotulo={["Camisa titular", "Camisa reserva", "Terceira camisa"][i] ?? "Camisa"}
+              rotulo={
+                [t("Camisa titular"), t("Camisa reserva"), t("Terceira camisa")][i] ?? t("Camisa")
+              }
             />
           ))}
         </div>
       </header>
 
-      <nav className="flex gap-1 border-b border-placar-borda px-4" aria-label="Partes do time">
+      <nav
+        className="flex gap-1 border-b border-placar-borda px-4"
+        aria-label={t("Partes do time")}
+      >
         {(
           [
-            ["elenco", `Elenco (${profissionais.length})`],
-            ["base", `Base (${base.length})`],
-            ["dados", "Dados do time"],
-            ["visual", "Escudo e camisas"],
+            ["elenco", t("Elenco ({profissionais})", { profissionais: profissionais.length })],
+            ["base", t("Base ({base})", { base: base.length })],
+            ["dados", t("Dados do time")],
+            ["visual", t("Escudo e camisas")],
           ] as const
         ).map(([id, nome]) => (
           <button
@@ -108,11 +132,13 @@ export function FichaClube(props: Props) {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-suave">
                 {aba === "base"
-                  ? "Jogadores da categoria de base: não contam no limite do elenco até serem promovidos."
-                  : "Clique num jogador para editar. Botão direito transfere."}
+                  ? t(
+                      "Jogadores da categoria de base: não contam no limite do elenco até serem promovidos.",
+                    )
+                  : t("Clique num jogador para editar. Botão direito transfere.")}
               </p>
               <Botao variante="primario" onClick={props.onNovoJogador}>
-                Adicionar jogador
+                {t("Adicionar jogador")}
               </Botao>
             </div>
             <div className="overflow-x-auto">
@@ -120,13 +146,13 @@ export function FichaClube(props: Props) {
                 <thead className="text-left text-xs text-suave">
                   <tr>
                     <th className="w-10 py-1.5 pr-2 text-right font-bold">Nº</th>
-                    <th className="py-1.5 font-bold">Nome</th>
-                    <th className="py-1.5 font-bold">Posição</th>
-                    <th className="py-1.5 text-right font-bold">Idade</th>
-                    <th className="py-1.5 text-right font-bold">Força</th>
-                    <th className="py-1.5 text-right font-bold">Pot.</th>
-                    <th className="py-1.5 pl-4 font-bold">Características</th>
-                    <th className="py-1.5 font-bold">Nac.</th>
+                    <th className="py-1.5 font-bold">{t("Nome")}</th>
+                    <th className="py-1.5 font-bold">{t("Posição")}</th>
+                    <th className="py-1.5 text-right font-bold">{t("Idade")}</th>
+                    <th className="py-1.5 text-right font-bold">{t("Força")}</th>
+                    <th className="py-1.5 text-right font-bold">{t("Pot.")}</th>
+                    <th className="py-1.5 pl-4 font-bold">{t("Características")}</th>
+                    <th className="py-1.5 font-bold">{t("Nac.")}</th>
                     <th className="py-1.5" />
                   </tr>
                 </thead>
@@ -147,17 +173,19 @@ export function FichaClube(props: Props) {
                       <td className="py-1.5">
                         <span className="font-bold">{j.nome}</span>
                         {j.estrela && (
-                          <span className="ml-1.5 text-canarinho" title="Estrela">
+                          <span className="ml-1.5 text-canarinho" title={t("Estrela")}>
                             ★
                           </span>
                         )}
-                        {j.base && <span className="ml-1.5 text-xs text-suave">base</span>}
+                        {j.base && <span className="ml-1.5 text-xs text-suave">{t("base")}</span>}
                         {j.aConferir.length > 0 && (
                           <span
                             className="ml-1.5 text-xs text-canarinho"
-                            title={`A conferir: ${j.aConferir.join(", ")}`}
+                            title={t("A conferir: {aConferir}", {
+                              aConferir: j.aConferir.join(", "),
+                            })}
                           >
-                            a conferir
+                            {t("a conferir")}
                           </span>
                         )}
                       </td>
@@ -165,9 +193,9 @@ export function FichaClube(props: Props) {
                         {NOME_POSICAO[j.posicao]}
                         {j.posicao === "L"
                           ? j.lado === "D"
-                            ? " direito"
+                            ? t(" direito")
                             : j.lado === "E"
-                              ? " esquerdo"
+                              ? t(" esquerdo")
                               : ""
                           : ""}
                       </td>
@@ -189,7 +217,7 @@ export function FichaClube(props: Props) {
                             props.onTransferir(j);
                           }}
                         >
-                          Transferir
+                          {t("Transferir")}
                         </button>
                         <button
                           type="button"
@@ -199,7 +227,7 @@ export function FichaClube(props: Props) {
                             props.onRemoverJogador(j);
                           }}
                         >
-                          Deletar
+                          {t("Deletar")}
                         </button>
                       </td>
                     </tr>
@@ -208,7 +236,7 @@ export function FichaClube(props: Props) {
               </table>
               {!elenco.length && (
                 <p className="py-6 text-center text-suave">
-                  Time sem jogadores. Adicione pelo botão acima ou importe uma planilha.
+                  {t("Time sem jogadores. Adicione pelo botão acima ou importe uma planilha.")}
                 </p>
               )}
             </div>
@@ -223,24 +251,26 @@ export function FichaClube(props: Props) {
               ligaAtual={liga?.id}
               banco={banco}
               indices={indices}
-              rotuloSalvar="Salvar dados do time"
+              rotuloSalvar={t("Salvar dados do time")}
               onSalvar={props.onSalvarClube}
             />
             <div className="mt-8 border-t border-placar-borda pt-4">
               {!confirmarRemocao ? (
                 <Botao variante="perigo" onClick={() => setConfirmarRemocao(true)}>
-                  Deletar time
+                  {t("Deletar time")}
                 </Botao>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span>
-                    Deletar {clube.nome}? Os {elenco.length} jogadores ficam livres e o time sai das
-                    competições. Dá para recuperar descartando as edições.
+                    {t(
+                      "Deletar {nome}? Os {elenco} jogadores ficam livres e o time sai das competições. Dá para recuperar descartando as edições.",
+                      { nome: clube.nome, elenco: elenco.length },
+                    )}
                   </span>
                   <Botao variante="perigo" onClick={props.onRemoverClube}>
-                    Deletar
+                    {t("Deletar")}
                   </Botao>
-                  <Botao onClick={() => setConfirmarRemocao(false)}>Cancelar</Botao>
+                  <Botao onClick={() => setConfirmarRemocao(false)}>{t("Cancelar")}</Botao>
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 /** Índices para o editor achar rápido os elencos, as ligas e os resultados de busca. */
 import { elencoValido, type Banco, type Clube, type Competicao, type Jogador } from "@newbras/data";
+import { t } from "@newbras/textos";
 
 export interface Indices {
   clubePorId: Map<string, Clube>;
@@ -111,10 +112,11 @@ export function gruposDoPais(banco: Banco, indices: Indices, pais: string): Grup
   for (const [sigla, lista] of estados)
     grupos.push({
       id: `estado-${sigla}`,
-      nome: `Só estadual: ${nomeEstado.get(sigla)}`,
+      nome: t("Só estadual: {get}", { get: nomeEstado.get(sigla) }),
       clubes: lista,
     });
-  if (semLiga.length) grupos.push({ id: "sem-liga", nome: "Sem liga nacional", clubes: semLiga });
+  if (semLiga.length)
+    grupos.push({ id: "sem-liga", nome: t("Sem liga nacional"), clubes: semLiga });
   return grupos.filter((g) => g.clubes.length);
 }
 
@@ -132,24 +134,24 @@ export interface ResultadoBusca {
 
 /** Procura times e jogadores pelo nome em todo o banco. */
 export function procurar(banco: Banco, termo: string, limite = 60): ResultadoBusca {
-  const t = normalizar(termo);
-  if (t.length < 2) return { clubes: [], jogadores: [], mais: false };
+  const alvo = normalizar(termo);
+  if (alvo.length < 2) return { clubes: [], jogadores: [], mais: false };
   const clubes = banco.clubes
     .filter(
       (c) =>
-        normalizar(c.nome).includes(t) ||
-        normalizar(c.nomeCurto).includes(t) ||
-        c.abreviacao.toLowerCase() === t,
+        normalizar(c.nome).includes(alvo) ||
+        normalizar(c.nomeCurto).includes(alvo) ||
+        c.abreviacao.toLowerCase() === alvo,
     )
     .sort(ordemNome)
     .slice(0, limite);
   const jogadores: Jogador[] = [];
   let mais = false;
-  if (t.length >= 3) {
+  if (alvo.length >= 3) {
     for (const j of banco.jogadores) {
       if (
-        normalizar(j.nome).includes(t) ||
-        (j.nomeCompleto && normalizar(j.nomeCompleto).includes(t))
+        normalizar(j.nome).includes(alvo) ||
+        (j.nomeCompleto && normalizar(j.nomeCompleto).includes(alvo))
       ) {
         if (jogadores.length >= limite) {
           mais = true;

@@ -19,8 +19,9 @@ import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { useEditor } from "../editor/useEditor";
 import { novoId } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
+import { t, locale } from "@newbras/textos";
 
-const ESTRELAS = ["", "Municipal", "Estadual", "Nacional", "Continental", "Mundial"];
+const ESTRELAS = ["", t("Municipal"), t("Estadual"), t("Nacional"), t("Continental"), t("Mundial")];
 
 export function NovoJogo({
   onBack,
@@ -70,7 +71,7 @@ export function NovoJogo({
   );
 
   if (!banco || !indices)
-    return <TelaDeEspera titulo="Novo jogo" carga={ed.carga} onBack={onBack} />;
+    return <TelaDeEspera titulo={t("Novo jogo")} carga={ed.carga} onBack={onBack} />;
 
   const clube = clubeId ? indices.clubePorId.get(clubeId) : undefined;
   const paisDoClube = clube ? banco.paises.find((p) => p.codigo === clube.pais) : undefined;
@@ -96,7 +97,7 @@ export function NovoJogo({
         novaCarreira(mundoDoBanco(banco), {
           id,
           semente: id,
-          tecnico: tecnico.trim() || "Técnico",
+          tecnico: tecnico.trim() || t("Técnico"),
           clube: clube.id,
           referencia: ed.dataReferencia,
           versaoBanco: banco.meta.versao,
@@ -115,31 +116,33 @@ export function NovoJogo({
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-4 p-4 lg:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-placar-borda bg-placar px-5 py-3">
         <div>
-          <h1 className="font-placar text-4xl font-extrabold">Novo jogo</h1>
+          <h1 className="font-placar text-4xl font-extrabold">{t("Novo jogo")}</h1>
           <p className="text-sm text-suave">
-            Escolha seu nome e o clube. A carreira começa na pré-temporada do país do clube,{" "}
-            {DIAS_PRE_TEMPORADA} dias antes da estreia.
+            {t(
+              "Escolha seu nome e o clube. A carreira começa na pré-temporada do país do clube, {diasPreTemporada} dias antes da estreia.",
+              { diasPreTemporada: DIAS_PRE_TEMPORADA },
+            )}
           </p>
         </div>
-        <Botao onClick={onBack}>Voltar ao menu</Botao>
+        <Botao onClick={onBack}>{t("Voltar ao menu")}</Botao>
       </header>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="flex flex-col gap-3 rounded-md border-2 border-placar-borda bg-placar p-4">
-          <Campo rotulo="Seu nome (técnico)">
+          <Campo rotulo={t("Seu nome (técnico)")}>
             <input
               className={estiloCampo}
               value={tecnico}
               maxLength={40}
-              placeholder="Ex.: Guilherme"
+              placeholder={t("Ex.: Guilherme")}
               onChange={(e) => setTecnico(e.target.value)}
             />
           </Campo>
-          <Campo rotulo="Procurar clube">
+          <Campo rotulo={t("Procurar clube")}>
             <input
               className={estiloCampo}
               value={busca}
-              placeholder="Ex.: Corinthians, Barcelona, Botafogo-SP"
+              placeholder={t("Ex.: Corinthians, Barcelona, Botafogo-SP")}
               onChange={(e) => setBusca(e.target.value)}
             />
           </Campo>
@@ -147,7 +150,7 @@ export function NovoJogo({
             <ListaClubes clubes={achados} onEscolher={escolher} selecionado={clubeId} />
           ) : (
             <>
-              <Campo rotulo="País">
+              <Campo rotulo={t("País")}>
                 <select
                   className={estiloCampo}
                   value={pais}
@@ -164,7 +167,7 @@ export function NovoJogo({
                 </select>
               </Campo>
               {grupos.length > 1 && (
-                <Campo rotulo="Liga">
+                <Campo rotulo={t("Liga")}>
                   <select
                     className={estiloCampo}
                     value={ligaAtual}
@@ -176,7 +179,9 @@ export function NovoJogo({
                       </option>
                     ))}
                     <option value="">
-                      Todas as ligas ({grupos.reduce((s, g) => s + g.clubes.length, 0)})
+                      {t("Todas as ligas ({grupos})", {
+                        grupos: grupos.reduce((s, g) => s + g.clubes.length, 0),
+                      })}
                     </option>
                   </select>
                 </Campo>
@@ -194,23 +199,33 @@ export function NovoJogo({
                 <div className="min-w-0">
                   <p className="truncate font-placar text-3xl font-bold">{clube.nome}</p>
                   <p className="text-sm text-suave">
-                    {paisDoClube.nome}, reputação {ESTRELAS[clube.reputacao]?.toLowerCase()},{" "}
-                    {elenco.length} jogadores, média dos 11 melhores {media}
+                    {t(
+                      "{nome}, reputação {estrelas}, {elenco} jogadores, média dos 11 melhores {media}",
+                      {
+                        nome: paisDoClube.nome,
+                        estrelas: ESTRELAS[clube.reputacao]?.toLowerCase(),
+                        elenco: elenco.length,
+                        media,
+                      },
+                    )}
                   </p>
                 </div>
               </div>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                <dt className="text-suave">Começa em</dt>
+                <dt className="text-suave">{t("Começa em")}</dt>
                 <dd>{dataPorExtenso(inicio)}</dd>
-                <dt className="text-suave">Temporada</dt>
+                <dt className="text-suave">{t("Temporada")}</dt>
                 <dd>{nomeTemporada(paisDoClube, inicio)}</dd>
-                <dt className="text-suave">Estádio</dt>
+                <dt className="text-suave">{t("Estádio")}</dt>
                 <dd>
-                  {clube.estadio.nome} ({clube.estadio.capacidade.toLocaleString("pt-BR")} lugares)
+                  {t("{nome} ({capacidade} lugares)", {
+                    nome: clube.estadio.nome,
+                    capacidade: clube.estadio.capacidade.toLocaleString(locale()),
+                  })}
                 </dd>
               </dl>
               <div>
-                <p className="mb-1 text-sm font-bold">Destaques do elenco</p>
+                <p className="mb-1 text-sm font-bold">{t("Destaques do elenco")}</p>
                 <ul className="text-sm">
                   {craques.map((j) => (
                     <li key={j.id} className="flex justify-between border-b border-white/5 py-0.5">
@@ -227,18 +242,22 @@ export function NovoJogo({
               </div>
               {ed.edicoes > 0 && (
                 <p className="text-xs text-suave">
-                  As {ed.edicoes} edições do Editor de Equipes entram nesta carreira (e ficam
-                  guardadas nela).
+                  {t(
+                    "As {edicoes} edições do Editor de Equipes entram nesta carreira (e ficam guardadas nela).",
+                    { edicoes: ed.edicoes },
+                  )}
                 </p>
               )}
               <Botao variante="primario" className="mt-auto py-2 text-base" onClick={comecar}>
                 {preparando
-                  ? "Preparando as ligas do mundo inteiro…"
-                  : `Começar a carreira no ${clube.nomeCurto}`}
+                  ? t("Preparando as ligas do mundo inteiro…")
+                  : t("Começar a carreira no {nomeCurto}", { nomeCurto: clube.nomeCurto })}
               </Botao>
             </>
           ) : (
-            <p className="m-auto text-center text-suave">Escolha um clube na lista ao lado.</p>
+            <p className="m-auto text-center text-suave">
+              {t("Escolha um clube na lista ao lado.")}
+            </p>
           )}
         </section>
       </div>
@@ -267,7 +286,9 @@ function ListaClubes({
           >
             <Escudo clube={c} tamanho={22} />
             <span className="min-w-0 flex-1 truncate">{c.nome}</span>
-            <span className="text-xs text-suave">nível {c.nivel}</span>
+            <span className="text-xs text-suave">
+              {t("nível")} {c.nivel}
+            </span>
           </button>
         </li>
       ))}

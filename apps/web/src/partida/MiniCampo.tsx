@@ -6,6 +6,7 @@
 import type { Evento } from "@newbras/engine";
 import { MarcacoesCampo } from "../components/Pitch";
 import type { Instantaneo } from "./usePartidaAoVivo";
+import { t } from "@newbras/textos";
 
 export interface CorTime {
   fundo: string;
@@ -42,7 +43,7 @@ export function MiniCampo({
       viewBox="-6 -6 117 80"
       className="w-full rounded-md"
       role="img"
-      aria-label="Mini-campo da partida"
+      aria-label={t("Mini-campo da partida")}
     >
       <MarcacoesCampo />
       {Array.from({ length: 22 }, (_, i) => {

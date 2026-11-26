@@ -23,10 +23,11 @@ import {
 } from "@newbras/data";
 import { idade, nascimentoParaIdade } from "./datas";
 import { Botao, Campo, Dialogo, ListaProblemas, estiloCampo } from "./ui";
+import { t } from "@newbras/textos";
 
 const estiloAtributo = `${estiloCampo.replace("w-full", "w-[4.5rem]")} shrink-0 py-1 text-right`;
 
-const NOME_LADO = { D: "Direito", E: "Esquerdo", C: "Centro" } as const;
+const NOME_LADO = { D: t("Direito"), E: t("Esquerdo"), C: t("Centro") } as const;
 
 interface Props {
   jogador: JogadorT;
@@ -114,7 +115,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
 
   return (
     <Dialogo
-      titulo={novo ? "Novo jogador" : `Editar ${jogador.nome}`}
+      titulo={novo ? t("Novo jogador") : t("Editar {nome}", { nome: jogador.nome })}
       onFechar={onFechar}
       largura="max-w-2xl"
     >
@@ -123,7 +124,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
         onSubmit={salvar}
         className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4"
       >
-        <Campo rotulo="Nome de camisa" className="col-span-2">
+        <Campo rotulo={t("Nome de camisa")} className="col-span-2">
           <input
             className={estiloCampo}
             value={j.nome}
@@ -132,7 +133,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             onChange={(e) => mudar({ nome: e.target.value })}
           />
         </Campo>
-        <Campo rotulo="Nome completo" className="col-span-2">
+        <Campo rotulo={t("Nome completo")} className="col-span-2">
           <input
             className={estiloCampo}
             value={j.nomeCompleto ?? ""}
@@ -144,7 +145,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
           />
         </Campo>
 
-        <Campo rotulo="Posição">
+        <Campo rotulo={t("Posição")}>
           <select
             className={estiloCampo}
             value={j.posicao}
@@ -157,7 +158,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             ))}
           </select>
         </Campo>
-        <Campo rotulo="Lado">
+        <Campo rotulo={t("Lado")}>
           <select
             className={estiloCampo}
             value={j.lado}
@@ -172,9 +173,9 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
         </Campo>
         <fieldset className="col-span-full flex flex-col gap-1 text-sm">
           <legend className="mb-1">
-            Posições em campo{" "}
+            {t("Posições em campo")}
             <span className="text-xs text-suave">
-              (onde ele joga de verdade; a primeira é a principal, até 5)
+              {t("(onde ele joga de verdade; a primeira é a principal, até 5)")}
             </span>
           </legend>
           <div className="flex flex-wrap gap-1">
@@ -196,7 +197,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             })}
           </div>
         </fieldset>
-        <Campo rotulo="Idade">
+        <Campo rotulo={t("Idade")}>
           <input
             className={estiloCampo}
             type="number"
@@ -215,7 +216,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             }
           />
         </Campo>
-        <Campo rotulo="Nascimento">
+        <Campo rotulo={t("Nascimento")}>
           <input
             className={estiloCampo}
             type="date"
@@ -225,14 +226,14 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
           />
         </Campo>
 
-        <Campo rotulo="Força (média dos atributos)">
+        <Campo rotulo={t("Força (média dos atributos)")}>
           <input
             className={estiloCampo}
             type="number"
             min={1}
             max={100}
             value={forcaDigitada ?? j.forca}
-            title="Mudar a força sobe ou desce todos os atributos na mesma proporção"
+            title={t("Mudar a força sobe ou desce todos os atributos na mesma proporção")}
             onChange={(e) => setForcaDigitada(e.target.value)}
             onBlur={() => {
               if (forcaDigitada !== undefined && forcaDigitada !== "") mudarForca(forcaDigitada);
@@ -246,7 +247,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             }}
           />
         </Campo>
-        <Campo rotulo="Potencial">
+        <Campo rotulo={t("Potencial")}>
           <input
             className={estiloCampo}
             type="number"
@@ -256,16 +257,16 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             onChange={(e) => mudar({ potencial: Number(e.target.value) })}
           />
         </Campo>
-        <Campo rotulo="Características" className="col-span-2">
+        <Campo rotulo={t("Características")} className="col-span-2">
           <p className="py-2 text-sm text-cal">
             {j.caracteristicas.map((c) => NOME_CARACTERISTICA[c]).join(" e ")}
-            <span className="text-suave/70"> (os atributos mais altos)</span>
+            <span className="text-suave/70"> {t("(os atributos mais altos)")}</span>
           </p>
         </Campo>
 
         <fieldset className="col-span-full rounded-lg border border-placar-borda p-3">
           <legend className="px-1 text-sm text-suave">
-            Atributos (1 a 100). Os marcados com ● pesam na força desta posição.
+            {t("Atributos (1 a 100). Os marcados com ● pesam na força desta posição.")}
           </legend>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
             {atributosDaPosicao(j.posicao).map((a) => {
@@ -300,7 +301,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
           </div>
         </fieldset>
 
-        <Campo rotulo="Nacionalidade" className="col-span-2">
+        <Campo rotulo={t("Nacionalidade")} className="col-span-2">
           <select
             className={estiloCampo}
             value={j.nacionalidade}
@@ -313,7 +314,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
             ))}
           </select>
         </Campo>
-        <Campo rotulo="Número">
+        <Campo rotulo={t("Número")}>
           <input
             className={estiloCampo}
             type="number"
@@ -335,7 +336,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
               onChange={(e) => mudar({ estrela: e.target.checked })}
               className="accent-canarinho"
             />
-            Estrela (craque)
+            {t("Estrela (craque)")}
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -344,13 +345,13 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
               onChange={(e) => mudar({ base: e.target.checked })}
               className="accent-canarinho"
             />
-            Categoria de base
+            {t("Categoria de base")}
           </label>
         </div>
 
         {j.clube && (
           <>
-            <Campo rotulo="Contrato até" className="col-span-2">
+            <Campo rotulo={t("Contrato até")} className="col-span-2">
               <input
                 className={estiloCampo}
                 type="date"
@@ -367,7 +368,7 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
                 }
               />
             </Campo>
-            <Campo rotulo="Salário mensal" className="col-span-2">
+            <Campo rotulo={t("Salário mensal")} className="col-span-2">
               <input
                 className={estiloCampo}
                 type="number"
@@ -391,14 +392,15 @@ export function FormJogador({ jogador, novo, paises, dataReferencia, onSalvar, o
           <ListaProblemas problemas={problemas} />
           {jogador.aConferir.length > 0 && (
             <p className="mt-3 text-sm text-canarinho">
-              A fonte não trouxe com precisão: {jogador.aConferir.join(", ")}. Salvar marca como
-              conferido.
+              {t("A fonte não trouxe com precisão: {aConferir}. Salvar marca como conferido.", {
+                aConferir: jogador.aConferir.join(", "),
+              })}
             </p>
           )}
           <div className="mt-5 flex justify-end gap-2">
-            <Botao onClick={onFechar}>Cancelar</Botao>
+            <Botao onClick={onFechar}>{t("Cancelar")}</Botao>
             <Botao type="submit" variante="primario">
-              Salvar jogador
+              {t("Salvar jogador")}
             </Botao>
           </div>
         </div>

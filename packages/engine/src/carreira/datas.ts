@@ -2,6 +2,7 @@
  * Datas do jogo no formato AAAA-MM-DD. A conta é feita em dias corridos (UTC), sem relógio do
  * computador: o calendário da carreira só anda quando o técnico avança.
  */
+import { locale } from "@newbras/textos";
 
 const MS_DIA = 86_400_000;
 
@@ -58,8 +59,24 @@ export const NOMES_MES = [
   "dezembro",
 ] as const;
 
+/** Formatação de datas nos outros idiomas (o português segue as regras abaixo, fixas). */
+function formatarIntl(data: string, opcoes: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat(locale(), { ...opcoes, timeZone: "UTC" }).format(
+    new Date(`${data}T12:00:00Z`),
+  );
+}
+
+const emPortugues = () => locale() === "pt-BR";
+
 /** "quarta-feira, 25 de novembro de 2026". */
 export function dataPorExtenso(data: string, comDiaDaSemana = true): string {
+  if (!emPortugues())
+    return formatarIntl(data, {
+      ...(comDiaDaSemana ? { weekday: "long" } : {}),
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   const [a, m, d] = partes(data);
   const texto = `${d} de ${NOMES_MES[m - 1]} de ${a}`;
   return comDiaDaSemana ? `${NOMES_DIA_SEMANA[diaDaSemana(data)]}, ${texto}` : texto;
@@ -67,8 +84,28 @@ export function dataPorExtenso(data: string, comDiaDaSemana = true): string {
 
 /** "25/11/2026". */
 export function dataCurta(data: string): string {
+  if (!emPortugues())
+    return formatarIntl(data, { day: "2-digit", month: "2-digit", year: "numeric" });
   const [a, m, d] = partes(data);
   return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${a}`;
+}
+
+/** "Novembro de 2026" (título do calendário). */
+export function mesEAno(ano: number, mes: number): string {
+  const data = montarData(ano, mes, 1);
+  const texto = emPortugues()
+    ? `${NOMES_MES[mes - 1]} de ${ano}`
+    : formatarIntl(data, { month: "long", year: "numeric" });
+  return texto.replace(/^./, (l) => l.toUpperCase());
+}
+
+/** Abreviações dos dias da semana, de domingo a sábado. */
+export function diasDaSemanaCurtos(): string[] {
+  if (emPortugues()) return ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  // 2026-11-01 foi um domingo.
+  return Array.from({ length: 7 }, (_, i) =>
+    formatarIntl(`2026-11-0${i + 1}`, { weekday: "short" }),
+  );
 }
 
 /** Dias do mês (28 a 31). */

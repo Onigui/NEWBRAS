@@ -18,15 +18,16 @@ import {
 import { Escudo } from "../components/Escudo";
 import { Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
+import { t } from "@newbras/textos";
 
 /** Nome das confederações no seletor de países (as continentais de cada uma). */
 const NOME_CONFEDERACAO: Record<string, string> = {
-  CONMEBOL: "América do Sul (CONMEBOL)",
-  UEFA: "Europa (UEFA)",
-  CONCACAF: "Américas do Norte e Central (CONCACAF)",
-  AFC: "Ásia (AFC)",
-  CAF: "África (CAF)",
-  OFC: "Oceania (OFC)",
+  CONMEBOL: t("América do Sul (CONMEBOL)"),
+  UEFA: t("Europa (UEFA)"),
+  CONCACAF: t("Américas do Norte e Central (CONCACAF)"),
+  AFC: t("Ásia (AFC)"),
+  CAF: t("África (CAF)"),
+  OFC: t("Oceania (OFC)"),
 };
 
 /** Cor da zona da posição: classificação para a próxima fase; na fase única, acesso, playoff e rebaixamento. */
@@ -122,7 +123,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
           codigo: p,
           nome:
             p === CHAVE_MUNDIAL
-              ? "Mundial (FIFA)"
+              ? t("Mundial (FIFA)")
               : p.startsWith("conf:")
                 ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
                 : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
@@ -142,7 +143,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-2">
         {minhas.length > 0 && (
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Suas competições">
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t("Suas competições")}>
             {minhas.map((m) => {
               const x = mundo.competicao(m);
               return (
@@ -159,7 +160,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
             })}
           </div>
         )}
-        <Campo rotulo="País" className="ml-auto w-44">
+        <Campo rotulo={t("País")} className="ml-auto w-44">
           <select className={estiloCampo} value={pais} onChange={(ev) => setPais(ev.target.value)}>
             {paises.map((p) => (
               <option key={p.codigo} value={p.codigo}>
@@ -168,14 +169,14 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
             ))}
           </select>
         </Campo>
-        <Campo rotulo="Competição" className="w-64">
+        <Campo rotulo={t("Competição")} className="w-64">
           <select
             className={estiloCampo}
             value={doPais.some((x) => x.id === id) ? id : ""}
             onChange={(ev) => setId(ev.target.value)}
           >
             <option value="" disabled>
-              Escolha
+              {t("Escolha")}
             </option>
             {doPais.map((x) => (
               <option key={x.id} value={x.id}>
@@ -188,7 +189,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
       {comp && e ? (
         <Painel c={c} comp={comp} e={e} montado={montado} />
       ) : (
-        <p className="text-suave">Escolha uma competição.</p>
+        <p className="text-suave">{t("Escolha uma competição.")}</p>
       )}
     </div>
   );
@@ -224,8 +225,13 @@ function Painel({
         <p className="text-sm text-suave">
           {dataCurta(e.inicio)} a {dataCurta(e.fim)}.{" "}
           {e.encerrada
-            ? `Encerrada. Campeão: ${e.campeao ? nome(e.campeao) : "?"}${e.vencedorPlayoff ? `; playoff de acesso: ${nome(e.vencedorPlayoff)}` : ""}.`
-            : `Em andamento: ${comp.fases[faseAtual]?.nome ?? ""}.`}
+            ? t("Encerrada. Campeão: {campeao}{vencedorPlayoff}.", {
+                campeao: e.campeao ? nome(e.campeao) : "?",
+                vencedorPlayoff: e.vencedorPlayoff
+                  ? t("; playoff de acesso: {nome}", { nome: nome(e.vencedorPlayoff) })
+                  : "",
+              })
+            : t("Em andamento: {nome}.", { nome: comp.fases[faseAtual]?.nome ?? "" })}
         </p>
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
@@ -260,11 +266,11 @@ function Painel({
         </div>
         <div className="flex flex-col gap-4">
           <Rodadas c={c} comp={comp} e={e} nome={nome} />
-          <Lideres titulo="Artilharia" e={e} indice={0} montado={montado} />
-          <Lideres titulo="Assistências" e={e} indice={1} montado={montado} />
+          <Lideres titulo={t("Artilharia")} e={e} indice={0} montado={montado} />
+          <Lideres titulo={t("Assistências")} e={e} indice={1} montado={montado} />
           {historico.length > 0 && (
             <div>
-              <h3 className="mb-1 text-sm font-bold">Campeões anteriores</h3>
+              <h3 className="mb-1 text-sm font-bold">{t("Campeões anteriores")}</h3>
               <ul className="text-sm">
                 {historico.map((h) => (
                   <li
@@ -322,30 +328,30 @@ function Tabela({
         <thead className="text-xs text-suave">
           <tr className="border-b border-placar-borda">
             <th className="w-8 py-1 text-right">#</th>
-            <th className="py-1 pl-2 text-left">Clube</th>
-            <th className="py-1 text-right" title="Pontos">
+            <th className="py-1 pl-2 text-left">{t("Clube")}</th>
+            <th className="py-1 text-right" title={t("Pontos")}>
               P
             </th>
-            <th className="py-1 text-right" title="Jogos">
+            <th className="py-1 text-right" title={t("Jogos")}>
               J
             </th>
-            <th className="py-1 text-right" title="Vitórias">
+            <th className="py-1 text-right" title={t("Vitórias")}>
               V
             </th>
-            <th className="py-1 text-right" title="Empates">
+            <th className="py-1 text-right" title={t("Empates")}>
               E
             </th>
-            <th className="py-1 text-right" title="Derrotas">
+            <th className="py-1 text-right" title={t("Derrotas")}>
               D
             </th>
-            <th className="py-1 text-right" title="Gols pró">
-              GP
+            <th className="py-1 text-right" title={t("Gols pró")}>
+              {t("GP")}
             </th>
-            <th className="py-1 text-right" title="Gols contra">
-              GC
+            <th className="py-1 text-right" title={t("Gols contra")}>
+              {t("GC")}
             </th>
-            <th className="py-1 pr-1 text-right" title="Saldo">
-              SG
+            <th className="py-1 pr-1 text-right" title={t("Saldo")}>
+              {t("SG")}
             </th>
           </tr>
         </thead>
@@ -386,7 +392,7 @@ function Tabela({
       </table>
       {n > 0 && fase === 0 && grupos === 1 && comp.movimentos.length > 0 && (
         <p className="mt-1 text-xs text-suave">
-          Verde: acesso ou classificação. Azul: playoff. Vermelho: rebaixamento.
+          {t("Verde: acesso ou classificação. Azul: playoff. Vermelho: rebaixamento.")}
         </p>
       )}
     </div>
@@ -425,7 +431,7 @@ function MataMata({
                   if (!p.b)
                     return (
                       <li key={ci} className="py-0.5 text-suave">
-                        {nome(p.a)} passa direto
+                        {t("{nome} passa direto", { nome: nome(p.a) })}
                       </li>
                     );
                   const jogos = e.jogos.filter(
@@ -434,8 +440,8 @@ function MataMata({
                   const placares = jogos
                     .map((j) =>
                       j.placar
-                        ? `${j.placar[0]}x${j.placar[1]}${j.penaltis ? ` (${j.penaltis[0]}x${j.penaltis[1]} pên.)` : ""}`
-                        : "a jogar",
+                        ? `${j.placar[0]}x${j.placar[1]}${j.penaltis ? t(" ({penaltis}x{penaltis2} pên.)", { penaltis: j.penaltis[0], penaltis2: j.penaltis[1] }) : ""}`
+                        : t("a jogar"),
                     )
                     .join(", ");
                   const meu = p.a === c.clube || p.b === c.clube;
@@ -496,12 +502,12 @@ function Rodadas({
           className="rounded px-2 hover:bg-white/10 disabled:opacity-30"
           disabled={i <= 0}
           onClick={() => setEscolhida(rodadas[i - 1] ?? r)}
-          aria-label="Rodada anterior"
+          aria-label={t("Rodada anterior")}
         >
           ◀
         </button>
         <h3 className="flex-1 text-center text-sm font-bold">
-          {jogos[0] ? nomeDaRodada(comp, e, jogos[0]) : "Rodada"}{" "}
+          {jogos[0] ? nomeDaRodada(comp, e, jogos[0]) : t("Rodada")}{" "}
           <span className="font-normal text-suave">{e.datas[r] ? dataCurta(e.datas[r]) : ""}</span>
         </h3>
         <button
@@ -509,7 +515,7 @@ function Rodadas({
           className="rounded px-2 hover:bg-white/10 disabled:opacity-30"
           disabled={i >= rodadas.length - 1}
           onClick={() => setEscolhida(rodadas[i + 1] ?? r)}
-          aria-label="Próxima rodada"
+          aria-label={t("Próxima rodada")}
         >
           ▶
         </button>

@@ -15,6 +15,7 @@
     "@newbras/banco": "workspace:*",
     "@newbras/data": "workspace:*",
     "@newbras/engine": "workspace:*",
+    "@newbras/textos": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

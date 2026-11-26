@@ -1,3 +1,4 @@
+import { t } from "@newbras/textos";
 export type ScreenId = "novo-jogo" | "carregar" | "amistoso" | "editor" | "opcoes";
 
 export interface MenuItem {
@@ -14,42 +15,47 @@ export interface MenuItem {
 export const MENU: readonly MenuItem[] = [
   {
     id: "novo-jogo",
-    label: "Novo jogo",
+    label: t("Novo jogo"),
     key: "n",
-    description:
+    description: t(
       "Escolha seu nome e o clube; a carreira começa na pré-temporada do país, com amistosos marcados.",
+    ),
     fase: 8,
   },
   {
     id: "carregar",
-    label: "Carregar jogo",
+    label: t("Carregar jogo"),
     key: "c",
-    description:
+    description: t(
       "Continue uma carreira salva (ela se salva sozinha; F2 salva na hora) ou abra um arquivo.",
+    ),
     fase: 8,
   },
   {
     id: "amistoso",
-    label: "Amistoso",
+    label: t("Amistoso"),
     key: "a",
-    description:
+    description: t(
       "Prévia do motor de partida: escolha dois times do banco e veja o jogo lance a lance, com estatísticas e notas.",
+    ),
     fase: 5,
   },
   {
     id: "editor",
-    label: "Editor de equipes",
+    label: t("Editor de equipes"),
     key: "e",
-    description:
+    description: t(
       "Crie e edite times e jogadores antes de começar: nome, posição, força, características, estrelas, escudos e camisas.",
+    ),
     fase: 4,
   },
   {
     id: "opcoes",
-    label: "Opções",
+    label: t("Opções"),
     key: "o",
-    description:
+    description: t(
       "Velocidade das partidas, avisos de contrato, sons e regras como o renascimento de lendas.",
+    ),
     fase: 16,
   },
 ];

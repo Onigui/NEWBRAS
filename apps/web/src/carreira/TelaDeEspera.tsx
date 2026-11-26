@@ -1,4 +1,5 @@
 import { Botao } from "../editor/ui";
+import { t } from "@newbras/textos";
 
 /** Enquanto o banco mundial é montado (ou se falhar). */
 export function TelaDeEspera({
@@ -16,12 +17,14 @@ export function TelaDeEspera({
         <h1 className="font-placar text-5xl font-extrabold">{titulo}</h1>
         <p className="mt-4 text-suave" role="status">
           {carga.status === "erro"
-            ? `Não foi possível montar o banco: ${carga.mensagem ?? "erro desconhecido"}`
-            : "Montando o banco mundial: 3.711 times e 95 mil jogadores…"}
+            ? t("Não foi possível montar o banco: {mensagem}", {
+                mensagem: carga.mensagem ?? t("erro desconhecido"),
+              })
+            : t("Montando o banco mundial: 3.711 times e 95 mil jogadores…")}
         </p>
         {carga.status === "erro" && (
           <Botao variante="primario" className="mt-6" onClick={onBack}>
-            Voltar ao menu
+            {t("Voltar ao menu")}
           </Botao>
         )}
       </div>

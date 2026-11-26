@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { Camisa as CamisaT } from "@newbras/data";
+import { t } from "@newbras/textos";
 
 const CORPO = "M30 8 L42 4 Q50 12 58 4 L70 8 L94 22 L84 40 L74 34 V94 H26 V34 L16 40 L6 22 Z";
 
@@ -23,7 +24,7 @@ export function Camisa({
       width={tamanho}
       height={tamanho}
       role="img"
-      aria-label={rotulo ?? "Camisa"}
+      aria-label={rotulo ?? t("Camisa")}
     >
       <defs>
         <clipPath id={`c${id}`}>

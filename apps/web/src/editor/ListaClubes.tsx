@@ -3,6 +3,7 @@ import { NOME_POSICAO, type Banco, type Jogador } from "@newbras/data";
 import { Escudo } from "../components/Escudo";
 import { gruposDoPais, procurar, type Indices } from "./indices";
 import { estiloCampo } from "./ui";
+import { t } from "@newbras/textos";
 
 interface Props {
   banco: Banco;
@@ -65,20 +66,20 @@ export function ListaClubes({
     <aside className="flex max-h-[60vh] min-h-0 min-w-0 flex-col rounded-md lg:max-h-none border-2 border-placar-borda bg-placar">
       <div className="flex flex-col gap-2 border-b border-placar-borda p-3">
         <label className="text-xs font-bold text-suave" htmlFor="editor-busca">
-          Procurar time ou jogador
+          {t("Procurar time ou jogador")}
         </label>
         <input
           id="editor-busca"
           type="search"
           className={estiloCampo}
-          placeholder="Ex.: Flamengo, Neymar"
+          placeholder={t("Ex.: Flamengo, Neymar")}
           value={busca}
           onChange={(e) => onBusca(e.target.value)}
         />
         {!buscando && (
           <>
             <label className="mt-1 text-xs font-bold text-suave" htmlFor="editor-pais">
-              País
+              {t("País")}
             </label>
             <select
               id="editor-pais"
@@ -93,7 +94,7 @@ export function ListaClubes({
               ))}
             </select>
             <label className="mt-1 text-xs font-bold text-suave" htmlFor="editor-liga">
-              Liga
+              {t("Liga")}
             </label>
             <select
               id="editor-liga"
@@ -101,7 +102,7 @@ export function ListaClubes({
               value={grupoEscolhido}
               onChange={(e) => setFiltro({ pais, grupo: e.target.value })}
             >
-              <option value="">Todas ({clubes.length})</option>
+              <option value="">{t("Todas ({clubes})", { clubes: clubes.length })}</option>
               {grupos.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.nome} ({g.clubes.length})
@@ -116,14 +117,16 @@ export function ListaClubes({
         {buscando ? (
           <>
             <h3 className="px-3 pt-2 pb-1 text-xs font-bold text-suave">
-              Times ({resultado.clubes.length})
+              {t("Times ({clubes})", { clubes: resultado.clubes.length })}
             </h3>
             <ul>{resultado.clubes.map((c) => linhaClube(c, true))}</ul>
             {busca.trim().length >= 3 && (
               <>
                 <h3 className="px-3 pt-3 pb-1 text-xs font-bold text-suave">
-                  Jogadores ({resultado.jogadores.length}
-                  {resultado.mais ? "+" : ""})
+                  {t("Jogadores ({jogadores}{mais})", {
+                    jogadores: resultado.jogadores.length,
+                    mais: resultado.mais ? "+" : "",
+                  })}
                 </h3>
                 <ul>
                   {resultado.jogadores.map((j) => (
@@ -146,13 +149,13 @@ export function ListaClubes({
                 </ul>
                 {resultado.mais && (
                   <p className="px-3 py-2 text-xs text-suave">
-                    Mostrando os primeiros 60. Digite mais letras para afinar.
+                    {t("Mostrando os primeiros 60. Digite mais letras para afinar.")}
                   </p>
                 )}
               </>
             )}
             {!resultado.clubes.length && !resultado.jogadores.length && (
-              <p className="px-3 py-2 text-sm text-suave">Nada encontrado.</p>
+              <p className="px-3 py-2 text-sm text-suave">{t("Nada encontrado.")}</p>
             )}
           </>
         ) : (
@@ -171,11 +174,13 @@ export function ListaClubes({
       </div>
       {!buscando && (
         <p className="border-t border-placar-borda px-3 py-2 text-xs text-suave">
-          {clubes.length} times
+          {t("{clubes} times", { clubes: clubes.length })}
           {invalidosNoPais > 0 && (
             <>
               {", "}
-              <span className="font-bold text-[#ff8a7e]">{invalidosNoPais} inválidos</span>
+              <span className="font-bold text-[#ff8a7e]">
+                {invalidosNoPais} {t("inválidos")}
+              </span>
             </>
           )}
         </p>

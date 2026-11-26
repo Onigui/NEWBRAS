@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { corDeTexto, escudoDoClube, type Clube } from "@newbras/data";
+import { t } from "@newbras/textos";
 
 /** Contorno de cada forma num quadro de 100 × 120. */
 const FORMAS = {
@@ -43,7 +44,7 @@ export function Escudo({
       height={tamanho * 1.2}
       className={className}
       role="img"
-      aria-label={`Escudo ${clube.abreviacao}`}
+      aria-label={t("Escudo {abreviacao}", { abreviacao: clube.abreviacao })}
     >
       <defs>
         <clipPath id={`e${id}`}>

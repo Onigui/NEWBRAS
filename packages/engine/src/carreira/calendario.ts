@@ -3,6 +3,7 @@
  * Os períodos do banco são anuais (MM-DD); aqui viram datas de verdade conforme o ano.
  */
 import { emDataFifa, periodoContem, type DataFifa, type Pais, type Periodo } from "@newbras/data";
+import { marcar } from "@newbras/textos";
 import { diaAbsoluto, montarData, somarDias } from "./datas";
 
 export type TipoEventoCalendario =
@@ -16,7 +17,9 @@ export type TipoEventoCalendario =
 export interface EventoCalendario {
   tipo: TipoEventoCalendario;
   data: string;
+  /** Texto em português (a chave da tradução) e as partes variáveis. */
   texto: string;
+  params?: Readonly<Record<string, string | number>>;
 }
 
 /** Dias de pré-temporada antes do primeiro jogo oficial. */
@@ -82,26 +85,35 @@ export function eventosDoDia(
     eventos.push({
       tipo: "inicio-temporada",
       data,
-      texto: `Começa a temporada ${nomeTemporada(pais, data)} no país (${pais.nome}).`,
+      ...marcar("Começa a temporada {temporada} no país ({pais}).", {
+        temporada: nomeTemporada(pais, data),
+        pais: pais.nome,
+      }),
     });
   if (termina(pais.temporada, data))
     eventos.push({
       tipo: "fim-temporada",
       data,
-      texto: `Termina a temporada ${nomeTemporada(pais, data)} (${pais.nome}).`,
+      ...marcar("Termina a temporada {temporada} ({pais}).", {
+        temporada: nomeTemporada(pais, data),
+        pais: pais.nome,
+      }),
     });
   for (const j of pais.janelas) {
     if (comeca(j, data))
       eventos.push({
         tipo: "janela-abre",
         data,
-        texto: `Abriu a janela de transferências (${pais.nome}). Fecha em ${formatar(periodoEmDatas(j, data).fim)}.`,
+        ...marcar("Abriu a janela de transferências ({pais}). Fecha em {fim}.", {
+          pais: pais.nome,
+          fim: formatar(periodoEmDatas(j, data).fim),
+        }),
       });
     if (termina(j, data))
       eventos.push({
         tipo: "janela-fecha",
         data,
-        texto: `Último dia da janela de transferências (${pais.nome}).`,
+        ...marcar("Último dia da janela de transferências ({pais}).", { pais: pais.nome }),
       });
   }
   for (const f of datasFifa) {
@@ -110,10 +122,16 @@ export function eventosDoDia(
       eventos.push({
         tipo: "data-fifa-inicio",
         data,
-        texto: `Começa a ${f.nome}: as ligas param e os convocados vão para as seleções.`,
+        ...marcar("Começa a {nome}: as ligas param e os convocados vão para as seleções.", {
+          nome: f.nome,
+        }),
       });
     if (termina(f.periodo, data))
-      eventos.push({ tipo: "data-fifa-fim", data, texto: `Termina a ${f.nome}.` });
+      eventos.push({
+        tipo: "data-fifa-fim",
+        data,
+        ...marcar("Termina a {nome}.", { nome: f.nome }),
+      });
   }
   return eventos;
 }

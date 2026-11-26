@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Panel } from "../components/Panel";
 import { findMenuItem, type ScreenId } from "../menu";
+import { t } from "@newbras/textos";
 
 interface Props {
   id: ScreenId;
@@ -26,7 +27,7 @@ export function ComingSoon({ id, onBack }: Props) {
       <h1 className="font-placar text-5xl leading-none font-extrabold text-cal">{item.label}</h1>
       <p className="mt-5 text-base leading-relaxed text-cal">{item.description}</p>
       <p className="mt-4 text-base leading-relaxed text-suave">
-        Esta tela fica pronta na fase {item.fase} do cronograma.
+        {t("Esta tela fica pronta na fase {fase} do cronograma.", { fase: item.fase })}
       </p>
       <button
         ref={back}
@@ -34,9 +35,9 @@ export function ComingSoon({ id, onBack }: Props) {
         onClick={onBack}
         className="mt-8 rounded-sm bg-canarinho px-5 py-2.5 font-placar text-2xl font-bold text-placar hover:brightness-110"
       >
-        Voltar ao menu
+        {t("Voltar ao menu")}
       </button>
-      <p className="mt-3 text-sm text-suave">Ou aperte Esc.</p>
+      <p className="mt-3 text-sm text-suave">{t("Ou aperte Esc.")}</p>
     </Panel>
   );
 }
