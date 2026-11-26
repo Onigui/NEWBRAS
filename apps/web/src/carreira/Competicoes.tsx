@@ -30,6 +30,22 @@ const NOME_CONFEDERACAO: Record<string, string> = {
   OFC: t("Oceania (OFC)"),
 };
 
+/** Seleções de cada confederação ficam juntas na lista de países ("sel-conf:UEFA"). */
+const grupoDaCompeticao = (c: Competicao) =>
+  c.categoria === "selecoes"
+    ? `sel-conf:${c.escopo.tipo === "confederacao" ? c.escopo.confederacao : "FIFA"}`
+    : chaveDaCompeticao(c);
+
+const NOME_SELECOES: Record<string, string> = {
+  CONMEBOL: t("Seleções da América do Sul"),
+  UEFA: t("Seleções da Europa"),
+  CONCACAF: t("Seleções das Américas do Norte e Central"),
+  AFC: t("Seleções da Ásia"),
+  CAF: t("Seleções da África"),
+  OFC: t("Seleções da Oceania"),
+  FIFA: t("Seleções (FIFA)"),
+};
+
 /** Cor da zona da posição: classificação para a próxima fase; na fase única, acesso, playoff e rebaixamento. */
 export function zonaDaPosicao(
   comp: Competicao,
@@ -101,7 +117,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
     () =>
       Object.values(estados)
         .map((e) => mundo.competicao(e.id))
-        .filter((x): x is Competicao => !!x && chaveDaCompeticao(x) === pais)
+        .filter((x): x is Competicao => !!x && grupoDaCompeticao(x) === pais)
         .sort(
           (a, b) =>
             ordemDoTipo(a) - ordemDoTipo(b) ||
@@ -115,7 +131,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
     () =>
       [
         ...new Set(
-          Object.values(estados).map((e) => chaveDaCompeticao(mundo.competicao(e.id)!) ?? ""),
+          Object.values(estados).map((e) => grupoDaCompeticao(mundo.competicao(e.id)!) ?? ""),
         ),
       ]
         .filter(Boolean)
@@ -124,13 +140,16 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
           nome:
             p === CHAVE_MUNDIAL
               ? t("Mundial (FIFA)")
-              : p.startsWith("conf:")
-                ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
-                : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
+              : p.startsWith("sel-conf:")
+                ? (NOME_SELECOES[p.slice(9)] ?? p.slice(9))
+                : p.startsWith("conf:")
+                  ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
+                  : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
         }))
         .sort(
           (a, b) =>
             Number(b.codigo === CHAVE_MUNDIAL) - Number(a.codigo === CHAVE_MUNDIAL) ||
+            Number(!a.codigo.startsWith("sel-conf:")) - Number(!b.codigo.startsWith("sel-conf:")) ||
             Number(!a.codigo.startsWith("conf:")) - Number(!b.codigo.startsWith("conf:")) ||
             a.nome.localeCompare(b.nome, "pt-BR"),
         ),
@@ -207,7 +226,8 @@ function Painel({
   montado: MundoMontado;
 }) {
   const { mundo } = montado;
-  const nome = (clube: string) => mundo.clube(clube)?.nomeCurto ?? clube;
+  // Clube ou, nas competições de seleções, o país.
+  const nome = (clube: string) => mundo.clube(clube)?.nomeCurto ?? mundo.pais(clube)?.nome ?? clube;
   const faseAtual = Math.max(
     0,
     e.fases.findIndex((f) => f && !f.encerrada),
@@ -297,6 +317,9 @@ function nomeDoGrupo(comp: Competicao, e: EstadoCompeticao, fase: number, g: num
   const f = comp.fases[fase];
   const caminho = e.caminhos?.[e.fases[fase]?.grupos?.[g]?.[0] ?? ""];
   if (f?.tipo === "fase-de-liga" && caminho) return caminho[0]!.toUpperCase() + caminho.slice(1);
+  // Ligas de seleções (Nations League): grupos A1, A2... B1, B2...
+  if (comp.categoria === "selecoes" && comp.divisao)
+    return `grupo ${String.fromCharCode(64 + comp.divisao)}${g + 1}`;
   return `grupo ${String.fromCharCode(65 + g)}`;
 }
 
@@ -330,7 +353,9 @@ function Tabela({
         <thead className="text-xs text-suave">
           <tr className="border-b border-placar-borda">
             <th className="w-8 py-1 text-right">#</th>
-            <th className="py-1 pl-2 text-left">{t("Clube")}</th>
+            <th className="py-1 pl-2 text-left">
+              {comp.categoria === "selecoes" ? t("Seleção") : t("Clube")}
+            </th>
             <th className="py-1 text-right" title={t("Pontos")}>
               P
             </th>
@@ -376,7 +401,7 @@ function Tabela({
                 <td className="py-1 pl-2">
                   <span className="flex items-center gap-1.5">
                     {cl && <Escudo clube={cl} tamanho={16} />}
-                    {cl?.nomeCurto ?? l.clube}
+                    {cl?.nomeCurto ?? montado.mundo.pais(l.clube)?.nome ?? l.clube}
                   </span>
                 </td>
                 <td className="py-1 text-right font-bold">{l.pontos}</td>

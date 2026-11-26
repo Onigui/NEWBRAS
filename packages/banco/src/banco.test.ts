@@ -1217,6 +1217,31 @@ describe("copas nacionais e supercopas", () => {
   });
 });
 
+describe("seleções", () => {
+  const competicao = (id: string) => banco.competicoes.find((c) => c.id === id);
+  it("Nations League 2026/27: as 54 seleções da UEFA (sem a Rússia) nos grupos do sorteio", () => {
+    const ligas = ["a", "b", "c", "d"].map((l) => competicao(`uefa-nations-league-${l}`)!);
+    const todas = ligas.flatMap((c) => c.participantes.fixos);
+    expect(todas).toHaveLength(54);
+    expect(new Set(todas).size).toBe(54);
+    const uefa = banco.paises.filter((p) => p.confederacao === "UEFA").map((p) => p.codigo);
+    expect(todas.every((x) => uefa.includes(x))).toBe(true);
+    expect(todas).not.toContain("RUS");
+    expect(ligas[0]!.participantes.fixos.slice(8, 12)).toEqual(["ESP", "CRO", "ENG", "CZE"]);
+    expect(ligas.map((c) => c.fases[0]?.tipo === "grupos" && c.fases[0].grupos)).toEqual([
+      4, 4, 4, 2,
+    ]);
+    // Só a Liga A tem quartas (ida e volta) e a fase final.
+    expect(ligas[0]!.fases.map((f) => f.id)).toEqual([
+      "fase-de-liga",
+      "quartas",
+      "semifinal",
+      "final",
+    ]);
+    for (const c of ligas) expect(c.fases[0]?.datas).toHaveLength(6);
+  });
+});
+
 describe("copas regionais", () => {
   const estadoDe = (id: string) => {
     const c = banco.competicoes.find((x) => x.id === id);

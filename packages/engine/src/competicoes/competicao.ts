@@ -5,7 +5,13 @@
 import type { Competicao, DataFifa, Fase } from "@newbras/data";
 import { Rng } from "../rng";
 import { somarDias } from "../carreira/datas";
-import { datasDaCompeticao, datasDasRodadas, rodadasDoGrupo, todosContraTodos } from "./rodadas";
+import {
+  datasDaCompeticao,
+  datasDasRodadas,
+  proximaData,
+  rodadasDoGrupo,
+  todosContraTodos,
+} from "./rodadas";
 import { potesSemCompatriotas, sortearFaseDeLiga } from "./faseDeLiga";
 import { ordenarTabela, type Criterio, type LinhaTabela } from "./tabela";
 import { t } from "@newbras/textos";
@@ -229,6 +235,8 @@ export interface OpcoesMontagem {
  */
 export function semanaDaCompeticao(c: Competicao): number[] {
   if (c.diasDeJogo) return c.diasDeJogo;
+  // Seleções jogam em qualquer dia da data FIFA.
+  if (c.categoria === "selecoes") return [0, 1, 2, 3, 4, 5, 6];
   if (c.tipo === "continental" || c.tipo === "intercontinental")
     return c.participantes.exclui.length ? [4] : [3];
   if (c.tipo === "estadual" || c.tipo === "regional" || c.tipo === "copa") return [3];
@@ -265,7 +273,19 @@ export function datasPlanejadasPorFase(
       const n = plano.rodadas[i] ?? 0;
       const janela = f.periodo ? datasDaCompeticao(f.periodo, inicio) : { inicio, fim };
       const desde = ultima && ultima >= janela.inicio ? somarDias(ultima, 2) : janela.inicio;
-      const datas = datasDasRodadas(n, desde, janela.fim, datasFifa, semana, bloqueadas);
+      // Calendário fixo (seleções nas datas FIFA): os dias marcados, em sequência.
+      const fixas: string[] = [];
+      if (f.datas && f.datas.length >= n && n > 0) {
+        let cursor = desde;
+        for (const md of f.datas.slice(0, n)) {
+          cursor = proximaData(md, cursor);
+          fixas.push(cursor);
+          cursor = somarDias(cursor, 1);
+        }
+      }
+      const datas = fixas.length
+        ? fixas
+        : datasDasRodadas(n, desde, janela.fim, datasFifa, semana, bloqueadas);
       porFase.push(datas);
       ultima = datas.at(-1) ?? ultima;
     });
@@ -485,6 +505,8 @@ function paresIniciais(
   paises?: Record<string, string>,
   rodadaUnica = false,
   caminhos?: Record<string, string>,
+  /** Grupo de cada time na fase anterior, quando o sorteio evita repetir o grupo. */
+  grupos?: Record<string, string>,
 ): [string, string][] {
   const pela = (ordem: readonly string[]) => {
     // Fase de uma eliminatória só (pré-Libertadores): todos jogam, sem folga (1 x n, 2 x n-1...).
@@ -554,11 +576,20 @@ function paresIniciais(
     return pares;
   }
   if (fase.chaveamento === "potes") {
-    // Metade de cima (melhores) contra a de baixo, sorteada.
+    // Metade de cima (melhores) contra a de baixo, sorteada (sem dois do mesmo grupo, se pedido).
     const meio = Math.ceil(times.length / 2);
     const cima = times.slice(0, meio);
-    const baixo = rng.shuffle(times.slice(meio));
-    return cima.map((t, i) => [t, baixo[i] ?? ""] as [string, string]);
+    const sortear = () => {
+      const baixo = rng.shuffle(times.slice(meio));
+      return cima.map((t, i) => [t, baixo[i] ?? ""] as [string, string]);
+    };
+    let melhor = sortear();
+    if (grupos)
+      for (let tentativa = 0; tentativa < 60 && choquesDePais(melhor, grupos) > 0; tentativa++) {
+        const outro = sortear();
+        if (choquesDePais(outro, grupos) < choquesDePais(melhor, grupos)) melhor = outro;
+      }
+    return melhor;
   }
   if (fase.chaveamento !== "sorteio") return pela(times);
   // Sorteio livre, tentando evitar clubes do mesmo país frente a frente.
@@ -616,6 +647,7 @@ function abrirRodadaEliminatoria(
         e.paises,
         semFolga,
         e.caminhos,
+        fase.evitarMesmoGrupo ? grupoNaFaseAnterior(e, f) : undefined,
       ),
     ].map(([p, q]) => {
       const [a, b] = seed(ef.times, p, q);
@@ -685,6 +717,13 @@ function garantirDatas(e: EstadoCompeticao): EstadoCompeticao {
   const datas = [...e.datas];
   while (datas.length <= maior) datas.push(somarDias(datas.at(-1) ?? e.inicio, 3));
   return { ...e, datas };
+}
+
+/** Grupo de cada time na fase anterior (para o sorteio não repetir o confronto do grupo). */
+function grupoNaFaseAnterior(e: EstadoCompeticao, f: number): Record<string, string> | undefined {
+  const grupos = e.fases[f - 1]?.grupos;
+  if (!grupos) return undefined;
+  return Object.fromEntries(grupos.flatMap((g, i) => g.map((t) => [t, `g${i}`])));
 }
 
 /**

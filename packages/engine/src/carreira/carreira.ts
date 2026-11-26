@@ -14,6 +14,7 @@ import type {
   Pais,
   Patch,
 } from "@newbras/data";
+import { convocar } from "../selecoes/convocacao";
 import {
   avancarCompeticao,
   desempateDoJogo,
@@ -198,12 +199,32 @@ export function mundoDoBanco(banco: Banco): Mundo {
     if (lista) lista.push(c);
     else porPais.set(c.pais, [c]);
   }
+  // Seleções: a convocação dos melhores de cada nacionalidade, montada na primeira vez.
+  let porNacionalidade: Map<string, Jogador[]> | undefined;
+  const convocacoes = new Map<string, Jogador[]>();
+  const convocacao = (pais: string) => {
+    let lista = convocacoes.get(pais);
+    if (!lista) {
+      if (!porNacionalidade) {
+        porNacionalidade = new Map();
+        for (const j of banco.jogadores) {
+          if (!j.clube || j.base) continue;
+          const l = porNacionalidade.get(j.nacionalidade);
+          if (l) l.push(j);
+          else porNacionalidade.set(j.nacionalidade, [j]);
+        }
+      }
+      lista = convocar(pais, porNacionalidade.get(pais) ?? []);
+      convocacoes.set(pais, lista);
+    }
+    return lista;
+  };
   return {
     competicoes: banco.competicoes,
     competicao: (id) => competicoes.get(id),
     clube: (id) => clubes.get(id),
     jogador: (id) => jogadores.get(id),
-    elenco: (id) => elencos.get(id) ?? [],
+    elenco: (id) => (/^[A-Z]{3}$/.test(id) ? convocacao(id) : (elencos.get(id) ?? [])),
     pais: (codigo) => paises.get(codigo),
     clubesDoPais: (codigo) => porPais.get(codigo) ?? [],
     datasFifa: banco.datasFifa,

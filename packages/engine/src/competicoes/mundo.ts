@@ -89,9 +89,13 @@ export const TEMPORADA_DA_CONFEDERACAO: Record<Confederacao, Periodo> = {
 /** Temporada das competições mundiais de clubes (Copa Intercontinental, Mundial de Clubes). */
 export const TEMPORADA_MUNDIAL: Periodo = { inicio: "01-01", fim: "12-31" };
 export const CHAVE_MUNDIAL = "mundial";
+/** Chave da temporada de uma competição de seleções ("sel:" + o id dela). */
+export const PREFIXO_SELECOES = "sel:";
 
 /** Chave da temporada de uma competição: o país, "conf:UEFA" nas continentais ou "mundial". */
 export function chaveDaCompeticao(c: Competicao): string | null {
+  // Seleções: cada competição tem a temporada dela (a Nations League vai de setembro a junho).
+  if (c.categoria === "selecoes") return `${PREFIXO_SELECOES}${c.id}`;
   if (c.escopo.tipo === "confederacao") return `conf:${c.escopo.confederacao}`;
   if (c.escopo.tipo === "mundial") return c.categoria === "clubes" ? CHAVE_MUNDIAL : null;
   return paisDaCompeticao(c);
@@ -100,6 +104,8 @@ export function chaveDaCompeticao(c: Competicao): string | null {
 /** Período da temporada de uma chave (país, confederação ou mundial). */
 function periodoDaChave(m: MundoParaCompeticoes, chave: string): Periodo | undefined {
   if (chave === CHAVE_MUNDIAL) return TEMPORADA_MUNDIAL;
+  if (chave.startsWith(PREFIXO_SELECOES))
+    return m.competicao(chave.slice(PREFIXO_SELECOES.length))?.calendario;
   if (chave.startsWith("conf:"))
     return TEMPORADA_DA_CONFEDERACAO[chave.slice(5) as Confederacao] as Periodo | undefined;
   return m.pais(chave)?.temporada;
@@ -235,11 +241,12 @@ function prioridade(c: Competicao): number {
 }
 
 function competicoesDoMundo(m: MundoParaCompeticoes): Competicao[] {
-  return m.competicoes.filter((c) => c.categoria === "clubes" && chaveDaCompeticao(c) !== null);
+  return m.competicoes.filter((c) => chaveDaCompeticao(c) !== null);
 }
 
 function participantesIniciais(c: Competicao): string[] {
-  // Em competição de clubes, os fixos são ids de clube (os códigos de país ficam para as seleções).
+  // Em competição de clubes, os fixos são ids de clube; nas de seleções, os códigos dos países.
+  if (c.categoria === "selecoes") return c.participantes.fixos.filter((x) => /^[A-Z]{3}$/.test(x));
   return c.participantes.fixos.filter((x) => !/^[A-Z]{3}$/.test(x));
 }
 
@@ -619,8 +626,9 @@ function abrirTemporada(
   const temporada: TemporadaDoPais = { nome: nomeTemporada({ temporada: periodo }, data), ...t };
   const competicoes = { ...estado.competicoes };
   const mundial = codigo === CHAVE_MUNDIAL;
-  // Continentais e mundiais marcam as datas pelo plano (as ligas é que fogem delas).
-  const continental = codigo.startsWith("conf:") || mundial;
+  const selecoes = codigo.startsWith(PREFIXO_SELECOES);
+  // Continentais, mundiais e seleções marcam as datas pelo plano (as ligas é que fogem delas).
+  const continental = codigo.startsWith("conf:") || mundial || selecoes;
   const confederacao = continental ? undefined : m.pais(codigo)?.confederacao;
   // Primeiro as de janela curta (supercopas, estaduais e regionais), depois as ligas (da 1ª divisão para baixo)
   // e as copas: cada uma foge das datas das anteriores, para o mesmo clube não ter dois jogos no
@@ -684,7 +692,8 @@ function abrirTemporada(
         if (todos.some((p) => x.clubes.has(p))) for (const d of x.datas) bloqueadas.add(d);
     }
     const e = montarCompeticao(c, participantes, t.inicio, {
-      datasFifa: m.datasFifa,
+      // As seleções jogam justamente nas datas FIFA.
+      datasFifa: selecoes ? [] : m.datasFifa,
       semente,
       temporada: temporada.nome,
       ...(entrantes ? { entrantes } : {}),
