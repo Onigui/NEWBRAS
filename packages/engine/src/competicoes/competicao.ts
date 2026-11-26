@@ -133,7 +133,9 @@ function planoDasFases(c: Competicao, n: number) {
     const liga = c.fases[i - 2];
     const diretos = liga?.tipo === "fase-de-liga" && liga.playoff ? liga.classificamDireto : 0;
     const soma =
-      vindos + diretos + (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + tamanhoDaVaga(v), 0));
+      vindos +
+      diretos +
+      (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + tamanhoDaVaga(v), 0) + f.fixosAqui.length);
     const e = f.limiteDeEntradas ? Math.min(soma, f.limiteDeEntradas) : soma;
     entram.push(e);
     const ultima = i === c.fases.length - 1;
@@ -351,7 +353,10 @@ export function montarCompeticao(
     ...(o.divisoes ? { divisoes: o.divisoes } : {}),
   };
   // Na lista de participantes entram também os que só jogam a partir de uma fase adiante.
-  const adiante = Object.values(o.entrantes ?? {}).flat();
+  const adiante = [
+    ...Object.values(o.entrantes ?? {}).flat(),
+    ...c.fases.slice(1).flatMap((f) => f.fixosAqui),
+  ];
   if (adiante.length) estado.participantes = [...participantes, ...adiante];
   // A primeira fase espera clubes de outras competições (Copa Intercontinental).
   if (esperaOutra(c, estado, 0)) return { ...estado, aguardando: 0 };
@@ -393,7 +398,12 @@ function abrirFase(
         : gruposPorPotes(times, numGrupos, rng, separacao(fase, e.paises));
     if (fase.tipo === "grupos" && fase.menoresPara)
       grupos = cabecasNosMenores(grupos, times, fase.menoresPara);
-  } else if (divisao === "sorteio" && f === 0) {
+  } else if (
+    (divisao === "sorteio" && f === 0) ||
+    (divisao === "ordem-da-lista" &&
+      c.gruposFixosAte !== undefined &&
+      anoFinal(e.temporada) > c.gruposFixosAte)
+  ) {
     rng.shuffle(times).forEach((t, i) => grupos[i % numGrupos]?.push(t));
   } else if (divisao === "sorteio") {
     // Depois da primeira fase, os grupos são montados em "serpente" pela campanha.
@@ -1098,6 +1108,8 @@ function entradaDaFase(
         destino.push(t);
       }
   };
+  // Cabeças que entram direto nesta fase (Nations League da Concacaf).
+  por(fase.fixosAqui, antes);
   // Os primeiros da fase de liga entram depois do playoff (Champions League).
   const liga = c.fases[p - 2];
   if (liga?.tipo === "fase-de-liga" && liga.playoff)
@@ -1253,6 +1265,20 @@ export function classificadosPelasRegras(
     )
       .map((l) => l.clube)
       .filter((t) => !ja.has(t));
+    if (r.anfitrioes && r.porGrupo) {
+      // Grupo com anfitrião (já classificado): ele ocupa uma das vagas do grupo.
+      for (const t of grupos) {
+        const casa = t.filter((l) => r.anfitrioes!.includes(l.clube)).length;
+        const vagas = Math.max(0, (r.posicoes?.length ?? 0) - casa);
+        lista.push(
+          ...t
+            .filter((l) => !r.anfitrioes!.includes(l.clube) && !ja.has(l.clube))
+            .slice(0, vagas)
+            .map((l) => l.clube),
+        );
+      }
+      continue;
+    }
     if (r.reservados) {
       // Vagas reservadas (anfitriões): os mais bem colocados que ainda não se classificaram.
       const todos = porCampanha(grupos.flat()).map((l) => l.clube);

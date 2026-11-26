@@ -831,6 +831,68 @@ describe("competições", () => {
     expect(e2.fases[0]?.times).toHaveLength(3);
   });
 
+  it("anfitrião ocupa vaga do grupo, cabeças entram adiante e o sorteio é novo depois", () => {
+    const grupos = (o: Record<string, unknown> = {}) =>
+      ({
+        id: "grupos",
+        nome: "Grupos",
+        tipo: "grupos",
+        grupos: 2,
+        turnos: 1,
+        divisaoGrupos: "ordem-da-lista",
+        ...o,
+      }) as CompeticaoEntrada["fases"][number];
+    const base = {
+      tipo: "eliminatorias" as const,
+      categoria: "selecoes" as const,
+      escopo: { tipo: "confederacao" as const, confederacao: "CAF" as const },
+      divisao: undefined,
+      gruposFixosAte: 2027,
+    };
+    const fixos = ["AAA", "BBB", "HHH", "CCC", "DDD", "EEE", "FFF", "GGG"];
+    // Passam 2 por grupo; no grupo do anfitrião HHH, só 1 dos outros.
+    const elim = comp({
+      ...base,
+      participantes: { fixos, quantidade: 8 },
+      fases: [grupos()],
+      classificados: [{ fase: "grupos", posicoes: [1, 2], porGrupo: true, anfitrioes: ["HHH"] }],
+    });
+    const e = jogarTudo(elim, fixos);
+    expect(e.fases[0]?.grupos?.[0]).toEqual(["AAA", "BBB", "HHH", "CCC"]);
+    expect(e.classificados).toHaveLength(3);
+    expect(e.classificados).not.toContain("HHH");
+    // Edição seguinte (2029): os mesmos, sorteados de novo.
+    const outras = Array.from({ length: 6 }, (_, i) =>
+      montarCompeticao(elim, fixos, "2029-01-10", {
+        datasFifa: SEM_FIFA,
+        semente: `s${i}`,
+        temporada: "2029",
+      }).fases[0]?.grupos?.[0]?.join("/"),
+    );
+    expect(outras.some((g) => g !== "AAA/BBB/HHH/CCC")).toBe(true);
+    // Cabeças que só entram nas quartas: 2 de cada grupo e mais 4.
+    const liga = comp({
+      ...base,
+      participantes: { fixos, quantidade: 8 },
+      fases: [
+        grupos({ classificamPorGrupo: 2 }),
+        {
+          id: "quartas",
+          nome: "Quartas",
+          tipo: "mata-mata",
+          jogos: 1,
+          chaveamento: "potes",
+          mando: "neutro",
+          fixosAqui: ["XXX", "YYY", "ZZZ", "WWW"],
+        },
+      ] as CompeticaoEntrada["fases"],
+    });
+    const f = jogarTudo(liga, fixos);
+    expect(f.fases[1]?.times).toHaveLength(8);
+    expect(f.fases[1]?.times.slice(0, 4)).toEqual(["XXX", "YYY", "ZZZ", "WWW"]);
+    expect(f.fases[0]?.times).not.toContain("XXX");
+  });
+
   it("datas com * pulam para o ano seguinte", () => {
     const c = comp({
       tipo: "eliminatorias",

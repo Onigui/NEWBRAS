@@ -165,14 +165,11 @@ export function validarIntegridade(banco: BancoT): Problema[] {
       if (!competicoes.has(cp.competicao))
         erro(onde, `classifica para ${cp.competicao}, que não existe`);
     }
-    if (
-      todasVagas.length === 0 &&
-      comp.participantes.fixos.length !== comp.participantes.quantidade
-    ) {
-      aviso(
-        onde,
-        `espera ${comp.participantes.quantidade} participantes e tem ${comp.participantes.fixos.length}`,
-      );
+    // Os que entram direto numa fase adiante também contam (cabeças da Nations League da Concacaf).
+    const fixos =
+      comp.participantes.fixos.length + comp.fases.reduce((s, f) => s + f.fixosAqui.length, 0);
+    if (todasVagas.length === 0 && fixos !== comp.participantes.quantidade) {
+      aviso(onde, `espera ${comp.participantes.quantidade} participantes e tem ${fixos}`);
     }
   }
 
