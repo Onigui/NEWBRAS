@@ -31,6 +31,8 @@ import {
   type Mundo,
 } from "./carreira";
 import { dataPorExtenso, diaDaSemana, diasEntre, somarDias } from "./datas";
+import { diaDosConvocados, foraPelaSelecao, DESGASTE_TITULAR } from "./selecao";
+import { indisponiveisNoJogo } from "./carreira";
 
 const BRASIL: Pais = {
   codigo: "BRA",
@@ -365,5 +367,39 @@ describe("carreira", () => {
     const nova2 = atualizarCarreira(antiga, mundo);
     expect(nova2.formato).toBe(FORMATO_CARREIRA);
     expect(nova2.competicoes.competicoes["liga-teste"]).toBeDefined();
+  });
+});
+
+describe("convocados", () => {
+  it("na data FIFA ficam fora do clube; pela seleção, cansam e somam jogos e gols", () => {
+    const base = mundoDeTeste();
+    // G, G e L do mandante estão na convocação do Brasil.
+    const convocados = base.elenco("mandante").slice(0, 3);
+    const mundo: Mundo = {
+      ...base,
+      elenco: (id) => (id === "BRA" ? convocados : base.elenco(id)),
+    };
+    const c = nova(mundo);
+    const ids = convocados.map((j) => j.id);
+    expect(foraPelaSelecao(c, mundo, "2027-03-10").size).toBe(0);
+    expect([...foraPelaSelecao(c, mundo, "2027-03-25").keys()]).toEqual(ids);
+    expect(indisponiveisNoJogo(c, mundo, undefined, "2027-03-25").has(ids[0]!)).toBe(true);
+    // Amistoso no dia 24, com gol do lateral: o goleiro titular e o lateral jogam os 90 minutos.
+    const depois = {
+      ...c.competicoes,
+      amistosos: [
+        {
+          data: "2027-03-24",
+          casa: "BRA",
+          fora: "ARG",
+          placar: [1, 0] as [number, number],
+          gols: [[ids[2]!], []] as [string[], string[]],
+        },
+      ],
+    };
+    const r = diaDosConvocados(c, mundo, c.competicoes, depois, "2027-03-24", c.jogadores);
+    expect(r.jogadores[ids[0]!]?.condicao).toBe(100 - DESGASTE_TITULAR);
+    expect(r.jogadores[ids[2]!]?.selecao).toEqual({ jogos: 1, gols: 1 });
+    expect(r.noticias[0]?.texto).toContain("Gol pela seleção");
   });
 });

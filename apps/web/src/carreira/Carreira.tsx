@@ -25,6 +25,7 @@ import {
   atualizarCarreira,
   nomeDoCompromisso,
   suspensosNaCompeticao,
+  foraPelaSelecao,
   type Carreira as CarreiraT,
   type Compromisso,
   type Concentracao,
@@ -42,12 +43,13 @@ import { Competicoes } from "./Competicoes";
 import { Jogos } from "./Jogos";
 import { Plantao } from "./Plantao";
 import { Plantel } from "./Plantel";
+import { Selecoes } from "./Selecoes";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
 import { t, locale } from "@newbras/textos";
 
-type Aba = "inicio" | "plantel" | "escalacao" | "calendario" | "jogos" | "competicoes";
+type Aba = "inicio" | "plantel" | "escalacao" | "calendario" | "jogos" | "competicoes" | "selecoes";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "inicio", nome: t("Início"), tecla: "1" },
   { id: "plantel", nome: t("Plantel"), tecla: "2" },
@@ -55,6 +57,7 @@ const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "calendario", nome: t("Calendário"), tecla: "4" },
   { id: "jogos", nome: t("Jogos"), tecla: "5" },
   { id: "competicoes", nome: t("Competições"), tecla: "6" },
+  { id: "selecoes", nome: t("Seleções"), tecla: "7" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -100,16 +103,28 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const hoje = compromissoDoDia(c);
   const proximo = proximoCompromisso(c);
   const jogadores = useMemo(() => elencoParaPartida(c, mundo, c.clube), [c, mundo]);
-  // Suspensos para o próximo jogo oficial entram nos avisos (e ficam fora do jogo).
+  // Suspensos e convocados para o próximo jogo entram nos avisos (e ficam fora do jogo).
   const suspensos = useMemo(() => suspensosNaCompeticao(c, proximo?.competicao), [c, proximo]);
+  const comASelecao = useMemo(
+    () => foraPelaSelecao(c, mundo, proximo?.data ?? c.data),
+    [c, mundo, proximo],
+  );
   const avisos = useMemo(() => {
     const m = new Map<string, string>();
     for (const j of jogadores) {
-      const a = suspensos.has(j.id) ? "suspenso" : avisoPoupar(estadoDe(c, j.id));
+      const selecao = comASelecao.get(j.id);
+      const poupar = avisoPoupar(estadoDe(c, j.id));
+      const a = suspensos.has(j.id)
+        ? t("suspenso")
+        : selecao
+          ? t("com a seleção ({selecao})", { selecao: mundo.pais(selecao)?.nome ?? selecao })
+          : poupar
+            ? t("poupar: {aviso}", { aviso: poupar })
+            : null;
       if (a) m.set(j.id, a);
     }
     return m;
-  }, [c, jogadores, suspensos]);
+  }, [c, jogadores, suspensos, comASelecao, mundo]);
 
   // Salvamento de uma versão anterior: ganha as competições ao abrir.
   useEffect(() => {
@@ -131,7 +146,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   }, [c, jogadores]);
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
 
-  // F2 salva na hora; 1 a 5 trocam de aba (fora de campos de texto).
+  // F2 salva na hora; 1 a 7 trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
   const tecla = useCallback(
     (e: KeyboardEvent) => {
@@ -317,6 +332,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
               />
             )}
             {aba === "plantel" && <Plantel c={c} montado={montado} />}
+            {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
             {aba === "escalacao" && (
               <div className="flex flex-col gap-3">
                 <Tatica c={c} mudar={mudar} />
