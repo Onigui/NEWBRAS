@@ -88,14 +88,11 @@ type Cr = ReturnType<typeof useCarreira> & { montado: MundoMontado };
 
 function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const { carreira: c, mudar } = cr;
-  // O mundo como está na data da carreira: jogadores evoluídos, aposentados fora, juniores dentro.
-  const { semente, inicio, data } = c;
+  // O mundo como está na data da carreira: jogadores evoluídos, aposentados fora, juniores dentro,
+  // sem quem saiu do clube e com o ajuste dos minutos jogados.
   const montado = useMemo(
-    () => ({
-      ...cr.montado,
-      mundo: mundoNaData(cr.montado.mundo, { semente, inicio }, data),
-    }),
-    [cr.montado, semente, inicio, data],
+    () => ({ ...cr.montado, mundo: mundoNaData(cr.montado.mundo, c, c.data) }),
+    [cr.montado, c],
   );
   const { mundo } = montado;
   const [aba, setAba] = useState<Aba>("inicio");
@@ -124,17 +121,20 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
     for (const j of jogadores) {
       const selecao = comASelecao.get(j.id);
       const poupar = avisoPoupar(estadoDe(c, j.id));
+      const lesao = estadoDe(c, j.id).lesao;
       const a = suspensos.has(j.id)
         ? t("suspenso")
-        : selecao
-          ? t("com a seleção ({selecao})", { selecao: mundo.pais(selecao)?.nome ?? selecao })
-          : poupar
-            ? t("poupar: {aviso}", { aviso: poupar })
-            : null;
+        : lesao && lesao.ate > (proximo?.data ?? c.data)
+          ? t("lesionado até {data}", { data: dataCurta(lesao.ate) })
+          : selecao
+            ? t("com a seleção ({selecao})", { selecao: mundo.pais(selecao)?.nome ?? selecao })
+            : poupar
+              ? t("poupar: {aviso}", { aviso: poupar })
+              : null;
       if (a) m.set(j.id, a);
     }
     return m;
-  }, [c, jogadores, suspensos, comASelecao, mundo]);
+  }, [c, jogadores, suspensos, comASelecao, mundo, proximo?.data]);
 
   // Salvamento de uma versão anterior: ganha as competições ao abrir.
   useEffect(() => {
@@ -341,7 +341,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                 onEscalacao={() => setAba("escalacao")}
               />
             )}
-            {aba === "plantel" && <Plantel c={c} montado={montado} />}
+            {aba === "plantel" && <Plantel c={c} montado={montado} mudar={mudar} />}
             {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
             {aba === "escalacao" && (
               <div className="flex flex-col gap-3">

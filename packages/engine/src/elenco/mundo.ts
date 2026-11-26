@@ -2,7 +2,7 @@
  * O mundo da carreira numa data (etapa 12a): o mundo do banco com os jogadores evoluídos, os
  * aposentados fora, os juniores e as lendas renascidas dentro, e as convocações refeitas com eles.
  */
-import type { Jogador } from "@newbras/data";
+import { FORCA_TETO, type Jogador } from "@newbras/data";
 import type { Mundo } from "../carreira/carreira";
 import { convocar } from "../selecoes/convocacao";
 import { somarDias } from "../carreira/datas";
@@ -10,7 +10,7 @@ import { EvolucaoDoMundo } from "./evolucao";
 
 /** Marca do mundo da data: guarda o mundo do banco por trás dele. */
 const BASE = Symbol("mundo do banco");
-type MundoNaData = Mundo & { [BASE]: Mundo; evolucao: EvolucaoDoMundo; data: string };
+type MundoNaData = Mundo & { [BASE]: Mundo; evolucao?: EvolucaoDoMundo; data: string };
 
 const evolucoes = new WeakMap<Mundo, Map<string, EvolucaoDoMundo>>();
 /** Jogadores de cada nacionalidade e as convocações já feitas, numa marca do mundo. */
@@ -39,15 +39,66 @@ export function evolucaoDe(
   return e;
 }
 
-/** O mundo como está na data da carreira (sem a evolução ligada, o próprio mundo do banco). */
-export function mundoNaData(m: Mundo, c: { semente: string; inicio: string }, data: string): Mundo {
+/** O que a carreira diz sobre o próprio elenco: quem saiu e o ajuste dos minutos jogados. */
+export interface CarreiraParaMundo {
+  semente: string;
+  inicio: string;
+  clube?: string;
+  saidas?: readonly string[];
+  jogadores?: Readonly<Record<string, { ajuste?: number }>>;
+}
+
+/** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
+function comAjuste(j: Jogador, ajuste: number): Jogador {
+  const forca = Math.max(1, Math.min(Math.max(FORCA_TETO, j.potencial), j.forca + ajuste));
+  if (forca === j.forca) return j;
+  const fator = forca / Math.max(1, j.forca);
+  const r: Jogador = { ...j, forca, potencial: Math.max(j.potencial, forca) };
+  let atributos: Jogador["atributos"] | undefined;
+  Object.defineProperty(r, "atributos", {
+    enumerable: true,
+    configurable: true,
+    get: () =>
+      (atributos ??= Object.fromEntries(
+        Object.entries(j.atributos ?? {}).map(([a, v]) => [
+          a,
+          Math.max(1, Math.min(100, Math.round((v as number) * fator))),
+        ]),
+      ) as Jogador["atributos"]),
+  });
+  return r;
+}
+
+const doClubeCache = new WeakMap<readonly Jogador[], { assinatura: string; lista: Jogador[] }>();
+
+/**
+ * O mundo como está na data da carreira: o elenco evoluído, sem quem saiu do clube do técnico e
+ * com o ajuste dos minutos. Sem nada disso para fazer, é o próprio mundo do banco.
+ */
+export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo {
   const atual = m as Partial<MundoNaData>;
   if (atual[BASE] && atual.data === data) return m;
   const base = mundoDoBancoDe(m);
   const evolucao = evolucaoDe(base, c);
-  if (!evolucao || !evolucao.ativo(data)) return base;
+  const evolui = !!evolucao && evolucao.ativo(data);
+  const saidas = new Set(c.saidas ?? []);
+  const ajustes = new Map<string, number>();
+  for (const [id, e] of Object.entries(c.jogadores ?? {})) if (e.ajuste) ajustes.set(id, e.ajuste);
+  if (!evolui && !saidas.size && !ajustes.size) return base;
+  const assinatura = `${[...saidas].join(",")}|${[...ajustes].join(",")}`;
+  const doClube = (lista: readonly Jogador[]): readonly Jogador[] => {
+    if (!saidas.size && !ajustes.size) return lista;
+    const guardado = doClubeCache.get(lista);
+    if (guardado?.assinatura === assinatura) return guardado.lista;
+    const r = lista
+      .filter((j) => !saidas.has(j.id))
+      .map((j) => (ajustes.has(j.id) ? comAjuste(j, ajustes.get(j.id)!) : j));
+    doClubeCache.set(lista, { assinatura, lista: r });
+    return r;
+  };
   let marca: string | undefined;
   const convocacao = (pais: string): readonly Jogador[] => {
+    if (!evolucao || !evolui) return base.elenco(pais);
     marca ??= evolucao.marca(data);
     let cache = convocacoes.get(evolucao);
     if (!cache || cache.marca !== marca) {
@@ -68,13 +119,23 @@ export function mundoNaData(m: Mundo, c: { semente: string; inicio: string }, da
     }
     return lista;
   };
+  const elencoDoClube = (id: string) =>
+    evolucao && evolui ? evolucao.elenco(id, data) : base.elenco(id);
   const view: MundoNaData = {
     ...base,
     [BASE]: base,
-    evolucao,
+    ...(evolucao ? { evolucao } : {}),
     data,
-    jogador: (id) => evolucao.jogador(id, data),
-    elenco: (id) => (/^[A-Z]{3}$/.test(id) ? convocacao(id) : evolucao.elenco(id, data)),
+    jogador: (id) => {
+      const j = evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id);
+      return j && ajustes.has(id) ? comAjuste(j, ajustes.get(id)!) : j;
+    },
+    elenco: (id) =>
+      /^[A-Z]{3}$/.test(id)
+        ? convocacao(id)
+        : id === c.clube
+          ? doClube(elencoDoClube(id))
+          : elencoDoClube(id),
   };
   return view;
 }

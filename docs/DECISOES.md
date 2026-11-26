@@ -442,3 +442,30 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Os minutos jogados ainda não pesam na evolução (fica para a 12b, com a moral).
   - Os jogadores da base do banco ainda não sobem; isso vem na 12c.
   - Os elencos crescem um pouco com as lendas renascidas, até o mercado (Fase 13) trazer as dispensas.
+
+## Lesões, contratos e moral de cada jogador (etapa 12b, 26/11/2026)
+
+- **Lesões:**
+  - Vêm do motor de partida (pancadas e cansaço) e do treino: 0,1% por dia, mais com o jogador cansado.
+  - A duração sai pelo tipo: pancada (2 a 6 dias), estiramento (7 a 21), entorse (10 a 28), lesão muscular na coxa (21 a 45), joelho (40 a 100), fratura (60 a 120) e ligamento cruzado (180 a 270). As leves são as mais comuns.
+  - O lesionado não joga pelo clube nem vai à seleção. Volta com no máximo 85 de condição.
+- **Moral de cada jogador (0 a 100, 60 é o normal):**
+  - Sobe ao jogar: titular +2, reserva que entrou +1, +2 por gol e +1 por vitória.
+  - Cai com a derrota (-1) e com o pênalti perdido (-4).
+  - Quem está entre os 16 principais e fica de fora perde 2 (os 5 melhores, 3).
+  - O atacante cobra de si mesmo depois de 5 jogos sem marcar.
+  - Volta aos poucos ao normal e desce devagar com o contrato nos últimos 6 meses.
+  - Puxa o humor junto com a moral do time.
+  - Aparece no plantel como insatisfeito, abatido, normal ou motivado.
+- **Contratos:**
+  - Avisos 6 meses e 1 mês antes do fim. No dia seguinte ao fim, sem renovação, o jogador sai do clube. Fica livre, e o mercado da Fase 13 cuida dele.
+  - A renovação abre com até 2 anos de contrato pela frente. O jogador pede um salário pela força (estrela pede mais, o insatisfeito também), nunca menos que 5% acima do atual.
+  - Durações: 6 meses, 1, 2 ou 3 anos. Com 33 anos, até 2 anos; com 35, até 1 ano.
+  - O insatisfeito (moral abaixo de 25) não quer conversar; com 38 anos, pensa em parar.
+  - Renovar levanta a moral.
+- **Minutos na evolução:** na virada da temporada do clube, o jovem de até 23 anos que jogou 60% dos minutos do mais usado ganha 1 de força, e mais 1 se jogou 40% com a moral alta. Quem quase não jogou perde 1. O ajuste fica entre -4 e +4, somado à curva da evolução.
+- **Interface:**
+  - Plantel: marca de lesionado, coluna de moral e fim de contrato em destaque quando faltam 6 meses.
+  - Ficha: moral, lesão e a renovação com o salário pedido.
+  - Escalação: aviso "lesionado até".
+- **Para depois:** lesões e moral dos jogadores dos clubes da CPU (eles seguem com o elenco inteiro), salários pesando no caixa (Fase 14) e jogador livre assinando com outro clube (Fase 13).
