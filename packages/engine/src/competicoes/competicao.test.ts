@@ -8,6 +8,7 @@ import {
   lancarResultado,
   montarCompeticao,
   movimentosDaTemporada,
+  receberEntrantes,
   tabelaDoGrupo,
   type EstadoCompeticao,
 } from "./competicao";
@@ -462,5 +463,88 @@ describe("competições", () => {
     }
     expect(e.encerrada).toBe(true);
     expect(e.jogos.at(-1)!.neutro).toBe(true);
+  });
+
+  it("Copa Intercontinental: cada campeão chega na sua fase, com folgas no Dérbi e na Challenger", () => {
+    const vaga = (de: string, depois = false) => ({
+      de,
+      criterio: "campeao" as const,
+      fase: "final",
+      depois,
+    });
+    const fase = (id: string, entramAqui: ReturnType<typeof vaga>[], neutro = false) => ({
+      id,
+      nome: id,
+      tipo: "mata-mata" as const,
+      jogos: 1,
+      prorrogacao: true,
+      chaveamento: "chave-fixa" as const,
+      mando: neutro ? ("neutro" as const) : ("melhor-campanha" as const),
+      entramAqui,
+    });
+    const c = comp({
+      tipo: "intercontinental",
+      escopo: { tipo: "mundial" },
+      divisao: undefined,
+      calendario: { inicio: "08-20", fim: "12-20" },
+      participantes: { fixos: [], quantidade: 6 },
+      fases: [
+        fase("playoff", [vaga("asia"), vaga("oceania")]),
+        fase("africa", [vaga("africa")]),
+        fase("derbi", [vaga("concacaf"), vaga("conmebol", true)], true),
+        fase("final", [vaga("uefa")], true),
+      ] as CompeticaoEntrada["fases"],
+    });
+    let e = montarCompeticao(c, [], "2027-01-01", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2027",
+      quantidadePlanejada: 2,
+    });
+    // Ninguém ainda: a primeira fase espera os campeões.
+    expect(e.aguardando).toBe(0);
+    expect(e.jogos).toHaveLength(0);
+    expect(e.datas).toHaveLength(5);
+    const jogar = () => {
+      const rng = new Rng("j");
+      for (const [i, j] of e.jogos.entries()) {
+        if (j.placar) continue;
+        const d = desempateDoJogo(c, e, j);
+        const r = simularRapido(rng, forca(j.casa), forca(j.fora), {
+          ...(j.neutro ? { neutro: true } : {}),
+          desempate: d.desempate,
+        });
+        e = lancarResultado(e, i, r.placar, r.penaltis);
+      }
+      e = avancarCompeticao(c, e, "s");
+    };
+    // O campeão da Champions chega cedo (junho) e espera a final.
+    e = receberEntrantes(c, e, 3, { 0: ["t1"] }, "s");
+    e = receberEntrantes(c, e, 0, { 0: ["t5"], 1: ["t9"] }, "s");
+    expect(e.jogos).toHaveLength(1);
+    expect(e.jogos[0]).toMatchObject({ casa: "t5", fora: "t9" });
+    jogar();
+    e = receberEntrantes(c, e, 1, { 0: ["t6"] }, "s");
+    expect(e.jogos[1]?.casa).toBe("t6");
+    jogar();
+    const africa = e.fases[1]!.chaves![0]![0]!.vencedor!;
+    e = receberEntrantes(c, e, 2, { 0: ["t3"], 1: ["t2"] }, "s");
+    // Dérbi das Américas: CONCACAF x CONMEBOL; o vencedor da Copa África-Ásia-Pacífico folga.
+    const derbi = e.jogos.filter((j) => j.fase === 2);
+    expect(derbi).toHaveLength(1);
+    expect([derbi[0]!.casa, derbi[0]!.fora].sort()).toEqual(["t2", "t3"]);
+    expect(derbi[0]!.neutro).toBe(true);
+    jogar();
+    // Copa Challenger: vencedor do Dérbi x vencedor da Copa África-Ásia-Pacífico; a Champions folga.
+    const challenger = e.jogos.filter((j) => j.fase === 3);
+    expect(challenger).toHaveLength(1);
+    expect([challenger[0]!.casa, challenger[0]!.fora]).toContain(africa);
+    expect([challenger[0]!.casa, challenger[0]!.fora]).not.toContain("t1");
+    jogar();
+    const final = e.jogos.filter((j) => j.fase === 3).at(-1)!;
+    expect([final.casa, final.fora]).toContain("t1");
+    jogar();
+    expect(e.encerrada).toBe(true);
+    expect(e.jogos).toHaveLength(5);
   });
 });

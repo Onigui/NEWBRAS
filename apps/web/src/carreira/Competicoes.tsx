@@ -8,6 +8,7 @@ import {
   dataCurta,
   nomeCurtoDaCompeticao,
   nomeDaRodada,
+  CHAVE_MUNDIAL,
   chaveDaCompeticao,
   saldo,
   tabelaDoGrupo,
@@ -70,6 +71,10 @@ const ORDEM_TIPO: Record<Competicao["tipo"], number> = {
   eliminatorias: 8,
 };
 
+/** Na lista de uma confederação, a supercopa (Recopa) vem depois das copas continentais. */
+const ordemDoTipo = (c: Competicao) =>
+  c.tipo === "supercopa" && c.escopo.tipo === "confederacao" ? 5.5 : ORDEM_TIPO[c.tipo];
+
 export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado }) {
   const { mundo, banco } = montado;
   const clube = mundo.clube(c.clube);
@@ -98,7 +103,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
         .filter((x): x is Competicao => !!x && chaveDaCompeticao(x) === pais)
         .sort(
           (a, b) =>
-            ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] ||
+            ordemDoTipo(a) - ordemDoTipo(b) ||
             (a.divisao ?? 9) - (b.divisao ?? 9) ||
             a.nome.localeCompare(b.nome, "pt-BR"),
         ),
@@ -115,12 +120,16 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
         .filter(Boolean)
         .map((p) => ({
           codigo: p,
-          nome: p.startsWith("conf:")
-            ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
-            : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
+          nome:
+            p === CHAVE_MUNDIAL
+              ? "Mundial (FIFA)"
+              : p.startsWith("conf:")
+                ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
+                : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
         }))
         .sort(
           (a, b) =>
+            Number(b.codigo === CHAVE_MUNDIAL) - Number(a.codigo === CHAVE_MUNDIAL) ||
             Number(!a.codigo.startsWith("conf:")) - Number(!b.codigo.startsWith("conf:")) ||
             a.nome.localeCompare(b.nome, "pt-BR"),
         ),

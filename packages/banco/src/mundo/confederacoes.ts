@@ -59,6 +59,7 @@ function competicao(o: {
   fases: Fase[];
   exclui?: string[];
   campeaoAnterior?: CompeticaoEntrada["campeaoAnterior"];
+  campeoesAnteriores?: CompeticaoEntrada["campeoesAnteriores"];
 }): CompeticaoEntrada {
   return {
     id: o.id,
@@ -69,6 +70,7 @@ function competicao(o: {
     escopo: { tipo: "confederacao", confederacao: o.confederacao },
     calendario: periodo(...o.calendario),
     ...(o.campeaoAnterior ? { campeaoAnterior: o.campeaoAnterior } : {}),
+    ...(o.campeoesAnteriores ? { campeoesAnteriores: o.campeoesAnteriores } : {}),
     participantes: {
       fixos: [],
       vagas: o.vagas,
@@ -266,6 +268,7 @@ const CHAMPIONS_ELITE = competicao({
   confederacao: "AFC",
   calendario: ["08-10", "05-01"],
   campeaoAnterior: { temporada: "2025/26", campeao: "ksa-al-ahli" },
+  campeoesAnteriores: [{ temporada: "2024/25", campeao: "ksa-al-ahli" }],
   quantidade: 36,
   // Preliminar (jogo único, na região): 4 no Oeste e 4 no Leste.
   vagas: [
@@ -451,6 +454,9 @@ const CAF_CHAMPIONS = competicao({
   confederacao: "CAF",
   calendario: ["09-04", "05-31"],
   campeaoAnterior: { temporada: "2025/26", campeao: "rsa-mamelodi-sundowns" },
+  campeoesAnteriores: [
+    { temporada: "2024/25", campeao: "egy-pyramids", vice: "rsa-mamelodi-sundowns" },
+  ],
   quantidade: 61,
   vagas: [
     ...CAF_DUAS.map((l) =>

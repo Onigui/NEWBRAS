@@ -72,24 +72,30 @@ export function datasDasRodadas(
     bloqueadas.has(data) ||
     bloqueadas.has(somarDias(data, -1)) ||
     bloqueadas.has(somarDias(data, 1));
-  const livres = (permitidos: readonly number[], evitar: boolean) => {
+  // Evitar: longe um dia das datas bloqueadas; exato: só fora delas (aceita o dia seguinte).
+  type Folga = "evitar" | "exato" | "livre";
+  const livres = (permitidos: readonly number[], folga: Folga) => {
     const lista: string[] = [];
     for (let d = 0; d <= dias; d++) {
       const data = somarDias(inicio, d);
       if (!permitidos.includes(diaDaSemana(data))) continue;
       if (datasFifa.some((f) => emDataFifa(f, data))) continue;
-      if (evitar && perto(data)) continue;
+      if (folga === "evitar" && perto(data)) continue;
+      if (folga === "exato" && bloqueadas.has(data)) continue;
       lista.push(data);
     }
     return lista;
   };
-  const tentativas: [readonly number[], boolean][] = [
-    [semanaDeJogo, true],
-    [[...semanaDeJogo, 0, 3], true],
-    [[0, 3, 6], true],
-    [[0, 1, 2, 3, 4, 5, 6], true],
-    [[0, 3], false],
-    [[0, 1, 2, 3, 4, 5, 6], false],
+  const tentativas: [readonly number[], Folga][] = [
+    [semanaDeJogo, "evitar"],
+    [[...semanaDeJogo, 0, 3], "evitar"],
+    [[0, 3, 6], "evitar"],
+    [[0, 1, 2, 3, 4, 5, 6], "evitar"],
+    // Calendário apertado (o Brasileirão parado no Mundial de Clubes): ao menos fora do dia.
+    [[0, 3, 6], "exato"],
+    [[0, 1, 2, 3, 4, 5, 6], "exato"],
+    [[0, 3], "livre"],
+    [[0, 1, 2, 3, 4, 5, 6], "livre"],
   ];
   for (const [permitidos, evitar] of tentativas) {
     const datas = espalhar(livres(permitidos, evitar), rodadas, inicio, fim);

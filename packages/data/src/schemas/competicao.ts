@@ -52,9 +52,11 @@ export const Vaga = z.object({
   /**
    * campeao e vice: da última edição da competição de origem; posicoes: colocações na tabela;
    * eliminados: quem caiu numa fase da origem na mesma temporada (a 3ª fase da Libertadores manda os
-   * eliminados para a Sul-Americana).
+   * eliminados para a Sul-Americana). campeoes: os campeões das últimas `edicoes` edições (Mundial
+   * de Clubes; campeão repetido dá a vaga ao próximo do ranking); ranking: os melhores pelas
+   * campanhas nas últimas `edicoes` edições da origem.
    */
-  criterio: z.enum(["campeao", "vice", "posicoes", "eliminados"]),
+  criterio: z.enum(["campeao", "vice", "posicoes", "eliminados", "campeoes", "ranking"]),
   /** Colocações que dão a vaga, quando o critério é "posicoes" (1 = primeiro). */
   posicoes: z.array(z.int().min(1)).optional(),
   /**
@@ -82,6 +84,10 @@ export const Vaga = z.object({
   alternativas: z.array(z.object({ de: Id, posicoes: z.array(z.int().min(1)).min(1) })).default([]),
   /** Se o dono da vaga já estiver classificado, ela passa para o próximo da tabela de origem. */
   repassa: z.boolean().default(true),
+  /** Quantas edições da origem contam, nos critérios "campeoes" e "ranking" (Mundial: 4). */
+  edicoes: z.int().min(1).max(8).optional(),
+  /** No critério "ranking", no máximo tantos clubes do mesmo país (sem contar os campeões). */
+  maximoPorPais: z.int().min(1).optional(),
 });
 export type Vaga = z.infer<typeof Vaga>;
 
@@ -174,6 +180,8 @@ export const Competicao = z
       .default({ aCadaAnos: 1, anoBase: 2026 }),
     /** Quando a competição é disputada dentro do ano. */
     calendario: Periodo,
+    /** Dias da semana dos jogos (0 = domingo), quando fogem do padrão do tipo (Recopa às quintas). */
+    diasDeJogo: z.array(z.int().min(0).max(6)).min(1).optional(),
     participantes: z.object({
       /** Clubes (ou países, em competições de seleções) fixos. */
       fixos: z.array(z.union([Id, CodigoPais])).default([]),
@@ -199,6 +207,10 @@ export const Competicao = z
     campeaoAnterior: z
       .object({ temporada: z.string().min(4).max(9), campeao: Id, vice: Id.optional() })
       .optional(),
+    /** Campeões mais antigos que o anterior (para as vagas que olham várias edições). */
+    campeoesAnteriores: z
+      .array(z.object({ temporada: z.string().min(4).max(9), campeao: Id, vice: Id.optional() }))
+      .default([]),
     /** Vagas que esta competição distribui em outras. */
     classificaPara: z
       .array(z.object({ competicao: Id, posicoes: z.array(z.int().min(1)) }))

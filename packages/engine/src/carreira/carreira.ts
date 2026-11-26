@@ -26,6 +26,7 @@ import {
   abrirTemporadasFaltando,
   iniciarMundo,
   jogarDia,
+  CHAVE_MUNDIAL,
   chaveDaCompeticao,
   jogosDoClube,
   paisDaCompeticao,
@@ -55,7 +56,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 6;
+export const FORMATO_CARREIRA = 7;
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -449,10 +450,11 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
-  // Campeões e acessos da temporada do país do técnico e das continentais da confederação dele.
+  // Campeões e acessos da temporada do país do técnico, das continentais da confederação dele e das
+  // competições mundiais.
   const continental = pais ? `conf:${pais.confederacao}` : "";
   for (const v of virada.encerradas) {
-    if (v.pais !== clube?.pais && v.pais !== continental) continue;
+    if (v.pais !== clube?.pais && v.pais !== continental && v.pais !== CHAVE_MUNDIAL) continue;
     for (const h of competicoes.historico.filter((x) => x.temporada === v.temporada)) {
       const comp = mundo.competicao(h.competicao);
       if (!comp || !h.campeao || comp.escopo.tipo === "estado") continue;
@@ -886,7 +888,8 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
   if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
   // Formato 1: sem competições. Formato 2: sem as continentais. Formatos 3 e 4: continentais num
   // formato anterior; formato 5: CONCACAF, AFC, CAF e OFC no formato anterior. Essas são abertas de
-  // novo no formato real. Tudo em dia com a data da carreira.
+  // novo no formato real. Formato 6: sem as competições mundiais (abertas agora; as supercopas
+  // continentais entram na virada da temporada). Tudo em dia com a data da carreira.
   let competicoes = antiga.competicoes;
   const refazer =
     antiga.formato === 3 || antiga.formato === 4
