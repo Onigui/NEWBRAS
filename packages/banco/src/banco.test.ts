@@ -1123,7 +1123,9 @@ describe("copas nacionais e supercopas", () => {
     for (const c of [...copas, ...supercopas, ...regionais]) {
       expect(c.participantes.fixos, c.id).toEqual([]);
       let total = 0;
-      for (const v of c.participantes.vagas) {
+      // Vagas da primeira fase e as das fases adiante (Copa do Brasil: Série A na 5ª fase).
+      const vagas = [...c.participantes.vagas, ...c.fases.flatMap((f) => f.entramAqui)];
+      for (const v of vagas) {
         const origem = competicao(v.de);
         expect(origem, `${c.id} → ${v.de}`).toBeDefined();
         expect(paisDe(origem!), c.id).toBe(paisDe(c));
@@ -1139,17 +1141,24 @@ describe("copas nacionais e supercopas", () => {
   });
 
   it("copas têm uma fase por eliminatória até a final", () => {
-    for (const c of copas) {
+    for (const c of copas.filter((x) => x.id !== "bra-copa-do-brasil")) {
       const n = c.participantes.quantidade;
       expect(c.fases, c.id).toHaveLength(Math.ceil(Math.log2(n)));
       expect(c.fases.at(-1)?.nome, c.id).toBe("Final");
       expect(c.fases.every((f) => f.tipo === "mata-mata")).toBe(true);
     }
+    // Copa do Brasil de 2026: 126 clubes, 28 na 1ª fase, 74 na 2ª, 4 na 3ª e a Série A na 5ª.
     const copaDoBrasil = competicao("bra-copa-do-brasil")!;
-    expect(copaDoBrasil.participantes.quantidade).toBe(64);
+    expect(copaDoBrasil.participantes.quantidade).toBe(126);
+    const conta = (vs: readonly { posicoes?: number[] | undefined }[]) =>
+      vs.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0);
+    expect(conta(copaDoBrasil.participantes.vagas)).toBe(28);
+    expect(copaDoBrasil.fases.map((f) => conta(f.entramAqui))).toEqual([
+      0, 74, 4, 0, 20, 0, 0, 0, 0,
+    ]);
     const jogos = (f: (typeof copaDoBrasil.fases)[number]) =>
       f.tipo === "mata-mata" ? f.jogos : 0;
-    expect(copaDoBrasil.fases.map(jogos)).toEqual([1, 1, 2, 2, 2, 2]);
+    expect(copaDoBrasil.fases.map(jogos)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 1]);
     const final = competicao("eng-fa-cup")!.fases.at(-1);
     expect(final?.tipo === "mata-mata" && final.mando).toBe("neutro");
   });

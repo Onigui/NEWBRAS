@@ -2546,6 +2546,8 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
         jogos: 2,
         chaveamento: "campanha",
         mando: "melhor-campanha",
+        // 3º x 6º e 4º x 5º em ida e volta: os dois vencedores sobem.
+        eliminatorias: 1,
       },
     ],
     desempate: [...DESEMPATE_CBF],
@@ -2587,7 +2589,17 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     desempate: [...DESEMPATE_CBF],
     movimentos: [
       { tipo: "acesso", para: "bra-serie-b", posicoes: [1, 2, 3, 4] },
-      { tipo: "rebaixamento", para: "bra-serie-d", posicoes: [19, 20] },
+      // Ampliação real: 20 clubes em 2026 e 24 em 2027, com 2 rebaixados; 28 a partir de 2028, com
+      // 6. O banco tem as divisões de 2026 e a carreira começa em 2027, então a escada vem um ano
+      // depois: 20 clubes em 2027, 24 em 2028 e 28 a partir de 2029.
+      { tipo: "rebaixamento", para: "bra-serie-d", posicoes: [19, 20], ate: 2027 },
+      { tipo: "rebaixamento", para: "bra-serie-d", posicoes: [23, 24], desde: 2028, ate: 2028 },
+      {
+        tipo: "rebaixamento",
+        para: "bra-serie-d",
+        posicoes: [23, 24, 25, 26, 27, 28],
+        desde: 2029,
+      },
     ],
   },
   {
@@ -2660,11 +2672,9 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
       },
     ],
     desempate: [...DESEMPATE_CBF],
-    // Sobem os 4 semifinalistas e os 2 vencedores dos playoffs entre os eliminados nas quartas (detalhado na Fase 9).
-    movimentos: [
-      { tipo: "acesso", para: "bra-serie-c", posicoes: [1, 2, 3, 4] },
-      { tipo: "playoff-acesso", para: "bra-serie-c", posicoes: [5, 6, 7, 8] },
-    ],
+    // Sobem 6: os 4 semifinalistas e 2 dos eliminados nas quartas (no real, por um playoff entre
+    // eles; aqui, os 2 de melhor campanha).
+    movimentos: [{ tipo: "acesso", para: "bra-serie-c", posicoes: [1, 2, 3, 4, 5, 6] }],
   },
 ];
 

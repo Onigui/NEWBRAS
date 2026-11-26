@@ -547,4 +547,93 @@ describe("competições", () => {
     expect(e.encerrada).toBe(true);
     expect(e.jogos).toHaveLength(5);
   });
+
+  it("Série B de 2026: 3º x 6º e 4º x 5º em ida e volta, e os dois vencedores sobem", () => {
+    const c = comp({
+      fases: [
+        {
+          id: "pc",
+          nome: "Pontos corridos",
+          tipo: "grupos",
+          grupos: 1,
+          turnos: 2,
+          faixaClassificada: { de: 3, ate: 6 },
+        },
+        {
+          id: "po",
+          nome: "Playoffs",
+          tipo: "mata-mata",
+          jogos: 2,
+          chaveamento: "campanha",
+          mando: "melhor-campanha",
+          eliminatorias: 1,
+        },
+      ],
+      movimentos: [
+        { tipo: "acesso", para: "a", posicoes: [1, 2] },
+        { tipo: "playoff-acesso", para: "a", posicoes: [3, 4, 5, 6] },
+      ],
+    });
+    const e = jogarTudo(c, times("B", 20));
+    const tabela = tabelaDoGrupo(c, e, 0, 0).map((l) => l.clube);
+    expect(e.jogos.filter((j) => j.fase === 1)).toHaveLength(4);
+    expect(e.vencedoresPlayoff).toHaveLength(2);
+    const sobem = movimentosDaTemporada(c, e).filter((m) => m.tipo === "acesso");
+    expect(sobem).toHaveLength(4);
+    // Um vencedor de cada confronto (3º ou 6º; 4º ou 5º).
+    const [x, y] = e.vencedoresPlayoff!;
+    expect([tabela[2], tabela[5]]).toContain(x);
+    expect([tabela[3], tabela[4]]).toContain(y);
+  });
+
+  it("liga em grupos: o 1º de cada grupo sobe e o playoff junta a faixa de todos os grupos", () => {
+    const c = comp({
+      participantes: { fixos: [], quantidade: 20 },
+      fases: [
+        {
+          id: "t",
+          nome: "Temporada",
+          tipo: "grupos",
+          grupos: 2,
+          turnos: 2,
+          divisaoGrupos: "ordem-da-lista",
+          faixaClassificada: { de: 2, ate: 5 },
+        },
+        {
+          id: "po",
+          nome: "Playoffs",
+          tipo: "mata-mata",
+          jogos: 2,
+          chaveamento: "campanha",
+          mando: "melhor-campanha",
+          eliminatorias: 2,
+        },
+      ],
+      movimentos: [
+        { tipo: "acesso", para: "a", posicoes: [1], porGrupo: true },
+        { tipo: "playoff-acesso", para: "a", posicoes: [2, 3, 4, 5], porGrupo: true },
+      ],
+    });
+    const e = jogarTudo(c, times("F", 20));
+    expect(e.fases[1]?.times).toHaveLength(8);
+    expect(e.vencedoresPlayoff).toHaveLength(2);
+    const sobem = movimentosDaTemporada(c, e).filter((m) => m.tipo === "acesso");
+    expect(sobem).toHaveLength(4);
+    for (const g of [0, 1])
+      expect(sobem.map((m) => m.clube)).toContain(tabelaDoGrupo(c, e, 0, g)[0]?.clube);
+  });
+
+  it("movimento com anos: só vale nas temporadas dele (ampliação da Série C)", () => {
+    const c = comp({
+      fases: [{ id: "t", nome: "Temporada", tipo: "grupos", grupos: 1, turnos: 1 }],
+      movimentos: [
+        { tipo: "rebaixamento", para: "d", posicoes: [9, 10], ate: 2027 },
+        { tipo: "rebaixamento", para: "d", posicoes: [5, 6, 7, 8, 9, 10], desde: 2028 },
+      ],
+    });
+    const e = jogarTudo(c, times("C", 10));
+    expect(e.temporada).toBe("2027");
+    expect(movimentosDaTemporada(c, e)).toHaveLength(2);
+    expect(movimentosDaTemporada(c, { ...e, temporada: "2028" })).toHaveLength(6);
+  });
 });

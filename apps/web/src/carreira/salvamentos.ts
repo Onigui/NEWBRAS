@@ -25,7 +25,7 @@ export function lerCarreira(
   if (!c || typeof c !== "object")
     return { ok: false, erro: t("o arquivo não é uma carreira do NewBras") };
   // Formatos antigos (1 a 4) são atualizados ao abrir a carreira.
-  if (c.formato !== FORMATO_CARREIRA && ![1, 2, 3, 4, 5, 6].includes(Number(c.formato)))
+  if (c.formato !== FORMATO_CARREIRA && ![1, 2, 3, 4, 5, 6, 7].includes(Number(c.formato)))
     return {
       ok: false,
       erro: t("formato de salvamento {String} não é lido por esta versão", {

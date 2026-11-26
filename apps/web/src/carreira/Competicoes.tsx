@@ -228,7 +228,9 @@ function Painel({
             ? t("Encerrada. Campeão: {campeao}{vencedorPlayoff}.", {
                 campeao: e.campeao ? nome(e.campeao) : "?",
                 vencedorPlayoff: e.vencedorPlayoff
-                  ? t("; playoff de acesso: {nome}", { nome: nome(e.vencedorPlayoff) })
+                  ? t("; playoff de acesso: {nome}", {
+                      nome: (e.vencedoresPlayoff ?? [e.vencedorPlayoff]).map(nome).join(", "),
+                    })
                   : "",
               })
             : t("Em andamento: {nome}.", { nome: comp.fases[faseAtual]?.nome ?? "" })}

@@ -493,8 +493,8 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
       { tipo: "rebaixamento", para: "kor-k-league-2", posicoes: [12] },
     ],
   }),
-  // Sobem os dois primeiros; do 3º ao 6º disputam os playoffs de acesso. Não há rebaixamento
-  // para a K3 League.
+  // O campeão sobe direto; do 2º ao 5º, playoff de jogo único (2º x 5º, 3º x 4º) e os dois
+  // vencedores fazem a barragem contra o 11º e o 10º da K League 1. Não há rebaixamento para a K3.
   liga({
     ...base,
     id: "kor-k-league-2",
@@ -503,10 +503,14 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     divisao: 2,
     clubes: kor(K_LEAGUE_2),
     calendario: { inicio: "02-28", fim: "11-29" },
-    playoff: { de: 3, ate: 6, fases: [rodadaUnica("playoffs", "Playoffs de acesso")] },
+    playoff: {
+      de: 2,
+      ate: 5,
+      fases: [rodadaUnica("playoffs", "Playoffs de acesso", [], 1)],
+    },
     movimentos: [
-      { tipo: "acesso", para: "kor-k-league-1", posicoes: [1, 2] },
-      { tipo: "playoff-acesso", para: "kor-k-league-1", posicoes: faixa(3, 6) },
+      { tipo: "acesso", para: "kor-k-league-1", posicoes: [1] },
+      { tipo: "playoff-acesso", para: "kor-k-league-1", posicoes: faixa(2, 5) },
     ],
   }),
 ];

@@ -1343,7 +1343,8 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     grupos: 2,
     clubes: [...esp(FEDERACION_1), ...esp(FEDERACION_2)],
     calendario: { inicio: "08-28", fim: "06-20" },
-    playoff: { de: 2, ate: 5, fases: [playoffIdaEVolta()] },
+    // Playoff do 2º ao 5º de cada grupo em duas eliminatórias: os 2 vencedores sobem (4 no total).
+    playoff: { de: 2, ate: 5, fases: [playoffIdaEVolta("Playoffs", 2)] },
     movimentos: [
       { tipo: "acesso", para: "esp-laliga-2", posicoes: [1], porGrupo: true },
       { tipo: "playoff-acesso", para: "esp-laliga-2", posicoes: faixa(2, 5), porGrupo: true },
