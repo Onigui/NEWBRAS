@@ -33,6 +33,11 @@ export interface TemporadaDoPais {
   nome: string;
   inicio: string;
   fim: string;
+  /**
+   * Intervalo entre duas edições de uma competição de seleções: nada abre, e a edição anterior
+   * continua no estado (a Nations League de 2026/27 serve aos playoffs da Euro em março de 2028).
+   */
+  intervalo?: boolean;
 }
 
 export interface RegistroHistorico {
@@ -42,6 +47,8 @@ export interface RegistroHistorico {
   vice?: string;
   /** Até os 32 primeiros (só nas continentais): o ranking do Mundial de Clubes sai daqui. */
   classificacao?: string[];
+  /** Eliminatórias: as seleções que se classificaram. */
+  classificados?: string[];
   artilheiro?: { jogador: string; gols: number };
 }
 
@@ -552,6 +559,18 @@ function participantesPorVagas(
 }
 
 /**
+ * A edição da origem serve para a vaga: a mesma temporada ou, nas seleções (cada competição tem a
+ * sua), a edição da origem que termina no mesmo ano ou no anterior (a Nations League de 2026/27
+ * para as eliminatórias da Euro de 2027/28).
+ */
+function mesmaEdicao(c: Competicao, origem: string, destino: string): boolean {
+  if (origem === destino) return true;
+  if (c.categoria !== "selecoes") return false;
+  const d = anoFinal(destino) - anoFinal(origem);
+  return d === 0 || d === 1;
+}
+
+/**
  * Entrega a cada competição os clubes que vêm de outra durante a temporada (os eliminados da 3ª
  * fase da Libertadores para os grupos da Sul-Americana, os 3º colocados dos grupos para o playoff),
  * assim que a fase de origem termina.
@@ -581,7 +600,9 @@ function distribuirEntrantes(
         const atuais = mudou ?? competicoes;
         const eo = atuais[v.de];
         let lista =
-          origem && eo && eo.temporada === e.temporada ? resolverVagaDinamica(origem, eo, v) : null;
+          origem && eo && mesmaEdicao(c, eo.temporada, e.temporada)
+            ? resolverVagaDinamica(origem, eo, v)
+            : null;
         // Campeão de uma competição de outra temporada (o da Champions na Intercontinental): a
         // edição que termina no ano desta, em andamento ou já no histórico.
         if (!lista && origem && (v.criterio === "campeao" || v.criterio === "vice")) {
@@ -610,6 +631,37 @@ function distribuirEntrantes(
   return mudou;
 }
 
+/**
+ * Edição de uma competição de seleções que contém a data: termina no ano F (F na periodicidade
+ * dela) e começa `anos` antes (as eliminatórias da Euro vão de março de 2027 a março de 2028). Antes
+ * do começo, o intervalo desde a edição anterior, em que nada abre. O nome vai do ano do começo ao
+ * do fim ("2027/28", "2028").
+ */
+export function edicaoDaSelecao(c: Competicao, data: string): TemporadaDoPais {
+  const { aCadaAnos, anoBase } = c.periodicidade;
+  const viraAno = c.calendario.inicio > c.calendario.fim;
+  const edicao = (f: number): TemporadaDoPais => {
+    const inicio = `${f - (c.anos - 1) - (viraAno ? 1 : 0)}-${c.calendario.inicio}`;
+    const fim = `${f}-${c.calendario.fim}`;
+    return { nome: nomeDoPeriodo(inicio, fim), inicio, fim };
+  };
+  const ano = Number(data.slice(0, 4));
+  let f = anoBase + Math.ceil((ano - 1 - anoBase) / aCadaAnos) * aCadaAnos;
+  while (edicao(f).fim < data) f += aCadaAnos;
+  const atual = edicao(f);
+  if (data >= atual.inicio) return atual;
+  // Antes do começo: o intervalo desde o fim da edição anterior.
+  const inicio = somarDias(edicao(f - aCadaAnos).fim, 1);
+  const fim = somarDias(atual.inicio, -1);
+  return { nome: nomeDoPeriodo(inicio, fim), inicio, fim, intervalo: true };
+}
+
+function nomeDoPeriodo(inicio: string, fim: string): string {
+  const a = inicio.slice(0, 4);
+  const b = fim.slice(0, 4);
+  return a === b ? a : `${a}/${b.slice(2)}`;
+}
+
 /** Abre a temporada de um país (a que contém a data, ou a próxima) com todas as competições dele. */
 function abrirTemporada(
   m: MundoParaCompeticoes,
@@ -622,8 +674,16 @@ function abrirTemporada(
 ): MundoCompeticoes {
   const periodo = periodoDaChave(m, codigo);
   if (!periodo) return estado;
-  const t = temporadaDe({ temporada: periodo }, data);
-  const temporada: TemporadaDoPais = { nome: nomeTemporada({ temporada: periodo }, data), ...t };
+  const sel = codigo.startsWith(PREFIXO_SELECOES)
+    ? m.competicao(codigo.slice(PREFIXO_SELECOES.length))
+    : undefined;
+  const temporada: TemporadaDoPais = sel
+    ? edicaoDaSelecao(sel, data)
+    : {
+        nome: nomeTemporada({ temporada: periodo }, data),
+        ...temporadaDe({ temporada: periodo }, data),
+      };
+  const t = temporada;
   const competicoes = { ...estado.competicoes };
   const mundial = codigo === CHAVE_MUNDIAL;
   const selecoes = codigo.startsWith(PREFIXO_SELECOES);
@@ -637,7 +697,7 @@ function abrirTemporada(
   // Competições que não são anuais (o Mundial de Clubes, a cada 4 anos) só abrem no ano delas.
   const ano = anoFinal(temporada.nome);
   const ordem = competicoesDoMundo(m)
-    .filter((c) => chaveDaCompeticao(c) === codigo)
+    .filter((c) => chaveDaCompeticao(c) === codigo && !temporada.intervalo)
     .filter((c) => (ano - c.periodicidade.anoBase) % c.periodicidade.aCadaAnos === 0)
     .filter((c) => !apenas || apenas.has(c.id))
     .sort(
@@ -1007,11 +1067,13 @@ export function virarTemporadas(
       const c = m.competicao(e.id);
       if (!c) continue;
       const artilheiro = Object.entries(e.artilharia).sort((a, b) => b[1][0] - a[1][0])[0];
+      const eliminatorias = c.tipo === "eliminatorias";
       historico.push({
         temporada: e.temporada,
         competicao: e.id,
-        ...(e.campeao ? { campeao: e.campeao } : {}),
-        ...(e.classificacao?.[1] ? { vice: e.classificacao[1] } : {}),
+        ...(e.campeao && !eliminatorias ? { campeao: e.campeao } : {}),
+        ...(e.classificacao?.[1] && !eliminatorias ? { vice: e.classificacao[1] } : {}),
+        ...(e.classificados ? { classificados: e.classificados } : {}),
         ...(c.tipo === "continental" && e.classificacao
           ? { classificacao: e.classificacao.slice(0, 32) }
           : {}),

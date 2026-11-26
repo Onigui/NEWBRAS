@@ -3,6 +3,7 @@ import { Competicao, type CompeticaoEntrada } from "@newbras/data";
 import { Rng } from "../rng";
 import {
   avancarCompeticao,
+  classificadosPelasRegras,
   desempateDoJogo,
   jogosDoDia,
   lancarResultado,
@@ -713,6 +714,54 @@ describe("competições", () => {
       "2026-11-16",
       "2027-06-13",
     ]);
+  });
+
+  it("eliminatórias: diretos, melhor segundo e playoff com quem sobrou", () => {
+    const c = comp({
+      tipo: "eliminatorias",
+      categoria: "selecoes",
+      escopo: { tipo: "confederacao", confederacao: "UEFA" },
+      divisao: undefined,
+      participantes: { fixos: [], quantidade: 6 },
+      fases: [
+        { id: "grupos", nome: "Grupos", tipo: "grupos", grupos: 2, turnos: 2 },
+        {
+          id: "playoffs",
+          nome: "Playoffs",
+          tipo: "mata-mata",
+          jogos: 1,
+          chaveamento: "campanha",
+          mando: "neutro",
+          limiteDeEntradas: 2,
+          entramAqui: [
+            {
+              de: "teste",
+              criterio: "posicoes",
+              fase: "grupos",
+              porGrupo: true,
+              posicoes: [2, 3],
+              foraDosClassificados: true,
+            },
+          ],
+        },
+      ] as CompeticaoEntrada["fases"],
+      classificados: [
+        { fase: "grupos", posicoes: [1], porGrupo: true },
+        { fase: "grupos", posicoes: [2], porGrupo: true, melhores: 1 },
+        { fase: "playoffs", vencedores: true },
+      ],
+    });
+    const e = jogarTudo(c, ["S1", "S2", "S3", "S4", "S5", "S6"]);
+    expect(e.encerrada).toBe(true);
+    const diretos = classificadosPelasRegras(c, e, 1);
+    expect(diretos).toHaveLength(3);
+    // O playoff tem 2: o segundo que não foi direto e o melhor terceiro, nenhum dos diretos.
+    const playoff = e.fases[1]!.times;
+    expect(playoff).toHaveLength(2);
+    expect(playoff.some((t) => diretos.includes(t))).toBe(false);
+    expect(e.classificados).toHaveLength(4);
+    expect(new Set(e.classificados).size).toBe(4);
+    expect(e.classificados!.slice(0, 3)).toEqual(diretos);
   });
 
   it("movimento com anos: só vale nas temporadas dele (ampliação da Série C)", () => {

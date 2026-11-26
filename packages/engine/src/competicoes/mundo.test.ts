@@ -6,6 +6,7 @@ import {
   abrirTemporadasFaltando,
   anoFinal,
   datasContinentais,
+  edicaoDaSelecao,
   iniciarMundo,
   jogarDia,
   plantaoDoDia,
@@ -487,5 +488,34 @@ describe("temporadas de outras chaves", () => {
     expect(anoFinal("2026/27")).toBe(2027);
     expect(anoFinal("2027")).toBe(2027);
     expect(anoFinal("1999/00")).toBe(2000);
+    expect(anoFinal("2027/29")).toBe(2029);
+  });
+
+  it("seleções: edições de vários anos e o intervalo entre elas, em que nada abre", () => {
+    const c = Competicao.parse({
+      id: "eliminatorias",
+      nome: "Eliminatórias",
+      tipo: "eliminatorias",
+      categoria: "selecoes",
+      escopo: { tipo: "confederacao", confederacao: "UEFA" },
+      periodicidade: { aCadaAnos: 4, anoBase: 2028 },
+      calendario: { inicio: "03-25", fim: "03-31" },
+      anos: 2,
+      participantes: { fixos: ["AAA", "BBB"], quantidade: 2 },
+      fases: [{ id: "g", nome: "g", tipo: "grupos", grupos: 1, turnos: 2 }],
+    });
+    expect(edicaoDaSelecao(c, "2027-06-01")).toEqual({
+      nome: "2027/28",
+      inicio: "2027-03-25",
+      fim: "2028-03-31",
+    });
+    expect(edicaoDaSelecao(c, "2026-11-01")).toEqual({
+      nome: "2024/27",
+      inicio: "2024-04-01",
+      fim: "2027-03-24",
+      intervalo: true,
+    });
+    expect(edicaoDaSelecao(c, "2028-04-01").intervalo).toBe(true);
+    expect(edicaoDaSelecao(c, "2031-03-25").nome).toBe("2031/32");
   });
 });

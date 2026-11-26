@@ -1240,6 +1240,29 @@ describe("seleções", () => {
     ]);
     for (const c of ligas) expect(c.fases[0]?.datas).toHaveLength(6);
   });
+
+  it("Euro 2028: eliminatórias pela Nations League, 24 na fase final", () => {
+    const elim = competicao("uefa-eliminatorias-euro")!;
+    const euro = competicao("uefa-euro")!;
+    // As 54 da Nations League entram nos 12 grupos; dez rodadas nas datas FIFA de 2027.
+    const entram = elim.fases[0]!.entramAqui.reduce((s, v) => s + (v.quantidade ?? 0), 0);
+    expect(entram).toBe(54);
+    expect(elim.fases[0]?.datas).toHaveLength(10);
+    expect(elim.anos).toBe(2);
+    // 12 primeiros + 8 melhores segundos + 2 anfitriões + 2 dos playoffs = 24.
+    expect(
+      elim.classificados.map((r) => r.melhores ?? r.quantidade ?? (r.vencedores ? 2 : 12)),
+    ).toEqual([12, 8, 2, 2]);
+    expect(euro.participantes.quantidade).toBe(24);
+    expect(euro.fases.map((f) => f.id)).toEqual([
+      "grupos",
+      "oitavas",
+      "quartas",
+      "semifinal",
+      "final",
+    ]);
+    expect(euro.campeaoAnterior?.campeao).toBe("ESP");
+  });
 });
 
 describe("copas regionais", () => {
