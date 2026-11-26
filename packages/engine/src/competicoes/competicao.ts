@@ -99,6 +99,10 @@ function tamanhoDaVaga(v: {
 export function quantidadeInicial(c: Competicao): number {
   if (c.participantes.vagas.length)
     return c.participantes.vagas.reduce((s, v) => s + tamanhoDaVaga(v), 0);
+  // Todos chegam de outras competições durante a temporada (Copa Intercontinental).
+  const primeira = c.fases[0]?.entramAqui ?? [];
+  if (!c.participantes.fixos.length && primeira.length)
+    return primeira.reduce((s, v) => s + tamanhoDaVaga(v), 0);
   return c.participantes.fixos.length || c.participantes.quantidade;
 }
 
@@ -202,6 +206,7 @@ export interface OpcoesMontagem {
  * principal continental às quartas; a segunda continental (Sul-Americana, Europa League) às quintas.
  */
 export function semanaDaCompeticao(c: Competicao): number[] {
+  if (c.diasDeJogo) return c.diasDeJogo;
   if (c.tipo === "continental" || c.tipo === "intercontinental")
     return c.participantes.exclui.length ? [4] : [3];
   if (c.tipo === "estadual" || c.tipo === "regional" || c.tipo === "copa") return [3];
@@ -216,25 +221,39 @@ export function datasPlanejadas(
   quantidade = quantidadeInicial(c),
   bloqueadas?: ReadonlySet<string>,
 ): string[] {
+  return datasPlanejadasPorFase(c, inicioTemporada, datasFifa, quantidade, bloqueadas).flat();
+}
+
+/** As mesmas datas, separadas por fase. */
+export function datasPlanejadasPorFase(
+  c: Competicao,
+  inicioTemporada: string,
+  datasFifa: readonly DataFifa[],
+  quantidade = quantidadeInicial(c),
+  bloqueadas?: ReadonlySet<string>,
+): string[][] {
   const { inicio, fim } = datasDaCompeticao(c.calendario, inicioTemporada);
   const plano = planoDasFases(c, quantidade);
   const semana = semanaDaCompeticao(c);
   // Fases com janela própria (as continentais seguem o calendário real de cada fase).
   if (c.fases.some((f) => f.periodo)) {
-    const datas: string[] = [];
+    const porFase: string[][] = [];
+    let ultima: string | undefined;
     c.fases.forEach((f, i) => {
       const n = plano.rodadas[i] ?? 0;
       const janela = f.periodo ? datasDaCompeticao(f.periodo, inicio) : { inicio, fim };
-      const desde =
-        datas.at(-1) && datas.at(-1)! >= janela.inicio
-          ? somarDias(datas.at(-1)!, 2)
-          : janela.inicio;
-      datas.push(...datasDasRodadas(n, desde, janela.fim, datasFifa, semana, bloqueadas));
+      const desde = ultima && ultima >= janela.inicio ? somarDias(ultima, 2) : janela.inicio;
+      const datas = datasDasRodadas(n, desde, janela.fim, datasFifa, semana, bloqueadas);
+      porFase.push(datas);
+      ultima = datas.at(-1) ?? ultima;
     });
-    return datas;
+    return porFase;
   }
+  // Sem janela por fase: as rodadas em sequência, repartidas pelas fases.
   const total = plano.rodadas.reduce((s, r) => s + r, 0);
-  return datasDasRodadas(total, inicio, fim, datasFifa, semana, bloqueadas);
+  const todas = datasDasRodadas(total, inicio, fim, datasFifa, semana, bloqueadas);
+  let k = 0;
+  return plano.rodadas.map((r) => todas.slice(k, (k += r)));
 }
 
 /** Monta a competição da temporada: datas de todas as rodadas e a primeira fase. */
@@ -273,6 +292,8 @@ export function montarCompeticao(
   // Na lista de participantes entram também os que só jogam a partir de uma fase adiante.
   const adiante = Object.values(o.entrantes ?? {}).flat();
   if (adiante.length) estado.participantes = [...participantes, ...adiante];
+  // A primeira fase espera clubes de outras competições (Copa Intercontinental).
+  if (esperaOutra(c, estado, 0)) return { ...estado, aguardando: 0 };
   return abrirFase(c, estado, 0, [...participantes], o.semente);
 }
 
@@ -901,6 +922,12 @@ export function resolverVagaDinamica(
     doCaminho?: string | undefined;
   },
 ): string[] | null {
+  // Campeão (ou vice) da edição: quando ela termina.
+  if (v.criterio === "campeao" || v.criterio === "vice") {
+    if (!e.encerrada) return null;
+    const dono = v.criterio === "campeao" ? e.campeao : e.classificacao?.[1];
+    return dono ? [dono] : [];
+  }
   const fi = v.fase ? origem.fases.findIndex((x) => x.id === v.fase) : -1;
   const ef = e.fases[fi];
   if (fi < 0 || !ef?.encerrada) return null;

@@ -10,6 +10,7 @@ import { diaAbsoluto, somarDias } from "../carreira/datas";
 import {
   avancarCompeticao,
   datasPlanejadas,
+  datasPlanejadasPorFase,
   quantidadeInicial,
   receberEntrantes,
   resolverVagaDinamica,
@@ -36,6 +37,8 @@ export interface RegistroHistorico {
   competicao: string;
   campeao?: string;
   vice?: string;
+  /** Até os 32 primeiros (só nas continentais): o ranking do Mundial de Clubes sai daqui. */
+  classificacao?: string[];
   artilheiro?: { jogador: string; gols: number };
 }
 
@@ -80,14 +83,26 @@ export const TEMPORADA_DA_CONFEDERACAO: Record<Confederacao, Periodo> = {
   CAF: { inicio: "07-01", fim: "06-30" },
 };
 
-/** Chave da temporada de uma competição: o país, ou "conf:UEFA" nas continentais. */
+/** Temporada das competições mundiais de clubes (Copa Intercontinental, Mundial de Clubes). */
+export const TEMPORADA_MUNDIAL: Periodo = { inicio: "01-01", fim: "12-31" };
+export const CHAVE_MUNDIAL = "mundial";
+
+/** Chave da temporada de uma competição: o país, "conf:UEFA" nas continentais ou "mundial". */
 export function chaveDaCompeticao(c: Competicao): string | null {
   if (c.escopo.tipo === "confederacao") return `conf:${c.escopo.confederacao}`;
+  if (c.escopo.tipo === "mundial") return c.categoria === "clubes" ? CHAVE_MUNDIAL : null;
   return paisDaCompeticao(c);
 }
 
-/** Período da temporada de uma chave (país ou confederação). */
+/** Ano em que uma temporada termina ("2026/27" → 2027; "2027" → 2027). */
+export function anoFinal(temporada: string): number {
+  const inicio = Number(temporada.slice(0, 4));
+  return temporada.includes("/") ? inicio + 1 : inicio;
+}
+
+/** Período da temporada de uma chave (país, confederação ou mundial). */
 function periodoDaChave(m: MundoParaCompeticoes, chave: string): Periodo | undefined {
+  if (chave === CHAVE_MUNDIAL) return TEMPORADA_MUNDIAL;
   if (chave.startsWith("conf:"))
     return TEMPORADA_DA_CONFEDERACAO[chave.slice(5) as Confederacao] as Periodo | undefined;
   return m.pais(chave)?.temporada;
@@ -122,14 +137,83 @@ export function datasContinentais(
     for (const c of continentais) {
       const chave = `${c.id}:${i}`;
       let lista = cache.get(chave);
-      if (!lista) cache.set(chave, (lista = datasPlanejadas(c, i, m.datasFifa)));
+      if (!lista) cache.set(chave, (lista = planoContinental(m, c, i)));
       for (const d of lista) if (d >= inicio && d <= fim) datas.add(d);
     }
   return datas;
 }
 
+/**
+ * Datas de uma continental na temporada que começa em `inicio`, fugindo das datas mundiais em que
+ * os clubes da confederação podem jogar (a fase de liga da Champions não cai no dia da final da
+ * Intercontinental).
+ */
+function bloqueiosMundiais(m: MundoParaCompeticoes, c: Competicao, inicio: string) {
+  if (c.escopo.tipo !== "confederacao") return undefined;
+  const fim = somarDias(inicio, 400);
+  return datasMundiais(m, c.escopo.confederacao, inicio, fim);
+}
+
+function planoContinental(m: MundoParaCompeticoes, c: Competicao, inicio: string): string[] {
+  return datasPlanejadas(
+    c,
+    inicio,
+    m.datasFifa,
+    quantidadeInicial(c),
+    bloqueiosMundiais(m, c, inicio),
+  );
+}
+
 /** Datas planejadas das continentais, por mundo (o calendário não muda durante o jogo). */
 const cacheContinental = new WeakMap<MundoParaCompeticoes, Map<string, string[]>>();
+
+/** Confederação da competição de origem de uma vaga (null se não for continental). */
+function confederacaoDaOrigem(m: MundoParaCompeticoes, de: string): Confederacao | null {
+  const o = m.competicao(de)?.escopo;
+  return o?.tipo === "confederacao" ? o.confederacao : null;
+}
+
+/**
+ * Datas das competições mundiais em que um clube da confederação pode jogar, entre `inicio` e
+ * `fim`: de cada fase em diante a partir daquela em que entra o campeão da confederação (o da UEFA
+ * só joga a final da Intercontinental; o da OFC, desde a primeira rodada). As ligas do país fogem
+ * delas. O Mundial de Clubes, que tem os participantes conhecidos antes, trava só os países deles.
+ */
+export function datasMundiais(
+  m: MundoParaCompeticoes,
+  confederacao: Confederacao,
+  inicio: string,
+  fim: string,
+): Set<string> {
+  const datas = new Set<string>();
+  const mundiais = m.competicoes.filter(
+    (c) =>
+      c.categoria === "clubes" &&
+      c.escopo.tipo === "mundial" &&
+      !c.participantes.vagas.length &&
+      c.fases.some((f) => f.entramAqui.length),
+  );
+  if (!mundiais.length) return datas;
+  let cache = cacheContinental.get(m);
+  if (!cache) cacheContinental.set(m, (cache = new Map()));
+  const anos = new Set([Number(inicio.slice(0, 4)), Number(fim.slice(0, 4))]);
+  for (const ano of anos)
+    for (const c of mundiais) {
+      const primeira = c.fases.findIndex((f) =>
+        f.entramAqui.some((v) => confederacaoDaOrigem(m, v.de) === confederacao),
+      );
+      if (primeira < 0) continue;
+      const chave = `${c.id}:${ano}:${confederacao}`;
+      let lista = cache.get(chave);
+      if (!lista)
+        cache.set(
+          chave,
+          (lista = datasPlanejadasPorFase(c, `${ano}-01-01`, m.datasFifa).slice(primeira).flat()),
+        );
+      for (const d of lista) if (d >= inicio && d <= fim) datas.add(d);
+    }
+  return datas;
+}
 
 const PRIORIDADE: Record<Competicao["tipo"], number> = {
   // A supercopa é um jogo (ou dois) numa janela curta: marca primeiro e os outros fogem dela.
@@ -201,6 +285,94 @@ const continentalOuMais = (c: Competicao | undefined) =>
   c?.tipo === "continental" || c?.tipo === "intercontinental";
 
 /**
+ * Origem de cada clube para os sorteios evitarem confrontos da mesma origem: o país nas
+ * continentais e a confederação nas mundiais (grupos do Mundial de Clubes sem dois da mesma).
+ */
+function origemDosClubes(
+  m: MundoParaCompeticoes,
+  c: Competicao,
+  clubes: readonly string[],
+): Record<string, string> {
+  const mundial = c.escopo.tipo === "mundial";
+  return Object.fromEntries(
+    clubes.map((x) => {
+      const pais = m.clube?.(x)?.pais ?? "";
+      return [x, mundial ? (m.pais(pais)?.confederacao ?? pais) : pais];
+    }),
+  );
+}
+
+/**
+ * Campeão (ou vice) da edição de uma competição que termina no ano: a edição em andamento, o
+ * histórico ou os campeões anteriores ao banco. null: a edição ainda não acabou; undefined: não há.
+ */
+function donoDaEdicao(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  de: string,
+  ano: number,
+  vice = false,
+  competicoes: Record<string, EstadoCompeticao> = estado.competicoes,
+): string | null | undefined {
+  const eo = competicoes[de];
+  if (eo && anoFinal(eo.temporada) === ano) {
+    if (!eo.encerrada) return null;
+    return (vice ? eo.classificacao?.[1] : eo.campeao) ?? undefined;
+  }
+  const h = estado.historico.find((x) => x.competicao === de && anoFinal(x.temporada) === ano);
+  if (h) return vice ? h.vice : h.campeao;
+  const def = m.competicao(de);
+  const antes = [
+    ...(def?.campeaoAnterior ? [def.campeaoAnterior] : []),
+    ...(def?.campeoesAnteriores ?? []),
+  ].find((x) => anoFinal(x.temporada) === ano);
+  return antes ? (vice ? antes.vice : antes.campeao) : undefined;
+}
+
+/**
+ * Clubes da confederação de uma competição continental em ordem de ranking: pontos pela campanha
+ * nas edições que terminaram entre `ano - edicoes` e `ano - 1` (32 pelo campeão, 31 pelo vice...),
+ * e depois os clubes das primeiras divisões da confederação pela força do elenco.
+ */
+function rankingDaConfederacao(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  de: string,
+  ano: number,
+  edicoes: number,
+): string[] {
+  const pontos = new Map<string, number>();
+  for (const h of estado.historico) {
+    if (h.competicao !== de) continue;
+    const a = anoFinal(h.temporada);
+    if (a < ano - edicoes || a > ano - 1) continue;
+    (h.classificacao ?? [h.campeao, h.vice].filter((x): x is string => !!x)).forEach((t, i) =>
+      pontos.set(t, (pontos.get(t) ?? 0) + Math.max(1, 32 - i)),
+    );
+  }
+  const conf = confederacaoDaOrigem(m, de);
+  const ligas = m.competicoes.filter(
+    (c) =>
+      c.tipo === "liga" &&
+      (c.divisao ?? 1) === 1 &&
+      conf !== null &&
+      m.pais(paisDaCompeticao(c) ?? "")?.confederacao === conf,
+  );
+  const todos = new Set(pontos.keys());
+  for (const l of ligas)
+    for (const t of estado.competicoes[l.id]?.participantes ??
+      estado.participantes[l.id] ??
+      participantesIniciais(l))
+      todos.add(t);
+  return [...todos].sort(
+    (a, b) =>
+      (pontos.get(b) ?? 0) - (pontos.get(a) ?? 0) ||
+      forca(m, b) - forca(m, a) ||
+      a.localeCompare(b),
+  );
+}
+
+/**
  * Participantes pelas vagas: os primeiros de cada liga, o campeão e o vice (da última edição; na
  * primeira temporada, o campeão anterior ao banco ou os mais fortes). As vagas das fases mais
  * adiantadas são resolvidas antes (o campeão da Libertadores entra nos grupos e empurra os do país
@@ -211,6 +383,7 @@ function resolverParticipantes(
   estado: MundoCompeticoes,
   c: Competicao,
   daTemporada: Record<string, EstadoCompeticao>,
+  temporada?: string,
 ): Resolucao {
   const escolhidos: string[] = [];
   // Quem já está numa competição excluída (a Libertadores, para a Sul-Americana) não entra.
@@ -236,8 +409,39 @@ function resolverParticipantes(
     if (v.caminho) for (const t of lista) caminhos[t] = v.caminho;
     return lista;
   };
+  const ano = temporada ? anoFinal(temporada) : undefined;
+  const paisDe = (x: string) => m.clube?.(x)?.pais ?? "";
   const resolverVaga = (v: Competicao["participantes"]["vagas"][number]): string[] => {
     if (v.criterio === "eliminados") return [];
+    // Mundial de Clubes: os campeões das últimas edições e os melhores do ranking.
+    if (v.criterio === "campeoes" || v.criterio === "ranking") {
+      const n = v.edicoes ?? 4;
+      const alvo = ano ?? anoFinal(estado.historico.at(-1)?.temporada ?? "2026");
+      const ordem = rankingDaConfederacao(m, estado, v.de, alvo, n);
+      const lista: string[] = [];
+      const pegar = (x: string) => {
+        escolhidos.push(x);
+        lista.push(x);
+      };
+      if (v.criterio === "campeoes") {
+        for (let a = alvo - n; a < alvo; a++) {
+          const dono = donoDaEdicao(m, estado, v.de, a);
+          if (dono && !ocupado(dono)) pegar(dono);
+        }
+        // Campeão repetido (ou edição sem campeão conhecido): a vaga vai para o ranking.
+        const falta = (v.quantidade ?? n) - lista.length;
+        for (const x of ordem.filter((t) => !ocupado(t)).slice(0, Math.max(0, falta))) pegar(x);
+        return lista;
+      }
+      const limite = v.maximoPorPais ?? Infinity;
+      for (const x of ordem) {
+        if (lista.length >= (v.quantidade ?? 1)) break;
+        if (ocupado(x)) continue;
+        if (escolhidos.filter((t) => paisDe(t) === paisDe(x)).length >= limite) continue;
+        pegar(x);
+      }
+      return lista;
+    }
     if (v.criterio === "posicoes") {
       const ordem = ranking(m, estado, v.de, daTemporada);
       const proximo = (desde: number) => ordem.slice(desde).find((x) => !ocupado(x));
@@ -324,6 +528,7 @@ function participantesPorVagas(
  */
 function distribuirEntrantes(
   m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
   competicoes: Record<string, EstadoCompeticao>,
   semente: string,
 ): Record<string, EstadoCompeticao> | null {
@@ -333,7 +538,7 @@ function distribuirEntrantes(
       continue;
     let e = (mudou ?? competicoes)[c.id];
     if (!e || e.encerrada) continue;
-    for (let p = 1; p < c.fases.length; p++) {
+    for (let p = 0; p < c.fases.length; p++) {
       const fase = c.fases[p] as Competicao["fases"][number];
       const dinamicas = fase.entramAqui
         .map((v, vi) => ({ v, vi }))
@@ -343,9 +548,20 @@ function distribuirEntrantes(
       let pronto = true;
       for (const { v, vi } of dinamicas) {
         const origem = m.competicao(v.de);
-        const eo = (mudou ?? competicoes)[v.de];
-        const lista =
+        const atuais = mudou ?? competicoes;
+        const eo = atuais[v.de];
+        let lista =
           origem && eo && eo.temporada === e.temporada ? resolverVagaDinamica(origem, eo, v) : null;
+        // Campeão de uma competição de outra temporada (o da Champions na Intercontinental): a
+        // edição que termina no ano desta, em andamento ou já no histórico.
+        if (!lista && origem && (v.criterio === "campeao" || v.criterio === "vice")) {
+          const ano = anoFinal(e.temporada);
+          const dono = donoDaEdicao(m, estado, v.de, ano, v.criterio === "vice", atuais);
+          if (dono) lista = [dono];
+          // Edição que não existe (nem no banco): o mais forte da confederação.
+          else if (dono === undefined && !(eo && eo.temporada === e.temporada))
+            lista = rankingDaConfederacao(m, estado, v.de, ano, 4).slice(0, 1);
+        }
         if (!lista) {
           pronto = false;
           break;
@@ -355,10 +571,7 @@ function distribuirEntrantes(
       if (!pronto) continue;
       // País dos que chegam, para o sorteio da fase evitar compatriotas.
       const novos = Object.values(porVaga).flat();
-      const paises =
-        m.clube && continentalOuMais(c)
-          ? Object.fromEntries(novos.map((x) => [x, m.clube?.(x)?.pais ?? ""]))
-          : undefined;
+      const paises = m.clube && continentalOuMais(c) ? origemDosClubes(m, c, novos) : undefined;
       e = receberEntrantes(c, e, p, porVaga, semente, paises);
       mudou ??= { ...competicoes };
       mudou[c.id] = e;
@@ -380,14 +593,19 @@ function abrirTemporada(
   const t = temporadaDe({ temporada: periodo }, data);
   const temporada: TemporadaDoPais = { nome: nomeTemporada({ temporada: periodo }, data), ...t };
   const competicoes = { ...estado.competicoes };
-  const continental = codigo.startsWith("conf:");
+  const mundial = codigo === CHAVE_MUNDIAL;
+  // Continentais e mundiais marcam as datas pelo plano (as ligas é que fogem delas).
+  const continental = codigo.startsWith("conf:") || mundial;
   const confederacao = continental ? undefined : m.pais(codigo)?.confederacao;
   // Primeiro as de janela curta (supercopas, estaduais e regionais), depois as ligas (da 1ª divisão para baixo)
   // e as copas: cada uma foge das datas das anteriores, para o mesmo clube não ter dois jogos no
   // mesmo dia nem em dias seguidos.
   // Nas continentais, a que exclui outra abre depois dela (a Sul-Americana depois da Libertadores).
+  // Competições que não são anuais (o Mundial de Clubes, a cada 4 anos) só abrem no ano delas.
+  const ano = anoFinal(temporada.nome);
   const ordem = competicoesDoMundo(m)
     .filter((c) => chaveDaCompeticao(c) === codigo)
+    .filter((c) => (ano - c.periodicidade.anoBase) % c.periodicidade.aCadaAnos === 0)
     .sort(
       (a, b) =>
         prioridade(a) - prioridade(b) ||
@@ -396,24 +614,36 @@ function abrirTemporada(
     );
   // As datas das continentais da confederação ficam reservadas desde o começo.
   const reservadas = confederacao
-    ? datasContinentais(m, confederacao, t.inicio, t.fim)
+    ? new Set([
+        ...datasContinentais(m, confederacao, t.inicio, t.fim),
+        ...datasMundiais(m, confederacao, t.inicio, t.fim),
+      ])
     : new Set<string>();
   // Cada competição foge das datas das que já marcaram e dividem clubes com ela (o Paulistão não
-  // atrapalha o Carioca; a Copa do Nordeste só pesa para quem a joga).
+  // atrapalha o Carioca; a Copa do Nordeste só pesa para quem a joga). O Mundial de Clubes já
+  // aberto trava as datas dele nas competições dos países que têm clubes lá.
   const marcadas: { clubes: Set<string>; datas: readonly string[] }[] = [];
+  if (!continental)
+    for (const e of Object.values(estado.competicoes)) {
+      const def = m.competicao(e.id);
+      if (def?.escopo.tipo !== "mundial" || e.encerrada || !e.participantes.length) continue;
+      if (e.fim < t.inicio || e.inicio > t.fim) continue;
+      marcadas.push({ clubes: new Set(e.participantes), datas: e.datas });
+    }
   for (const c of ordem) {
     const porVagas = !c.participantes.fixos.length && c.participantes.vagas.length > 0;
-    const resolucao = porVagas ? resolverParticipantes(m, estado, c, competicoes) : undefined;
+    const resolucao = porVagas
+      ? resolverParticipantes(m, estado, c, competicoes, temporada.nome)
+      : undefined;
     const participantes =
       resolucao?.inicial ?? estado.participantes[c.id] ?? participantesIniciais(c);
-    if (participantes.length < 2) continue;
+    // Sem ninguém no começo só se todos vierem de outras competições (Copa Intercontinental).
+    const chegamDepois = !participantes.length && c.fases[0]?.entramAqui.length;
+    if (participantes.length < 2 && !chegamDepois) continue;
     const entrantes =
       resolucao && Object.keys(resolucao.entrantes).length ? resolucao.entrantes : undefined;
     const todos = [...participantes, ...Object.values(entrantes ?? {}).flat()];
-    const paises =
-      m.clube && continentalOuMais(c)
-        ? Object.fromEntries(todos.map((x) => [x, m.clube?.(x)?.pais ?? ""]))
-        : undefined;
+    const paises = m.clube && continentalOuMais(c) ? origemDosClubes(m, c, todos) : undefined;
     let bloqueadas: Set<string> | undefined;
     if (!continental) {
       // Todas reservam as datas continentais: até um campeão de copa da 2ª divisão pode jogá-las.
@@ -430,7 +660,15 @@ function abrirTemporada(
       ...(resolucao && Object.keys(resolucao.caminhos).length
         ? { caminhos: resolucao.caminhos }
         : {}),
-      ...(bloqueadas ? { bloqueadas } : { quantidadePlanejada: quantidadeInicial(c) }),
+      ...(bloqueadas
+        ? { bloqueadas }
+        : {
+            quantidadePlanejada: quantidadeInicial(c),
+            // As continentais fogem das datas mundiais (o mesmo plano que as ligas reservaram).
+            ...(codigo.startsWith("conf:")
+              ? { bloqueadas: bloqueiosMundiais(m, c, t.inicio) ?? new Set<string>() }
+              : {}),
+          }),
     });
     competicoes[c.id] = e;
     if (!continental) marcadas.push({ clubes: new Set(todos), datas: e.datas });
@@ -459,12 +697,14 @@ export function abrirTemporadasFaltando(
       .filter((c) => faltando.includes(chaveDaCompeticao(c) as string))
       .map((c) => c.id),
   );
-  // Só os jogos já passados das competições novas (as outras já estão em dia).
-  for (const e of Object.values(estado.competicoes)) {
-    if (!novas.has(e.id)) continue;
-    const dias = [...new Set(e.datas.filter((d) => d < data))].sort();
-    for (const d of dias) estado = jogarDia(m, estado, d, semente, (id) => !novas.has(id));
-  }
+  // Só os jogos já passados das competições novas (as outras já estão em dia), dia a dia desde o
+  // começo delas: quem chega de outra competição (Intercontinental) entra antes do jogo.
+  const inicios = Object.values(estado.competicoes)
+    .filter((e) => novas.has(e.id))
+    .map((e) => e.inicio)
+    .sort();
+  for (let d = inicios[0] ?? data; d < data; d = somarDias(d, 1))
+    estado = jogarDia(m, estado, d, semente, (id) => !novas.has(id));
   return estado;
 }
 
@@ -604,9 +844,12 @@ export function jogarDia(
     competicoes ??= { ...estado.competicoes };
     competicoes[id] = e;
   }
-  if (!competicoes) return estado;
-  // Quem caiu numa competição e segue em outra (eliminados da Libertadores na Sul-Americana).
-  return { ...estado, competicoes: distribuirEntrantes(m, competicoes, semente) ?? competicoes };
+  // Quem caiu numa competição e segue em outra (eliminados da Libertadores na Sul-Americana), e
+  // os campeões que chegam à Intercontinental (mesmo num dia sem jogos).
+  const base = competicoes ?? estado.competicoes;
+  const distribuidas = distribuirEntrantes(m, estado, base, semente);
+  if (!competicoes && !distribuidas) return estado;
+  return { ...estado, competicoes: distribuidas ?? base };
 }
 
 /**
@@ -669,7 +912,11 @@ export function virarTemporadas(
 ): Virada {
   let estado = estado0;
   const encerradas: Virada["encerradas"] = [];
-  for (const [codigo, t] of Object.entries(estado0.temporadas)) {
+  // A mundial vira antes: o Mundial de Clubes abre antes das ligas e trava as datas dos clubes dele.
+  const chaves = Object.entries(estado0.temporadas).sort(
+    ([a], [b]) => Number(b === CHAVE_MUNDIAL) - Number(a === CHAVE_MUNDIAL),
+  );
+  for (const [codigo, t] of chaves) {
     if (data <= t.fim) continue;
     const doPais = Object.values(estado.competicoes).filter((e) => {
       const c = m.competicao(e.id);
@@ -690,6 +937,9 @@ export function virarTemporadas(
         competicao: e.id,
         ...(e.campeao ? { campeao: e.campeao } : {}),
         ...(e.classificacao?.[1] ? { vice: e.classificacao[1] } : {}),
+        ...(c.tipo === "continental" && e.classificacao
+          ? { classificacao: e.classificacao.slice(0, 32) }
+          : {}),
         ...(artilheiro ? { artilheiro: { jogador: artilheiro[0], gols: artilheiro[1][0] } } : {}),
       });
       movimentos.push(...movimentosDaTemporada(c, e));

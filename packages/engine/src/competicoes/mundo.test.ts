@@ -4,6 +4,7 @@ import { somarDias } from "../carreira/datas";
 import { jogosDoDia, lancarResultado, tabelaDoGrupo } from "./competicao";
 import {
   abrirTemporadasFaltando,
+  anoFinal,
   datasContinentais,
   iniciarMundo,
   jogarDia,
@@ -405,5 +406,13 @@ describe("fases preliminares e clubes que passam de uma competição para outra"
     // Os 3º da Libertadores são a metade de cima; os eliminados da prévia vêm por último.
     expect(finalSul.slice(0, 2).sort()).toEqual([...terceiros].sort());
     expect(finalSul.slice(-2).sort()).toEqual([...eliminados].sort());
+  });
+});
+
+describe("temporadas de outras chaves", () => {
+  it("ano final de uma temporada de um ano ou de dois", () => {
+    expect(anoFinal("2026/27")).toBe(2027);
+    expect(anoFinal("2027")).toBe(2027);
+    expect(anoFinal("1999/00")).toBe(2000);
   });
 });

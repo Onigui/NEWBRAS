@@ -1360,3 +1360,60 @@ describe("CONCACAF, AFC, CAF e OFC no formato real", () => {
     expect(conta(ofc.fases[1]!.entramAqui)).toBe(7);
   });
 });
+
+describe("supercopas continentais e competições mundiais", () => {
+  const comp = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+
+  it("Recopa, Supercopa da UEFA e da CAF juntam os dois campeões continentais", () => {
+    for (const [id, de] of [
+      ["conmebol-recopa", ["conmebol-libertadores", "conmebol-sul-americana"]],
+      ["uefa-supercopa", ["uefa-champions-league", "uefa-europa-league"]],
+      ["caf-supercopa", ["caf-champions-league", "caf-confederation-cup"]],
+    ] as const) {
+      const c = comp(id);
+      expect(c.tipo).toBe("supercopa");
+      expect(c.participantes.vagas.map((v) => [v.de, v.criterio])).toEqual(
+        de.map((d) => [d, "campeao"]),
+      );
+    }
+    expect(comp("conmebol-recopa").fases[0]).toMatchObject({ jogos: 2, prorrogacao: true });
+    expect(comp("uefa-supercopa").fases[0]).toMatchObject({ jogos: 1, mando: "neutro" });
+  });
+
+  it("Intercontinental: os seis campeões entram cada um na sua fase, o da Champions só na final", () => {
+    const ic = comp("fifa-intercontinental");
+    expect(ic.escopo.tipo).toBe("mundial");
+    const entram = ic.fases.map((f) => f.entramAqui.map((v) => v.de));
+    expect(entram).toEqual([
+      ["afc-champions-league", "ofc-champions-league"],
+      ["caf-champions-league"],
+      ["concacaf-champions-cup", "conmebol-libertadores"],
+      ["uefa-champions-league"],
+    ]);
+    // A vaga aponta para a última fase da origem (entra quando a final acontece).
+    for (const v of ic.fases.flatMap((f) => f.entramAqui))
+      expect(v.fase).toBe(comp(v.de).fases.at(-1)!.id);
+  });
+
+  it("Mundial de Clubes a cada 4 anos, com 32 vagas na divisão da FIFA", () => {
+    const m = comp("fifa-mundial-de-clubes");
+    expect(m.periodicidade).toEqual({ aCadaAnos: 4, anoBase: 2029 });
+    const total = m.participantes.vagas.reduce((s, v) => s + (v.quantidade ?? 1), 0);
+    expect(total).toBe(32);
+    const porConf = (conf: string) =>
+      m.participantes.vagas
+        .filter((v) => {
+          const o = comp(v.de).escopo;
+          return o.tipo === "confederacao" && o.confederacao === conf;
+        })
+        .reduce((s, v) => s + (v.quantidade ?? 1), 0);
+    expect(porConf("UEFA")).toBe(12);
+    expect(porConf("CONMEBOL")).toBe(6);
+    expect(porConf("AFC")).toBe(4);
+    expect(porConf("CAF")).toBe(4);
+    expect(porConf("CONCACAF")).toBe(4);
+    expect(porConf("OFC")).toBe(1);
+    // Campeões dos últimos 4 anos: o de 2024/25 da Champions entra pelos campeões anteriores.
+    expect(comp("uefa-champions-league").campeoesAnteriores[0]?.temporada).toBe("2024/25");
+  });
+});

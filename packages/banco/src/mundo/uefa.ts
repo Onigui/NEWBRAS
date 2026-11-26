@@ -203,7 +203,9 @@ const CHAMPIONS: CompeticaoEntrada = {
   categoria: "clubes",
   escopo: { tipo: "confederacao", confederacao: "UEFA" },
   calendario: periodo("07-07", "06-05"),
-  campeaoAnterior: { temporada: "2025/26", campeao: "fra-psg" },
+  campeaoAnterior: { temporada: "2025/26", campeao: "fra-psg", vice: "eng-arsenal" },
+  // O de 2024/25 conta para o Mundial de Clubes de 2029.
+  campeoesAnteriores: [{ temporada: "2024/25", campeao: "fra-psg", vice: "ita-inter" }],
   participantes: {
     fixos: [],
     // 1ª qualificatória: campeões das federações 24, 25 e 29 a 55.
