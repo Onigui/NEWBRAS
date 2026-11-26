@@ -1,6 +1,7 @@
 import { CONTINENTAIS } from "./mundo/continentais";
 import { MUNDIAIS, SUPERCOPAS_CONTINENTAIS } from "./mundo/mundiais";
 import { COPAS } from "./mundo/copas";
+import { NATIONS_LEAGUE } from "./mundo/nationsLeague";
 import { COPAS_REGIONAIS } from "./mundo/regionais";
 import { paisesComTemporadaAjustada } from "./mundo/temporadas";
 import {
@@ -52,7 +53,7 @@ import { iconesNaBase } from "./lendas/icones";
 import { DATA_REFERENCIA } from "./referencia";
 
 export { DATA_REFERENCIA };
-export const VERSAO_BANCO = "0.33.0";
+export const VERSAO_BANCO = "0.34.0";
 
 interface PaisNoBanco {
   clubes: readonly ClubeEntrada[];
@@ -433,6 +434,8 @@ export function montarBanco(opcoes: OpcoesBanco = {}): BancoT {
     ...CONTINENTAIS,
     ...SUPERCOPAS_CONTINENTAIS,
     ...MUNDIAIS,
+    // Seleções (Fase 11).
+    ...NATIONS_LEAGUE,
   );
 
   // Elencos acima do limite profissional: os jovens que sobram vão para a base e o resto

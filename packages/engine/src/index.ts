@@ -6,6 +6,7 @@ export { gerarElenco, type OpcoesElenco } from "./gerador/elenco";
 export * from "./partida";
 export * from "./carreira";
 export * from "./competicoes";
+export { convocar, TAMANHO_DA_CONVOCACAO, VAGAS_DA_CONVOCACAO } from "./selecoes/convocacao";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.18.0";
+export const ENGINE_VERSION = "0.19.0";

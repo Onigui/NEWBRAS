@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CodigoPais, Id, NomeTexto, Periodo } from "./comum";
+import { CodigoPais, DiaDoAno, Id, NomeTexto, Periodo } from "./comum";
 import { Confederacao } from "./mundo";
 
 /**
@@ -45,6 +45,9 @@ export const Escopo = z.discriminatedUnion("tipo", [
   z.object({ tipo: z.literal("mundial") }),
 ]);
 export type Escopo = z.infer<typeof Escopo>;
+
+/** Um participante: id de clube ou, nas competições de seleções, o código do país. */
+const Participante = z.union([Id, CodigoPais]);
 
 /** De onde vem uma vaga: a colocação ou o título em outra competição. */
 export const Vaga = z.object({
@@ -98,6 +101,11 @@ const BaseFase = z.object({
   periodo: Periodo.optional(),
   /** Times que entram direto nesta fase (ex.: classificados para a Libertadores na Copa do Brasil). */
   entramAqui: z.array(Vaga).default([]),
+  /**
+   * Dias exatos das rodadas (MM-DD, em ordem), quando o calendário é fixo: as rodadas da Nations
+   * League nas datas FIFA. Valem quando são tantos quantas as rodadas da fase.
+   */
+  datas: z.array(DiaDoAno).optional(),
 });
 
 /** Grupos em pontos corridos. Uma liga comum é 1 grupo com 2 turnos. */
@@ -175,6 +183,8 @@ export const FaseMataMata = BaseFase.extend({
   eliminatorias: z.int().min(1).optional(),
   /** Todos jogam a eliminatória, sem folgas para os melhores (fases da Copa do Brasil). */
   todosJogam: z.boolean().optional(),
+  /** No sorteio (potes ou livre), evita quem foi do mesmo grupo na fase anterior (Nations League). */
+  evitarMesmoGrupo: z.boolean().optional(),
 });
 
 export const Fase = z.discriminatedUnion("tipo", [FaseGrupos, FaseDeLiga, FaseMataMata]);
@@ -245,11 +255,21 @@ export const Competicao = z
     movimentos: z.array(MovimentoTabela).default([]),
     /** Último campeão antes do banco (para a supercopa e as vagas de campeão da primeira temporada). */
     campeaoAnterior: z
-      .object({ temporada: z.string().min(4).max(9), campeao: Id, vice: Id.optional() })
+      .object({
+        temporada: z.string().min(4).max(9),
+        campeao: Participante,
+        vice: Participante.optional(),
+      })
       .optional(),
     /** Campeões mais antigos que o anterior (para as vagas que olham várias edições). */
     campeoesAnteriores: z
-      .array(z.object({ temporada: z.string().min(4).max(9), campeao: Id, vice: Id.optional() }))
+      .array(
+        z.object({
+          temporada: z.string().min(4).max(9),
+          campeao: Participante,
+          vice: Participante.optional(),
+        }),
+      )
       .default([]),
     /** Vagas que esta competição distribui em outras. */
     classificaPara: z

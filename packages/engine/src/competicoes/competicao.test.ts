@@ -668,6 +668,53 @@ describe("competições", () => {
     expect(e.jogos.at(-1)?.neutro).toBe(true);
   });
 
+  it("datas fixas: as rodadas caem nos dias marcados, mesmo virando o ano", () => {
+    const c = comp({
+      tipo: "selecoes",
+      categoria: "selecoes",
+      escopo: { tipo: "confederacao", confederacao: "UEFA" },
+      divisao: undefined,
+      calendario: { inicio: "09-24", fim: "06-13" },
+      participantes: { fixos: ["AAA", "BBB", "CCC", "DDD"], quantidade: 4 },
+      fases: [
+        {
+          id: "liga",
+          nome: "Liga",
+          tipo: "grupos",
+          grupos: 1,
+          turnos: 2,
+          classificamPorGrupo: 2,
+          periodo: { inicio: "09-24", fim: "11-17" },
+          datas: ["09-25", "09-28", "10-02", "10-05", "11-13", "11-16"],
+        },
+        {
+          id: "final",
+          nome: "Final",
+          tipo: "mata-mata",
+          jogos: 1,
+          chaveamento: "campanha",
+          mando: "neutro",
+          periodo: { inicio: "06-13", fim: "06-13" },
+          datas: ["06-13"],
+        },
+      ] as CompeticaoEntrada["fases"],
+    });
+    const e = montarCompeticao(c, ["AAA", "BBB", "CCC", "DDD"], "2026-09-24", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2026/27",
+    });
+    expect(e.datas).toEqual([
+      "2026-09-25",
+      "2026-09-28",
+      "2026-10-02",
+      "2026-10-05",
+      "2026-11-13",
+      "2026-11-16",
+      "2027-06-13",
+    ]);
+  });
+
   it("movimento com anos: só vale nas temporadas dele (ampliação da Série C)", () => {
     const c = comp({
       fases: [{ id: "t", nome: "Temporada", tipo: "grupos", grupos: 1, turnos: 1 }],
