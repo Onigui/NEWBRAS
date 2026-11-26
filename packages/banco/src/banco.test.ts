@@ -1293,6 +1293,38 @@ describe("seleções", () => {
     expect(conta("uefa-eliminatorias-copa-liga-2")).toBe(16);
     expect(copa.campeaoAnterior?.campeao).toBe("ESP");
   });
+
+  it("copas continentais: grupos do sorteio, e as vagas fecham com a Nations League e a Copa Ouro", () => {
+    const fixos = (id: string) => competicao(id)!.participantes.fixos;
+    const conf = (id: string) =>
+      new Set(banco.paises.filter((p) => p.confederacao === id).map((p) => p.codigo as string));
+    // Copa Africana: 48 nas eliminatórias (12 grupos), os 3 anfitriões entre elas; 21 + 3 = 24.
+    const elimCan = competicao("caf-eliminatorias-copa-africana")!;
+    expect(fixos(elimCan.id)).toHaveLength(48);
+    expect(new Set(fixos(elimCan.id)).size).toBe(48);
+    expect(fixos(elimCan.id).every((x) => conf("CAF").has(x))).toBe(true);
+    expect(elimCan.classificados[0]?.anfitrioes).toEqual(["KEN", "UGA", "TAN"]);
+    const can = competicao("caf-copa-africana")!;
+    expect(fixos(can.id).length + (can.fases[0]!.entramAqui[0]?.quantidade ?? 0)).toBe(24);
+    // Copa da Ásia: 24 da AFC nos 6 grupos, adiada para dezembro de 2027.
+    expect(fixos("afc-copa-da-asia")).toHaveLength(24);
+    expect(fixos("afc-copa-da-asia").every((x) => conf("AFC").has(x))).toBe(true);
+    expect(competicao("afc-copa-da-asia")!.calendario.inicio).toBe("12-23");
+    // Concacaf: as 4 cabeças só nas quartas; Copa Ouro com 10 da Liga A e 6 da Liga B.
+    const nlA = competicao("concacaf-nations-league-a")!;
+    const quartas = nlA.fases[1]!;
+    expect(quartas.fixosAqui).toEqual(["MEX", "USA", "CAN", "PAN"]);
+    const ligas = [...fixos(nlA.id), ...quartas.fixosAqui, ...fixos("concacaf-nations-league-b")];
+    expect(new Set(ligas).size).toBe(ligas.length);
+    expect(ligas.every((x) => conf("CONCACAF").has(x))).toBe(true);
+    const ouro = competicao("concacaf-copa-ouro")!;
+    expect(ouro.fases[0]!.entramAqui.map((v) => v.quantidade)).toEqual([10, 6]);
+    // Copa América: as 10 da CONMEBOL e 6 da Copa Ouro.
+    const america = competicao("conmebol-copa-america")!;
+    expect([...fixos(america.id)].sort()).toEqual([...conf("CONMEBOL")].sort());
+    expect(america.fases[0]!.entramAqui[0]?.quantidade).toBe(6);
+    expect(america.campeaoAnterior?.campeao).toBe("ARG");
+  });
 });
 
 describe("copas regionais", () => {

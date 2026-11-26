@@ -1089,7 +1089,10 @@ export function virarTemporadas(
       movimentos.push(...movimentosDaTemporada(c, e));
       if (e.classificacao) classificacoes[e.id] = e.classificacao;
       // Copas montam os participantes de novo a cada temporada, pelas vagas.
-      if (c.participantes.fixos.length)
+      // Seleções voltam à lista da definição: quem chegou pelas vagas ou entrou numa fase adiante
+      // (anfitriões e cabeças) não fica para a próxima edição.
+      if (c.categoria === "selecoes") participantes[e.id] = participantesIniciais(c);
+      else if (c.participantes.fixos.length)
         participantes[e.id] = participantes[e.id] ?? [...e.participantes];
     }
     resolverBarragens(m, doPais, movimentos, semente);

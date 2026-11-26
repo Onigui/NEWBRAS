@@ -53,6 +53,8 @@ function liga(o: {
     escopo: { tipo: "confederacao", confederacao: "UEFA" },
     divisao: { A: 1, B: 2, C: 3, D: 4 }[o.letra],
     periodicidade: { aCadaAnos: 2, anoBase: 2027 },
+    // Os grupos do sorteio de 2026; nas edições seguintes, sorteio novo.
+    gruposFixosAte: 2027,
     // Todas as ligas com a temporada de setembro a junho (a das edições de anos ímpares no fim).
     calendario: { inicio: "09-24", fim: "06-13" },
     participantes: { fixos, quantidade: fixos.length },

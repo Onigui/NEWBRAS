@@ -137,6 +137,8 @@ const BaseFase = z.object({
         ),
     )
     .optional(),
+  /** Seleções que entram direto nesta fase (as 4 cabeças da Liga A da Nations League da Concacaf). */
+  fixosAqui: z.array(z.string().min(3)).default([]),
   /** No máximo tantos entram na fase, na ordem das vagas (os playoffs da Euro têm 8). */
   limiteDeEntradas: z.int().min(2).optional(),
 });
@@ -270,6 +272,11 @@ export const Competicao = z
      */
     anos: z.int().min(1).max(4).default(1),
     /**
+     * Os grupos pela ordem da lista (o sorteio real) valem até a edição que termina neste ano; nas
+     * seguintes, os mesmos participantes são sorteados de novo.
+     */
+    gruposFixosAte: z.int().min(1900).optional(),
+    /**
      * Quem a competição classifica para outra (eliminatórias), em ordem: as posições numa fase (em
      * cada grupo, ou só os `melhores` entre os grupos), os vencedores de um playoff e as vagas
      * reservadas (os anfitriões que ainda não se classificaram; sem eles, o próximo da regra
@@ -285,6 +292,11 @@ export const Competicao = z
           vencedores: z.boolean().optional(),
           /** Os que perderam a última rodada da fase (o vice da Oceania vai à repescagem). */
           perdedores: z.boolean().optional(),
+          /**
+           * Anfitriões já classificados que disputam o grupo (Copa Africana de 2027): no grupo de um
+           * deles, ele ocupa uma das vagas e entram os outros até completar.
+           */
+          anfitrioes: z.array(z.string().min(3)).optional(),
           reservados: z.array(z.string().min(3)).optional(),
           quantidade: z.int().min(1).optional(),
         }),
