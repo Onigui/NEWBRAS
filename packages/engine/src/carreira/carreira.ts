@@ -55,7 +55,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 4;
+export const FORMATO_CARREIRA = 5;
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -884,10 +884,10 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
     competicoes?: MundoCompeticoes;
   };
   if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
-  // Formato 1: sem competições. Formato 2: sem as continentais. Formato 3: continentais sem as fases
-  // preliminares (abertas de novo no formato real). Tudo em dia com a data da carreira.
+  // Formato 1: sem competições. Formato 2: sem as continentais. Formatos 3 e 4: continentais num
+  // formato anterior (abertas de novo no formato real). Tudo em dia com a data da carreira.
   let competicoes = antiga.competicoes;
-  if (competicoes && antiga.formato === 3) {
+  if (competicoes && (antiga.formato === 3 || antiga.formato === 4)) {
     const continental = (id: string) => mundo.competicao(id)?.escopo.tipo === "confederacao";
     competicoes = {
       ...competicoes,

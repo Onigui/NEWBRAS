@@ -193,6 +193,8 @@ function ranking(
 interface Resolucao {
   inicial: string[];
   entrantes: Record<string, string[]>;
+  /** Caminho de cada clube nas qualificatórias da UEFA. */
+  caminhos: Record<string, string>;
 }
 
 const continentalOuMais = (c: Competicao | undefined) =>
@@ -226,7 +228,15 @@ function resolverParticipantes(
       .flatMap((v) => ranking(m, estado, v.de, daTemporada))
       .filter((x) => !ocupado(x))
       .sort((a, b) => forca(m, b) - forca(m, a))[0];
+  const caminhos: Record<string, string> = {};
+  // Quem entrou pela alternativa de uma vaga de campeão não é campeão (não vai para o pote 1).
+  const porAlternativa = new Set<string>();
   const resolver = (v: Competicao["participantes"]["vagas"][number]): string[] => {
+    const lista = resolverVaga(v);
+    if (v.caminho) for (const t of lista) caminhos[t] = v.caminho;
+    return lista;
+  };
+  const resolverVaga = (v: Competicao["participantes"]["vagas"][number]): string[] => {
     if (v.criterio === "eliminados") return [];
     if (v.criterio === "posicoes") {
       const ordem = ranking(m, estado, v.de, daTemporada);
@@ -252,7 +262,17 @@ function resolverParticipantes(
           ? registro.vice
           : anterior?.vice;
     let escolhido = dono && !ocupado(dono) ? dono : undefined;
-    if (!escolhido)
+    // UEFA: campeão que já tem vaga cede a dele ao mais forte das alternativas.
+    if (!escolhido && v.alternativas.length)
+      escolhido = v.alternativas
+        .flatMap((a) => {
+          const ordem = ranking(m, estado, a.de, daTemporada);
+          return a.posicoes.map((p) => ordem[p - 1]).filter((x): x is string => !!x);
+        })
+        .filter((x) => !ocupado(x))
+        .sort((a, b) => forca(m, b) - forca(m, a))[0];
+    if (escolhido && escolhido !== dono) porAlternativa.add(escolhido);
+    if (!escolhido && !v.alternativas.length)
       escolhido =
         continentalOuMais(origem) || v.de === c.id
           ? maisForteQueSobra()
@@ -270,18 +290,20 @@ function resolverParticipantes(
       .map((v, vi) => ({ v, vi }))
       .filter(({ v }) => !vagaDaPropria(c, v) && !vagaDinamica(v));
     if (!fixas.length) continue;
-    // Campeões continentais primeiro (o atual campeão no pote 1), depois os outros por força.
+    // O atual campeão primeiro (pote 1), depois os outros por força.
     const campeoes: string[] = [];
     const outros: string[] = [];
-    for (const { v } of fixas)
-      (v.criterio !== "posicoes" && continentalOuMais(m.competicao(v.de)) ? campeoes : outros).push(
-        ...resolver(v),
-      );
+    for (const { v } of fixas) {
+      const lista = resolver(v);
+      // Só o atual campeão da própria competição abre o pote 1 (o da Libertadores, o da Champions).
+      const campeao = v.criterio !== "posicoes" && v.de === c.id;
+      for (const t of lista) (campeao && !porAlternativa.has(t) ? campeoes : outros).push(t);
+    }
     outros.sort((a, b) => forca(m, b) - forca(m, a));
     entrantes[`${p}.${fixas[0]!.vi}`] = [...campeoes, ...outros];
   }
   const inicial = c.participantes.vagas.flatMap(resolver);
-  return { inicial, entrantes };
+  return { inicial, entrantes, caminhos };
 }
 
 /** Todos os participantes previstos pelas vagas (para a ordem de força de uma copa ainda fechada). */
@@ -331,7 +353,13 @@ function distribuirEntrantes(
         porVaga[vi] = lista;
       }
       if (!pronto) continue;
-      e = receberEntrantes(c, e, p, porVaga, semente);
+      // País dos que chegam, para o sorteio da fase evitar compatriotas.
+      const novos = Object.values(porVaga).flat();
+      const paises =
+        m.clube && continentalOuMais(c)
+          ? Object.fromEntries(novos.map((x) => [x, m.clube?.(x)?.pais ?? ""]))
+          : undefined;
+      e = receberEntrantes(c, e, p, porVaga, semente, paises);
       mudou ??= { ...competicoes };
       mudou[c.id] = e;
     }
@@ -366,8 +394,7 @@ function abrirTemporada(
         a.participantes.exclui.length - b.participantes.exclui.length ||
         (a.divisao ?? 9) - (b.divisao ?? 9),
     );
-  // As datas das continentais da confederação ficam reservadas desde o começo, para quem pode ter
-  // clube nelas (1ª divisão, copas, estaduais e regionais; as divisões de baixo não).
+  // As datas das continentais da confederação ficam reservadas desde o começo.
   const reservadas = confederacao
     ? datasContinentais(m, confederacao, t.inicio, t.fim)
     : new Set<string>();
@@ -389,7 +416,8 @@ function abrirTemporada(
         : undefined;
     let bloqueadas: Set<string> | undefined;
     if (!continental) {
-      bloqueadas = new Set(c.tipo === "liga" && (c.divisao ?? 1) > 1 ? [] : reservadas);
+      // Todas reservam as datas continentais: até um campeão de copa da 2ª divisão pode jogá-las.
+      bloqueadas = new Set(reservadas);
       for (const x of marcadas)
         if (todos.some((p) => x.clubes.has(p))) for (const d of x.datas) bloqueadas.add(d);
     }
@@ -399,6 +427,9 @@ function abrirTemporada(
       temporada: temporada.nome,
       ...(entrantes ? { entrantes } : {}),
       ...(paises ? { paises } : {}),
+      ...(resolucao && Object.keys(resolucao.caminhos).length
+        ? { caminhos: resolucao.caminhos }
+        : {}),
       ...(bloqueadas ? { bloqueadas } : { quantidadePlanejada: quantidadeInicial(c) }),
     });
     competicoes[c.id] = e;

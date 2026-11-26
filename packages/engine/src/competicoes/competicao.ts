@@ -6,6 +6,7 @@ import type { Competicao, DataFifa, Fase } from "@newbras/data";
 import { Rng } from "../rng";
 import { somarDias } from "../carreira/datas";
 import { datasDaCompeticao, datasDasRodadas, rodadasDoGrupo, todosContraTodos } from "./rodadas";
+import { sortearFaseDeLiga } from "./faseDeLiga";
 import { ordenarTabela, type Criterio, type LinhaTabela } from "./tabela";
 
 export interface JogoCompeticao {
@@ -69,6 +70,8 @@ export interface EstadoCompeticao {
   aguardando?: number;
   /** País de cada clube (para os sorteios evitarem clubes do mesmo país). */
   paises?: Record<string, string>;
+  /** Caminho de cada clube nas qualificatórias da UEFA ("campeoes" ou "liga"). */
+  caminhos?: Record<string, string>;
 }
 
 /** Vaga pela tabela da própria competição (os primeiros da fase de grupos direto às oitavas). */
@@ -190,6 +193,8 @@ export interface OpcoesMontagem {
   entrantes?: Record<string, string[]>;
   /** País de cada clube, para os sorteios. */
   paises?: Record<string, string>;
+  /** Caminho de cada clube (qualificatórias da UEFA). */
+  caminhos?: Record<string, string>;
 }
 
 /**
@@ -263,6 +268,7 @@ export function montarCompeticao(
     artilharia: {},
     ...(o.entrantes ? { entrantes: o.entrantes } : {}),
     ...(o.paises ? { paises: o.paises } : {}),
+    ...(o.caminhos && Object.keys(o.caminhos).length ? { caminhos: o.caminhos } : {}),
   };
   // Na lista de participantes entram também os que só jogam a partir de uma fase adiante.
   const adiante = Object.values(o.entrantes ?? {}).flat();
@@ -310,6 +316,23 @@ function abrirFase(
   } else {
     const tamanho = Math.ceil(times.length / numGrupos);
     times.forEach((t, i) => grupos[Math.min(numGrupos - 1, Math.floor(i / tamanho))]?.push(t));
+  }
+  // Fase de liga da UEFA: potes, sem compatriotas, mesmo número de adversários de cada pote.
+  const sorteada =
+    fase.tipo === "fase-de-liga" && fase.potes > 1
+      ? sortearFaseDeLiga(times, fase.potes, fase.jogosPorTime, rng, e.paises)
+      : null;
+  if (sorteada) {
+    for (const j of sorteada)
+      jogos.push({
+        fase: f,
+        rodada: rodadaInicial + j.rodada,
+        grupo: 0,
+        casa: j.casa,
+        fora: j.fora,
+      });
+    estadoFase = { times, grupos: [[...times]], rodadaInicial, encerrada: false };
+    return garantirDatas({ ...e, jogos, fases: e.fases.map((x, i) => (i === f ? estadoFase : x)) });
   }
   grupos.forEach((g, gi) => {
     let rodadas = todosContraTodos(g.length, turnos, rng);
@@ -385,6 +408,7 @@ function paresIniciais(
   rng: Rng,
   paises?: Record<string, string>,
   rodadaUnica = false,
+  caminhos?: Record<string, string>,
 ): [string, string][] {
   const pela = (ordem: readonly string[]) => {
     // Fase de uma eliminatória só (pré-Libertadores): todos jogam, sem folga (1 x n, 2 x n-1...).
@@ -416,6 +440,31 @@ function paresIniciais(
     }
     for (let i = 0; i < sobra.length; i += 2) pares.push([sobra[i] ?? "", sobra[i + 1] ?? ""]);
     return rng.shuffle(pares);
+  }
+  if (fase.chaveamento === "caminhos") {
+    // Sorteio dentro de cada caminho, evitando clubes do mesmo país frente a frente.
+    const porCaminho = new Map<string, string[]>();
+    for (const t of times) {
+      const k = caminhos?.[t] ?? "";
+      porCaminho.set(k, [...(porCaminho.get(k) ?? []), t]);
+    }
+    const pares: [string, string][] = [];
+    for (const lista of porCaminho.values()) {
+      let melhor: [string, string][] = [];
+      let menor = Infinity;
+      for (let tentativa = 0; tentativa < 60 && menor > 0; tentativa++) {
+        const ordem = rng.shuffle(lista);
+        const p: [string, string][] = [];
+        for (let i = 0; i < ordem.length; i += 2) p.push([ordem[i] ?? "", ordem[i + 1] ?? ""]);
+        const choques = choquesDePais(p, paises);
+        if (choques < menor) {
+          menor = choques;
+          melhor = p;
+        }
+      }
+      pares.push(...melhor);
+    }
+    return pares;
   }
   if (fase.chaveamento === "potes") {
     // Metade de cima (melhores) contra a de baixo, sorteada.
@@ -460,10 +509,12 @@ function abrirRodadaEliminatoria(
     // Eliminatória que alimenta uma fase onde entram outros clubes (pré-Libertadores): todos jogam,
     // sem folga. Nas outras, a chave completa com folgas para os melhores.
     const semFolga = !ultimaFase && (c.fases[f + 1]?.entramAqui.length ?? 0) > 0;
-    pares = paresIniciais(fase, times, tamanho, rng, e.paises, semFolga).map(([p, q]) => {
-      const [a, b] = seed(ef.times, p, q);
-      return b ? { a, b } : { a, b: "", vencedor: a };
-    });
+    pares = paresIniciais(fase, times, tamanho, rng, e.paises, semFolga, e.caminhos).map(
+      ([p, q]) => {
+        const [a, b] = seed(ef.times, p, q);
+        return b ? { a, b } : { a, b: "", vencedor: a };
+      },
+    );
   } else {
     pares = [];
     for (let i = 0; i < times.length; i += 2) {
@@ -803,6 +854,7 @@ export function resolverVagaDinamica(
     fase?: string | undefined;
     posicoes?: number[] | undefined;
     porGrupo: boolean;
+    doCaminho?: string | undefined;
   },
 ): string[] | null {
   const fi = v.fase ? origem.fases.findIndex((x) => x.id === v.fase) : -1;
@@ -810,7 +862,10 @@ export function resolverVagaDinamica(
   if (fi < 0 || !ef?.encerrada) return null;
   if (v.criterio === "eliminados") {
     const passaram = new Set(classificadosDaFase(origem, e, fi));
-    return ef.times.filter((t) => !passaram.has(t));
+    return ef.times.filter(
+      // Quem não tem caminho marcado é do caminho principal.
+      (t) => !passaram.has(t) && (!v.doCaminho || (e.caminhos?.[t] ?? "principal") === v.doCaminho),
+    );
   }
   return daPropriaTabela(origem, e, v);
 }
@@ -822,17 +877,23 @@ export function receberEntrantes(
   p: number,
   porVaga: Record<number, string[]>,
   semente: string,
+  paises?: Record<string, string>,
 ): EstadoCompeticao {
   const entrantes = { ...e.entrantes };
+  const caminhos = { ...e.caminhos };
   const novos: string[] = [];
   for (const [vi, lista] of Object.entries(porVaga)) {
     entrantes[`${p}.${vi}`] = lista;
     novos.push(...lista);
+    const caminho = c.fases[p]?.entramAqui[Number(vi)]?.caminho;
+    if (caminho) for (const t of lista) caminhos[t] = caminho;
   }
   const participantes = [...e.participantes, ...novos.filter((t) => !e.participantes.includes(t))];
   const recebido = {
     ...e,
     entrantes,
+    ...(Object.keys(caminhos).length ? { caminhos } : {}),
+    ...(paises || e.paises ? { paises: { ...e.paises, ...paises } } : {}),
     participantes,
     recebidos: { ...e.recebidos, [p]: true },
   };

@@ -40,5 +40,7 @@ export type Estado = z.infer<typeof Estado>;
 export const DataFifa = z.object({
   nome: NomeTexto,
   periodo: Periodo,
+  /** Só nesses anos (a pausa da Copa do Mundo de 2026); sem ela, todo ano. */
+  anos: z.array(z.int().min(1900)).optional(),
 });
 export type DataFifa = z.infer<typeof DataFifa>;

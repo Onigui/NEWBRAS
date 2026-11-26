@@ -375,4 +375,35 @@ describe("competições", () => {
     expect(pares).toHaveLength(16);
     for (const p of pares) expect(paises[p.a]).toBe(paises[p.b]);
   });
+
+  it("qualificatória da UEFA: cada caminho só cruza consigo mesmo", () => {
+    const c = comp({
+      tipo: "continental",
+      escopo: { tipo: "confederacao", confederacao: "UEFA" },
+      divisao: undefined,
+      participantes: { fixos: [], quantidade: 12 },
+      fases: [
+        { id: "q", nome: "Qualificatória", tipo: "mata-mata", jogos: 2, chaveamento: "caminhos" },
+        {
+          id: "liga",
+          nome: "Liga",
+          tipo: "grupos",
+          grupos: 1,
+          turnos: 1,
+          entramAqui: [{ de: "x", criterio: "posicoes", posicoes: [1, 2] }],
+        },
+      ],
+    });
+    const times12 = times("c", 12);
+    const caminhos = Object.fromEntries(times12.map((t, i) => [t, i < 8 ? "campeoes" : "liga"]));
+    const e = montarCompeticao(c, times12, "2027-07-01", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2027/28",
+      caminhos,
+    });
+    const pares = e.fases[0]!.chaves![0]!;
+    expect(pares).toHaveLength(6);
+    for (const p of pares) expect(caminhos[p.a]).toBe(caminhos[p.b]);
+  });
 });

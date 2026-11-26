@@ -2,7 +2,7 @@
  * Calendário da carreira: temporada do país, janelas de transferência e datas FIFA, dia a dia.
  * Os períodos do banco são anuais (MM-DD); aqui viram datas de verdade conforme o ano.
  */
-import { periodoContem, type DataFifa, type Pais, type Periodo } from "@newbras/data";
+import { emDataFifa, periodoContem, type DataFifa, type Pais, type Periodo } from "@newbras/data";
 import { diaAbsoluto, montarData, somarDias } from "./datas";
 
 export type TipoEventoCalendario =
@@ -105,6 +105,7 @@ export function eventosDoDia(
       });
   }
   for (const f of datasFifa) {
+    if (f.anos && !f.anos.includes(Number(data.slice(0, 4)))) continue;
     if (comeca(f.periodo, data))
       eventos.push({
         tipo: "data-fifa-inicio",
@@ -146,7 +147,7 @@ export function marcasDoMes(
       data,
       temporada: periodoContem(pais.temporada, data),
       janela: pais.janelas.some((j) => periodoContem(j, data)),
-      dataFifa: datasFifa.find((f) => periodoContem(f.periodo, data))?.nome ?? null,
+      dataFifa: datasFifa.find((f) => emDataFifa(f, data))?.nome ?? null,
       eventos: eventosDoDia(data, pais, datasFifa),
     });
   }

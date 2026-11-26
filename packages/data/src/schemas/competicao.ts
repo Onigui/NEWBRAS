@@ -68,6 +68,18 @@ export const Vaga = z.object({
   quantidade: z.int().min(1).optional(),
   /** Entra depois dos que vêm da fase anterior, no pote mais baixo (eliminados da Libertadores). */
   depois: z.boolean().default(false),
+  /**
+   * Caminho em que o clube entra (UEFA: "campeoes" ou "liga"): nas eliminatórias com chaveamento
+   * "caminhos", cada caminho só cruza consigo mesmo.
+   */
+  caminho: z.string().min(1).max(20).optional(),
+  /** Só os eliminados deste caminho na origem (os campeões que caem vão para outro lugar). */
+  doCaminho: z.string().min(1).max(20).optional(),
+  /**
+   * Para vaga de campeão (UEFA): se o campeão já tiver vaga, ela vai para o mais forte destes
+   * (o campeão ucraniano, quando o campeão da Champions já se classificou pela liga).
+   */
+  alternativas: z.array(z.object({ de: Id, posicoes: z.array(z.int().min(1)).min(1) })).default([]),
   /** Se o dono da vaga já estiver classificado, ela passa para o próximo da tabela de origem. */
   repassa: z.boolean().default(true),
 });
@@ -120,9 +132,12 @@ export const FaseMataMata = BaseFase.extend({
   golForaDesempata: z.boolean().default(false),
   /**
    * Como os confrontos são definidos. "pais": só entre clubes do mesmo país (1ª fase da
-   * Sul-Americana); "potes": a metade de cima sorteada contra a de baixo (oitavas da Libertadores).
+   * Sul-Americana); "potes": a metade de cima sorteada contra a de baixo (oitavas da Libertadores);
+   * "caminhos": sorteio dentro de cada caminho (qualificatórias da UEFA).
    */
-  chaveamento: z.enum(["sorteio", "campanha", "chave-fixa", "pais", "potes"]).default("sorteio"),
+  chaveamento: z
+    .enum(["sorteio", "campanha", "chave-fixa", "pais", "potes", "caminhos"])
+    .default("sorteio"),
   /** Em jogo único, quem manda: sorteado, melhor campanha ou campo neutro. */
   mando: z.enum(["sorteio", "melhor-campanha", "neutro"]).default("sorteio"),
 });
