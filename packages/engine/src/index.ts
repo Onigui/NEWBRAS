@@ -9,4 +9,14 @@ export * from "./competicoes";
 export { convocar, TAMANHO_DA_CONVOCACAO, VAGAS_DA_CONVOCACAO } from "./selecoes/convocacao";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.22.0";
+export const ENGINE_VERSION = "0.23.0";
+export {
+  CHANCE_DE_AMISTOSO,
+  diasDosAmistosos,
+  janelaDaData,
+  jogosDeSelecoes,
+  marcarAmistosos,
+  selecoesDoMundo,
+  type AmistosoDeSelecao,
+  type JogoDeSelecao,
+} from "./selecoes/amistosos";

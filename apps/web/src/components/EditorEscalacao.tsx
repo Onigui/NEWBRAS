@@ -127,11 +127,8 @@ export function EditorEscalacao({
           {j.humor && <IconeHumor humor={j.humor as Humor} />}
           {j.nome}
           {aviso && (
-            <span
-              className="ml-1 rounded-sm bg-[#ffa64d]/20 px-1 text-xs text-[#ffc38a]"
-              title={t("Melhor poupar")}
-            >
-              {t("poupar: {aviso}", { aviso })}
+            <span className="ml-1 rounded-sm bg-[#ffa64d]/20 px-1 text-xs text-[#ffc38a]">
+              {aviso}
             </span>
           )}
         </td>

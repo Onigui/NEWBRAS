@@ -26,6 +26,12 @@ import {
   type Movimento,
 } from "./competicao";
 import { autoresDosGols, forcaDoElenco, simularRapido } from "./rapida";
+import {
+  amistososRecentes,
+  jogarAmistosos,
+  marcarAmistosos,
+  type AmistosoDeSelecao,
+} from "../selecoes/amistosos";
 
 export { anoFinal };
 
@@ -61,6 +67,8 @@ export interface MundoCompeticoes {
   /** Classificação final da última temporada de cada competição (para as vagas das copas). */
   classificacoes?: Record<string, string[]>;
   historico: RegistroHistorico[];
+  /** Amistosos de seleções nas datas FIFA (os do último ano e os marcados). */
+  amistosos?: readonly AmistosoDeSelecao[];
 }
 
 /** O que as competições precisam saber do mundo. */
@@ -990,8 +998,18 @@ export function jogarDia(
   // os campeões que chegam à Intercontinental (mesmo num dia sem jogos).
   const base = competicoes ?? estado.competicoes;
   const distribuidas = distribuirEntrantes(m, estado, base, semente);
-  if (!competicoes && !distribuidas) return estado;
-  return { ...estado, competicoes: distribuidas ?? base };
+  // Amistosos das seleções: os de hoje e, na véspera de um dia de amistoso, os dele.
+  const agora = distribuidas ?? base;
+  const antes = estado.amistosos ?? [];
+  let amistosos = jogarAmistosos(m, agora, antes, data, semente);
+  const novos = marcarAmistosos(m, agora, amistosos, somarDias(data, 1), semente);
+  if (novos.length) amistosos = [...amistososRecentes(amistosos, data), ...novos];
+  if (!competicoes && !distribuidas && amistosos === antes) return estado;
+  return {
+    ...estado,
+    competicoes: agora,
+    ...(amistosos.length ? { amistosos } : {}),
+  };
 }
 
 /**
@@ -1033,6 +1051,9 @@ export function jogarAte(
     if (!menor) break;
     estado = jogarDia(m, estado, menor, semente);
   }
+  // Amistosos marcados antes do começo que ficaram sem jogar (o dia deles não tinha outro jogo).
+  if (estado.amistosos?.some((a) => !a.placar && a.data < data))
+    estado = { ...estado, amistosos: estado.amistosos.filter((a) => a.placar || a.data >= data) };
   return estado;
 }
 

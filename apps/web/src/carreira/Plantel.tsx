@@ -16,7 +16,9 @@ import {
 } from "@newbras/data";
 import {
   avisoPoupar,
+  convocadosDoClube,
   dataCurta,
+  foraPelaSelecao,
   estadoDe,
   idadeEm,
   type Carreira,
@@ -48,6 +50,9 @@ interface Linha {
   e: EstadoJogador;
   idade: number;
   media: number | null;
+  /** Seleção que o convocou (nome) e se está com ela agora. */
+  selecao?: string;
+  comASelecao?: boolean;
 }
 
 export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) {
@@ -58,19 +63,21 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
   });
   const [aberto, setAberto] = useState<string | null>(null);
 
-  const linhas: Linha[] = useMemo(
-    () =>
-      mundo.elenco(c.clube).map((j) => {
-        const e = estadoDe(c, j.id);
-        return {
-          j,
-          e,
-          idade: idadeEm(j.nascimento, c.data),
-          media: e.jogos ? e.somaNotas / e.jogos : null,
-        };
-      }),
-    [c, mundo],
-  );
+  const linhas: Linha[] = useMemo(() => {
+    const convocados = convocadosDoClube(mundo, c.clube);
+    const fora = foraPelaSelecao(c, mundo, c.data);
+    return mundo.elenco(c.clube).map((j) => {
+      const e = estadoDe(c, j.id);
+      const pais = convocados.get(j.id);
+      return {
+        j,
+        e,
+        idade: idadeEm(j.nascimento, c.data),
+        media: e.jogos ? e.somaNotas / e.jogos : null,
+        ...(pais ? { selecao: mundo.pais(pais)?.nome ?? pais, comASelecao: fora.has(j.id) } : {}),
+      };
+    });
+  }, [c, mundo]);
   const valor = (l: Linha): number | string => {
     switch (ordem.col) {
       case "numero":
@@ -167,6 +174,18 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
                     {l.j.estrela && (
                       <span className="ml-1 text-canarinho" title={t("Estrela")}>
                         ★
+                      </span>
+                    )}
+                    {l.selecao && (
+                      <span
+                        className={`ml-1 rounded-sm px-1 text-xs ${l.comASelecao ? "bg-[#7cc4f5]/25 text-[#bfe3fb]" : "bg-white/10 text-suave"}`}
+                        title={
+                          l.comASelecao
+                            ? t("Com a seleção ({selecao}) agora", { selecao: l.selecao })
+                            : t("Convocado para a seleção ({selecao})", { selecao: l.selecao })
+                        }
+                      >
+                        {l.comASelecao ? t("na seleção") : t("seleção")}
                       </span>
                     )}
                     {aviso && <span className="ml-1 text-xs text-[#ffc38a]">{t("poupar")}</span>}
@@ -301,6 +320,15 @@ function Ficha({ l }: { l: Linha }) {
             },
           )}
         </p>
+        {(l.selecao || e.selecao) && (
+          <p>
+            {t("Pela seleção{selecao}: {jogos} jogos e {gols} gols na carreira.", {
+              selecao: l.selecao ? ` (${l.selecao})` : "",
+              jogos: e.selecao?.jogos ?? 0,
+              gols: e.selecao?.gols ?? 0,
+            })}
+          </p>
+        )}
         {j.contrato && (
           <p className="text-suave">
             {t("Contrato até {dataCurta}, salário de {salario} por mês.", {

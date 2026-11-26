@@ -397,3 +397,15 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Copa América de 2028 (junho e julho):** sede e formato ainda não anunciados; o jogo segue 2024, com as 10 da CONMEBOL e as 6 melhores da Copa Ouro de 2027 em 4 grupos de 4. A Argentina é a atual campeã.
 - **Edições seguintes:** os grupos do sorteio real valem só na primeira edição (`gruposFixosAte`); depois, os mesmos participantes são sorteados de novo. A Nations League da UEFA passou a sortear também.
 - **Motor:** `fixosAqui` põe seleções direto numa fase adiante; a regra `anfitrioes` tira do grupo a vaga do anfitrião já classificado; cada edição nova de seleções volta à lista da definição (quem chegou pelas vagas não fica).
+
+## Seleções na interface e amistosos nas datas FIFA (etapa 11e, 26/11/2026)
+
+- **Amistosos:** cada data FIFA tem dias de amistoso (2 em março, junho e novembro; 4 na de setembro e outubro). Na véspera de cada um, as seleções sem jogo oficial a 2 dias dele entram no sorteio (85% delas; nem todas acham adversário) e são pareadas com uma de força parecida, de preferência da mesma confederação. Um amistoso que cai perto de um jogo oficial sorteado depois é cancelado. Ficam guardados os do último ano.
+- **Convocados do clube:** quem está na convocação automática da seleção (os 26 melhores do país) fica fora do clube durante as datas FIFA, como manda a regra da liberação. Fora delas, sai 3 dias antes de cada jogo da seleção, volta no dia seguinte e fica durante os torneios. Assim um clube brasileiro perde os convocados na Copa América de 2028, com o Brasileirão em andamento. Só o clube do técnico sente isso por enquanto; os da CPU seguem com o elenco inteiro.
+- **Volta cansado:** quem joga pela seleção perde condição (30 o titular, 10 o reserva que entrou). Os titulares são um 4-4-2 pela força dentro da convocação, e um reserva entra em 45% dos jogos. Os jogos e gols pela seleção ficam na ficha do jogador.
+- **Notícias:** a apresentação dos convocados, os gols deles pela seleção e os resultados da seleção do país do clube.
+- **Interface:**
+  - Aba Seleções: os convocados do clube e, de qualquer seleção, os próximos jogos, os resultados (oficiais e amistosos) e a convocação.
+  - Plantel: marca de convocado.
+  - Escalação: aviso "com a seleção" para quem estiver fora no próximo jogo.
+- **Para depois:** escolher a convocação à mão, ser técnico de seleção e receber convites vêm na Fase 15. A convocação ainda não acompanha a evolução dos jogadores na carreira.

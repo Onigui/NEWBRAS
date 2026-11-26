@@ -57,6 +57,7 @@ import {
 } from "../partida/tipos";
 import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
+import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
 export const FORMATO_CARREIRA = 9;
@@ -94,6 +95,8 @@ export interface EstadoJogador {
   amarelosPorCompeticao?: Record<string, number>;
   /** Jogos de suspensão a cumprir, por competição. */
   suspensoes?: Record<string, number>;
+  /** Jogos e gols pela seleção desde o começo da carreira. */
+  selecao?: { jogos: number; gols: number };
 }
 
 export interface GolDoJogo {
@@ -421,6 +424,18 @@ export function suspensosNaCompeticao(c: Carreira, competicao: string | undefine
   return ids;
 }
 
+/** Quem não pode jogar: os suspensos na competição e os que estão com a seleção na data. */
+export function indisponiveisNoJogo(
+  c: Carreira,
+  mundo: Mundo,
+  competicao: string | undefined,
+  data: string,
+): Set<string> {
+  const ids = suspensosNaCompeticao(c, competicao);
+  for (const id of foraPelaSelecao(c, mundo, data).keys()) ids.add(id);
+  return ids;
+}
+
 function noticia(c: Carreira, n: Noticia): Noticia[] {
   return [n, ...c.noticias].slice(0, MAX_NOTICIAS);
 }
@@ -480,6 +495,7 @@ export interface Avanco {
 export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
   if (compromissoDoDia(c)) return { carreira: c, novidades: [], parouPor: "jogo" };
   // Fecha o dia: os jogos de hoje no mundo inteiro.
+  const antes = c.competicoes;
   let competicoes = jogarDia(mundo, c.competicoes, c.data, c.semente);
   const data = somarDias(c.data, 1);
   const virada = virarTemporadas(mundo, competicoes, data, c.semente);
@@ -559,11 +575,30 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
+  // Convocados: quem jogou pela seleção ontem e quem se apresenta hoje.
+  const convocados = diaDosConvocados(
+    c,
+    mundo,
+    antes,
+    competicoes,
+    c.data,
+    viverDia(c, mundo, data),
+  );
+  const apresentacao = noticiaDaConvocacao(
+    mundo,
+    foraPelaSelecao(c, mundo, c.data),
+    foraPelaSelecao(proximo, mundo, data),
+    data,
+  );
+  for (const n of [...convocados.noticias, ...(apresentacao ? [apresentacao] : [])]) {
+    novidades.unshift(n);
+    noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
+  }
   const carreira: Carreira = {
     ...c,
     data,
     competicoes,
-    jogadores: viverDia(c, mundo, data),
+    jogadores: convocados.jogadores,
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };
@@ -714,11 +749,14 @@ export function timeDoCompromisso(
   mundo: Mundo,
   clubeId: string,
   competicao?: string,
+  data?: string,
 ): TimePartida {
   const clube = mundo.clube(clubeId);
   const jogadores = elencoParaPartida(c, mundo, clubeId);
   const humano = clubeId === c.clube;
-  const suspensos = humano ? suspensosNaCompeticao(c, competicao) : new Set<string>();
+  const suspensos = humano
+    ? indisponiveisNoJogo(c, mundo, competicao, data ?? c.data)
+    : new Set<string>();
   return {
     id: clubeId,
     nome: clube?.nomeCurto ?? clubeId,
@@ -735,8 +773,8 @@ export function timeDoCompromisso(
 
 /** Opções da partida de um compromisso (a semente sai da carreira e do compromisso). */
 export function partidaDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): OpcoesPartida {
-  const nosso = timeDoCompromisso(c, mundo, c.clube, x.competicao);
-  const deles = timeDoCompromisso(c, mundo, x.adversario, x.competicao);
+  const nosso = timeDoCompromisso(c, mundo, c.clube, x.competicao, x.data);
+  const deles = timeDoCompromisso(c, mundo, x.adversario, x.competicao, x.data);
   const base: OpcoesPartida = {
     semente: `${c.semente}:${c.competicoes.temporadas[mundo.clube(c.clube)?.pais ?? ""]?.nome ?? ""}:${x.id}`,
     casa: x.mando === "casa" ? nosso : deles,
