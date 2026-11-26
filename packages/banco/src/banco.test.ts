@@ -1307,3 +1307,56 @@ describe("UEFA 2026/27 pela lista de acesso", () => {
     expect(uecl.fases[4]).toMatchObject({ tipo: "fase-de-liga", jogosPorTime: 6, potes: 6 });
   });
 });
+
+describe("CONCACAF, AFC, CAF e OFC no formato real", () => {
+  const comp = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+  const conta = (vagas: { posicoes?: number[] | undefined; quantidade?: number | undefined }[]) =>
+    vagas.reduce((s, v) => s + (v.quantidade ?? v.posicoes?.length ?? 1), 0);
+
+  it("Copa dos Campeões: 22 na 1ª fase e 5 direto às oitavas, com as copas que dão vaga", () => {
+    const cc = comp("concacaf-champions-cup");
+    expect(conta(cc.participantes.vagas)).toBe(22);
+    expect(conta(cc.fases[1]!.entramAqui)).toBe(5);
+    for (const id of [
+      "concacaf-leagues-cup",
+      "concacaf-copa-centro-americana",
+      "concacaf-copa-do-caribe",
+    ])
+      expect(cc.fases[1]!.entramAqui.some((v) => v.de === id && v.criterio === "campeao")).toBe(
+        true,
+      );
+  });
+
+  it("Champions da Ásia: preliminar e fase de liga com 16 no Oeste e 16 no Leste", () => {
+    const elite = comp("afc-champions-league");
+    const liga = elite.fases.find((f) => f.tipo === "fase-de-liga")!;
+    expect(liga).toMatchObject({ grupos: 2, jogosPorTime: 8, classificamDireto: 8 });
+    const regiao = (r: string) => [
+      ...elite.participantes.vagas.filter((v) => v.caminho === r),
+      ...liga.entramAqui.filter((v) => v.caminho === r),
+    ];
+    // 14 direto e 4 na preliminar (2 passam) em cada região.
+    expect(conta(regiao("oeste"))).toBe(18);
+    expect(conta(regiao("leste"))).toBe(18);
+    const two = comp("afc-champions-league-two");
+    expect(two.participantes.exclui).toEqual(["afc-champions-league"]);
+    expect(two.fases[1]!.entramAqui.filter((v) => v.criterio === "eliminados")).toHaveLength(2);
+  });
+
+  it("CAF: 61 e 56 clubes, com 3 e 8 direto na 2ª fase preliminar", () => {
+    const cl = comp("caf-champions-league");
+    const cc = comp("caf-confederation-cup");
+    expect(cl.participantes.quantidade).toBe(61);
+    expect(conta(cl.fases[1]!.entramAqui)).toBe(3);
+    expect(cc.participantes.quantidade).toBe(56);
+    expect(conta(cc.fases[1]!.entramAqui)).toBe(8);
+    expect(cc.participantes.exclui).toEqual(["caf-champions-league"]);
+  });
+
+  it("OFC: qualificatória de 4 e fase final com dois grupos de 4", () => {
+    const ofc = comp("ofc-champions-league");
+    expect(conta(ofc.participantes.vagas)).toBe(4);
+    expect(ofc.fases[1]).toMatchObject({ tipo: "grupos", grupos: 2 });
+    expect(conta(ofc.fases[1]!.entramAqui)).toBe(7);
+  });
+});

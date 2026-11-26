@@ -294,3 +294,13 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Calendário real:** qualificatórias de 7 de julho a 27 de agosto, fase de liga de setembro a janeiro, playoff em fevereiro, final da Champions em 5 de junho, da Europa League em 26 de maio.
 - **Datas FIFA:** a pausa da Copa do Mundo (até 20 de julho) valia todo ano por engano e travava as qualificatórias de julho. Agora vale só em 2026; nos outros anos, junho tem a data FIFA normal. As divisões de baixo também reservam as datas continentais (o campeão de copa da 2ª divisão pode jogá-las).
 - **Salvamento:** formato 5 (as continentais dos formatos 3 e 4 são abertas de novo).
+
+## CONCACAF, AFC, CAF e OFC no formato real (etapa 10a4, 26/11/2026)
+
+- **CONCACAF:** Copa dos Campeões com 27 clubes; 22 na 1ª fase e 5 direto às oitavas (campeões da MLS, da Liga MX, da Leagues Cup, da Copa Centro-Americana e da Copa do Caribe), final em jogo único. As competições que dão vaga entram no banco: Leagues Cup (18 da MLS e 18 da Liga MX, fase de 3 jogos e mata-mata dos 8 melhores em jogo único), Copa Centro-Americana (20 clubes em 4 grupos de 5) e Copa do Caribe (10 em 2 grupos de 5). Simplificação: na Leagues Cup real só há jogos entre a MLS e a Liga MX; aqui o sorteio é livre.
+- **AFC:** Champions League Elite com fase preliminar em jogo único por região e duas ligas de 16 (Oeste e Leste), 8 jogos para cada um dentro da região, potes montados para não juntar compatriotas e sem o limite de 2 por país da UEFA. Oitavas na região pela campanha (1º x 8º) e fase final em jogo único em sede neutra. A Champions League Two tem 32 em 8 grupos regionais, recebe os eliminados da preliminar da Elite e o campeão dela vai à preliminar da Elite.
+- **CAF:** Champions League com 61 clubes e Copa das Confederações com 56; 1ª fase preliminar, 2ª com os mais fortes (3 e 8 direto), 16 em 4 grupos, quartas, semifinal e final em ida e volta. As 12 federações mais fortes do ranking têm duas vagas em cada.
+- **OFC:** qualificatória das quatro federações menores e fase final em sede única com dois grupos de 4, semifinal e final. A OFC Professional League (2026) fica para quando os clubes dela estiverem no banco.
+- **Motor:** fase de liga com mais de uma tabela (`grupos`, uma por caminho) e chaveamento `caminhos-campanha`. Se um sorteio da fase de liga não fecha com as restrições de país, ele é refeito sem elas, em vez de virar todos contra todos.
+- **Interface:** as tabelas da fase de liga da Ásia aparecem como "Oeste" e "Leste".
+- **Salvamento:** formato 6. Nos de formato 5, as copas dessas quatro confederações são abertas de novo; as da CONMEBOL e da UEFA ficam como estão.

@@ -275,6 +275,14 @@ function Painel({
   );
 }
 
+/** "grupo A" etc.; nas ligas regionais da Ásia, o nome da região ("Oeste", "Leste"). */
+function nomeDoGrupo(comp: Competicao, e: EstadoCompeticao, fase: number, g: number) {
+  const f = comp.fases[fase];
+  const caminho = e.caminhos?.[e.fases[fase]?.grupos?.[g]?.[0] ?? ""];
+  if (f?.tipo === "fase-de-liga" && caminho) return caminho[0]!.toUpperCase() + caminho.slice(1);
+  return `grupo ${String.fromCharCode(65 + g)}`;
+}
+
 function Tabela({
   c,
   comp,
@@ -299,7 +307,7 @@ function Tabela({
     <div className="overflow-x-auto">
       <h3 className="mb-1 text-sm font-bold">
         {f?.nome}
-        {grupos > 1 ? `, grupo ${String.fromCharCode(65 + grupo)}` : ""}
+        {grupos > 1 ? `, ${nomeDoGrupo(comp, e, fase, grupo)}` : ""}
       </h3>
       <table className="w-full min-w-[30rem] text-sm">
         <thead className="text-xs text-suave">

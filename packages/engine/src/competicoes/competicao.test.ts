@@ -35,11 +35,17 @@ function comp(c: Partial<CompeticaoEntrada> & Pick<CompeticaoEntrada, "fases">):
 }
 
 /** Joga a competição inteira, dia a dia, com a simulação rápida. */
-function jogarTudo(c: Competicao, participantes: string[], semente = "s"): EstadoCompeticao {
+function jogarTudo(
+  c: Competicao,
+  participantes: string[],
+  semente = "s",
+  extra: { caminhos?: Record<string, string> } = {},
+): EstadoCompeticao {
   let e = montarCompeticao(c, participantes, "2027-01-10", {
     datasFifa: SEM_FIFA,
     semente,
     temporada: "2027",
+    ...extra,
   });
   const rng = new Rng(semente);
   for (let guarda = 0; guarda < 400 && !e.encerrada; guarda++) {
@@ -405,5 +411,56 @@ describe("competições", () => {
     const pares = e.fases[0]!.chaves![0]!;
     expect(pares).toHaveLength(6);
     for (const p of pares) expect(caminhos[p.a]).toBe(caminhos[p.b]);
+  });
+
+  it("Champions da Ásia: liga do Oeste e do Leste, oitavas dentro da região pela campanha", () => {
+    const c = comp({
+      tipo: "continental",
+      escopo: { tipo: "confederacao", confederacao: "AFC" },
+      divisao: undefined,
+      calendario: { inicio: "09-15", fim: "05-31" },
+      participantes: { fixos: [], quantidade: 32 },
+      fases: [
+        {
+          id: "liga",
+          nome: "Fase de liga",
+          tipo: "fase-de-liga",
+          jogosPorTime: 8,
+          potes: 4,
+          grupos: 2,
+          classificamDireto: 8,
+        },
+        {
+          id: "oitavas",
+          nome: "Oitavas",
+          tipo: "mata-mata",
+          jogos: 2,
+          chaveamento: "caminhos-campanha",
+        },
+        { id: "final", nome: "Fase final", tipo: "mata-mata", jogos: 1, mando: "neutro" },
+      ],
+    });
+    const times32 = times("a", 32);
+    const caminhos = Object.fromEntries(times32.map((t, i) => [t, i % 2 ? "leste" : "oeste"]));
+    const e = jogarTudo(c, times32, "s", { caminhos });
+    const liga = e.jogos.filter((j) => j.fase === 0);
+    expect(liga).toHaveLength(32 * 4);
+    for (const j of liga) expect(caminhos[j.casa]).toBe(caminhos[j.fora]);
+    for (const t of times32)
+      expect(liga.filter((j) => j.casa === t || j.fora === t)).toHaveLength(8);
+    // Oitavas: os oito primeiros de cada região, 1º x 8º, 2º x 7º...
+    for (const g of [0, 1]) {
+      const tabela = tabelaDoGrupo(c, e, 0, g).map((l) => l.clube);
+      expect(tabela).toHaveLength(16);
+      const oitavas = e.jogos.filter(
+        (j) => j.fase === 1 && j.chave === 0 && tabela.includes(j.casa),
+      );
+      const pares = new Set(oitavas.map((j) => [j.casa, j.fora].sort().join("-")));
+      expect(pares.size).toBe(4);
+      for (let i = 0; i < 4; i++)
+        expect(pares.has([tabela[i]!, tabela[7 - i]!].sort().join("-"))).toBe(true);
+    }
+    expect(e.encerrada).toBe(true);
+    expect(e.jogos.at(-1)!.neutro).toBe(true);
   });
 });

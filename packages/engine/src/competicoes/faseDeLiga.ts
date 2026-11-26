@@ -2,7 +2,8 @@
  * Sorteio da fase de liga da UEFA: os times divididos em potes pela força, cada um enfrenta o mesmo
  * número de adversários de cada pote (Champions: 2 de cada um dos 4 potes; Conference: 1 de cada um
  * dos 6), sem adversário do mesmo país e com no máximo 2 do mesmo país. Metade dos jogos em casa e
- * cada rodada com todos jogando uma vez.
+ * cada rodada com todos jogando uma vez. As ligas regionais da Ásia usam a mesma conta, sem o limite
+ * por país e com os potes montados para não juntar compatriotas.
  */
 import type { Rng } from "../rng";
 
@@ -155,6 +156,7 @@ export function sortearFaseDeLiga(
   jogosPorTime: number,
   rng: Rng,
   paises?: Record<string, string>,
+  maximoDoPais = 2,
 ): JogoDaFaseDeLiga[] | null {
   const n = times.length;
   if (potes < 2 || n % potes || jogosPorTime % potes || jogosPorTime % 2) return null;
@@ -173,7 +175,7 @@ export function sortearFaseDeLiga(
       const pu = pais(u);
       const pv = pais(v);
       if (pu && pu === pv) return false;
-      return (doPais[u]!.get(pv) ?? 0) < 2 && (doPais[v]!.get(pu) ?? 0) < 2;
+      return (doPais[u]!.get(pv) ?? 0) < maximoDoPais && (doPais[v]!.get(pu) ?? 0) < maximoDoPais;
     };
     const aceitar = (u: number, v: number) => {
       arestas.push([u, v]);
@@ -198,4 +200,30 @@ export function sortearFaseDeLiga(
     }));
   }
   return null;
+}
+
+/**
+ * Reordena os times (em ordem de força) para que cada pote tenha no máximo um clube de cada país
+ * sempre que der: o pote pega o mais forte que sobrou entre os de países que ainda não estão nele.
+ */
+export function potesSemCompatriotas(
+  times: readonly string[],
+  potes: number,
+  paises?: Record<string, string>,
+): string[] {
+  if (!paises || times.length % potes) return [...times];
+  const s = times.length / potes;
+  const resto = [...times];
+  const saida: string[] = [];
+  for (let p = 0; p < potes; p++) {
+    const noPote = new Set<string>();
+    for (let i = 0; i < s; i++) {
+      let k = resto.findIndex((t) => !noPote.has(paises[t] ?? t));
+      if (k < 0) k = 0;
+      const t = resto.splice(k, 1)[0]!;
+      noPote.add(paises[t] ?? t);
+      saida.push(t);
+    }
+  }
+  return saida;
 }
