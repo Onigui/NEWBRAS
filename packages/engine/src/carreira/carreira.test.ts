@@ -15,6 +15,7 @@ import { eventosDoDia, inicioDaCarreira, marcasDoMes, nomeTemporada } from "./ca
 import {
   agendaCompleta,
   atualizarCarreira,
+  FORMATO_CARREIRA,
   avancarAteJogo,
   avancarDia,
   avisoPoupar,
@@ -362,7 +363,7 @@ describe("carreira", () => {
     const { competicoes: _c, ...resto } = nova(mundo);
     const antiga = { ...resto, formato: 1 } as unknown as Carreira;
     const nova2 = atualizarCarreira(antiga, mundo);
-    expect(nova2.formato).toBe(5);
+    expect(nova2.formato).toBe(FORMATO_CARREIRA);
     expect(nova2.competicoes.competicoes["liga-teste"]).toBeDefined();
   });
 });

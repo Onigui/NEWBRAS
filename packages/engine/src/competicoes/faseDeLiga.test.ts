@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Rng } from "../rng";
-import { sortearFaseDeLiga } from "./faseDeLiga";
+import { potesSemCompatriotas, sortearFaseDeLiga } from "./faseDeLiga";
 
 const PAISES = ["ENG", "ESP", "ITA", "GER", "FRA", "POR", "NED", "BEL", "TUR", "SCO", "AUT", "SUI"];
 
@@ -39,5 +39,28 @@ describe("fase de liga da UEFA", () => {
   });
   it("formato que não fecha devolve nulo (o motor usa o sorteio simples)", () => {
     expect(sortearFaseDeLiga(["a", "b", "c"], 4, 8, new Rng("x"))).toBeNull();
+  });
+  it("liga regional da Ásia: potes sem compatriotas e sem jogo entre clubes do mesmo país", () => {
+    // 16 do Oeste, com 5 sauditas entre os mais fortes (sem ajuste, o pote 1 seria todo saudita).
+    const lista = ["KSA", "KSA", "KSA", "KSA", "KSA", "UAE", "UAE", "UAE", "QAT", "QAT", "QAT"]
+      .concat(["IRN", "IRN", "UZB", "IRQ", "JOR"])
+      .map((p, i) => [`w${i}`, p] as const);
+    const paises = Object.fromEntries(lista);
+    const times = potesSemCompatriotas(
+      lista.map(([t]) => t),
+      4,
+      paises,
+    );
+    // Cinco sauditas em quatro potes: só um pote repete país, e nunca o primeiro.
+    const repetidos = [0, 1, 2, 3].filter(
+      (p) => new Set(times.slice(p * 4, p * 4 + 4).map((t) => paises[t])).size < 4,
+    );
+    expect(repetidos.length).toBeLessThanOrEqual(1);
+    expect(repetidos).not.toContain(0);
+    for (const semente of ["a", "b", "c", "d"]) {
+      const jogos = sortearFaseDeLiga(times, 4, 8, new Rng(semente), paises, 8);
+      expect(jogos).not.toBeNull();
+      for (const j of jogos!) expect(paises[j.casa]).not.toBe(paises[j.fora]);
+    }
   });
 });

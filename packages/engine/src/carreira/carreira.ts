@@ -55,7 +55,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 5;
+export const FORMATO_CARREIRA = 6;
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -885,17 +885,29 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
   };
   if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
   // Formato 1: sem competições. Formato 2: sem as continentais. Formatos 3 e 4: continentais num
-  // formato anterior (abertas de novo no formato real). Tudo em dia com a data da carreira.
+  // formato anterior; formato 5: CONCACAF, AFC, CAF e OFC no formato anterior. Essas são abertas de
+  // novo no formato real. Tudo em dia com a data da carreira.
   let competicoes = antiga.competicoes;
-  if (competicoes && (antiga.formato === 3 || antiga.formato === 4)) {
-    const continental = (id: string) => mundo.competicao(id)?.escopo.tipo === "confederacao";
+  const refazer =
+    antiga.formato === 3 || antiga.formato === 4
+      ? ["CONMEBOL", "UEFA", "CONCACAF", "AFC", "CAF", "OFC"]
+      : antiga.formato === 5
+        ? ["CONCACAF", "AFC", "CAF", "OFC"]
+        : [];
+  if (competicoes && refazer.length) {
+    const daConfederacao = (id: string) => {
+      const e = mundo.competicao(id)?.escopo;
+      return e?.tipo === "confederacao" && refazer.includes(e.confederacao);
+    };
     competicoes = {
       ...competicoes,
       competicoes: Object.fromEntries(
-        Object.entries(competicoes.competicoes).filter(([id]) => !continental(id)),
+        Object.entries(competicoes.competicoes).filter(([id]) => !daConfederacao(id)),
       ),
       temporadas: Object.fromEntries(
-        Object.entries(competicoes.temporadas).filter(([chave]) => !chave.startsWith("conf:")),
+        Object.entries(competicoes.temporadas).filter(
+          ([chave]) => !refazer.some((conf) => chave === `conf:${conf}`),
+        ),
       ),
     };
   }

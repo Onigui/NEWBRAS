@@ -6,7 +6,7 @@ import type { Competicao, DataFifa, Fase } from "@newbras/data";
 import { Rng } from "../rng";
 import { somarDias } from "../carreira/datas";
 import { datasDaCompeticao, datasDasRodadas, rodadasDoGrupo, todosContraTodos } from "./rodadas";
-import { sortearFaseDeLiga } from "./faseDeLiga";
+import { potesSemCompatriotas, sortearFaseDeLiga } from "./faseDeLiga";
 import { ordenarTabela, type Criterio, type LinhaTabela } from "./tabela";
 
 export interface JogoCompeticao {
@@ -140,7 +140,7 @@ function planoDasFases(c: Competicao, n: number) {
             : f.classificamPorGrupo * f.grupos + (f.melhores?.quantidade ?? 0)
           : f.playoff
             ? f.playoff.ate - f.playoff.de + 1
-            : f.classificamDireto;
+            : f.classificamDireto * f.grupos;
       saem.push(q);
     }
   });
@@ -303,7 +303,12 @@ function abrirFase(
   const divisao = fase.tipo === "grupos" ? fase.divisaoGrupos : "sorteio";
   let grupos: string[][] = Array.from({ length: numGrupos }, () => []);
   if (divisao === "potes") {
-    grupos = gruposPorPotes(times, numGrupos, rng, e.paises);
+    // Com caminhos (regiões da Ásia), cada região sorteia os seus grupos.
+    const regioes = porCaminho(times, e.caminhos);
+    grupos =
+      regioes.length > 1 && numGrupos % regioes.length === 0
+        ? regioes.flatMap((r) => gruposPorPotes(r, numGrupos / regioes.length, rng, e.paises))
+        : gruposPorPotes(times, numGrupos, rng, e.paises);
   } else if (divisao === "sorteio" && f === 0) {
     rng.shuffle(times).forEach((t, i) => grupos[i % numGrupos]?.push(t));
   } else if (divisao === "sorteio") {
@@ -317,22 +322,39 @@ function abrirFase(
     const tamanho = Math.ceil(times.length / numGrupos);
     times.forEach((t, i) => grupos[Math.min(numGrupos - 1, Math.floor(i / tamanho))]?.push(t));
   }
-  // Fase de liga da UEFA: potes, sem compatriotas, mesmo número de adversários de cada pote.
-  const sorteada =
-    fase.tipo === "fase-de-liga" && fase.potes > 1
-      ? sortearFaseDeLiga(times, fase.potes, fase.jogosPorTime, rng, e.paises)
-      : null;
-  if (sorteada) {
-    for (const j of sorteada)
-      jogos.push({
-        fase: f,
-        rodada: rodadaInicial + j.rodada,
-        grupo: 0,
-        casa: j.casa,
-        fora: j.fora,
+  // Fase de liga da UEFA: potes, sem compatriotas, mesmo número de adversários de cada pote. Com
+  // mais de uma liga (Oeste e Leste da Ásia), uma por caminho.
+  if (fase.tipo === "fase-de-liga" && fase.potes > 1) {
+    // Ligas regionais (Ásia): sem o limite de 2 por país e com potes sem compatriotas.
+    const regional = fase.grupos > 1;
+    const ligas = regional
+      ? porCaminho(times, e.caminhos).map((l) => potesSemCompatriotas(l, fase.potes, e.paises))
+      : [times];
+    const maximo = regional ? fase.jogosPorTime : 2;
+    // Se o sorteio com as restrições de país não fecha, sai sem elas (nunca vira todos contra todos).
+    const sorteadas = ligas.map(
+      (l) =>
+        sortearFaseDeLiga(l, fase.potes, fase.jogosPorTime, rng, e.paises, maximo) ??
+        sortearFaseDeLiga(l, fase.potes, fase.jogosPorTime, rng),
+    );
+    if (sorteadas.every((x) => x)) {
+      sorteadas.forEach((lista, gi) => {
+        for (const j of lista!)
+          jogos.push({
+            fase: f,
+            rodada: rodadaInicial + j.rodada,
+            grupo: gi,
+            casa: j.casa,
+            fora: j.fora,
+          });
       });
-    estadoFase = { times, grupos: [[...times]], rodadaInicial, encerrada: false };
-    return garantirDatas({ ...e, jogos, fases: e.fases.map((x, i) => (i === f ? estadoFase : x)) });
+      estadoFase = { times, grupos: ligas.map((l) => [...l]), rodadaInicial, encerrada: false };
+      return garantirDatas({
+        ...e,
+        jogos,
+        fases: e.fases.map((x, k) => (k === f ? estadoFase : x)),
+      });
+    }
   }
   grupos.forEach((g, gi) => {
     let rodadas = todosContraTodos(g.length, turnos, rng);
@@ -358,6 +380,16 @@ function abrirFase(
   });
   estadoFase = { times, grupos, rodadaInicial, encerrada: false };
   return garantirDatas({ ...e, jogos, fases: e.fases.map((x, i) => (i === f ? estadoFase : x)) });
+}
+
+/** Separa os times por caminho, na ordem em que cada caminho aparece (mantém a ordem de força). */
+function porCaminho(times: readonly string[], caminhos?: Record<string, string>): string[][] {
+  const mapa = new Map<string, string[]>();
+  for (const t of times) {
+    const k = caminhos?.[t] ?? "";
+    mapa.set(k, [...(mapa.get(k) ?? []), t]);
+  }
+  return [...mapa.values()];
 }
 
 /**
@@ -440,6 +472,17 @@ function paresIniciais(
     }
     for (let i = 0; i < sobra.length; i += 2) pares.push([sobra[i] ?? "", sobra[i + 1] ?? ""]);
     return rng.shuffle(pares);
+  }
+  if (fase.chaveamento === "caminhos-campanha") {
+    // Dentro de cada caminho, pela campanha: 1º x último, 2º x penúltimo...
+    const pares: [string, string][] = [];
+    for (const lista of porCaminho(times, caminhos))
+      for (let i = 0; i < Math.ceil(lista.length / 2); i++)
+        pares.push([
+          lista[i] ?? "",
+          i === lista.length - 1 - i ? "" : (lista[lista.length - 1 - i] ?? ""),
+        ]);
+    return pares;
   }
   if (fase.chaveamento === "caminhos") {
     // Sorteio dentro de cada caminho, evitando clubes do mesmo país frente a frente.
@@ -651,10 +694,11 @@ function classificadosDosGrupos(c: Competicao, e: EstadoCompeticao, f: number): 
   const fase = c.fases[f];
   if (!fase || fase.tipo === "mata-mata") return [];
   const geral = classificacaoDosGrupos(c, e, f);
-  if (fase.tipo === "fase-de-liga")
-    return fase.playoff
-      ? geral.slice(fase.playoff.de - 1, fase.playoff.ate)
-      : geral.slice(0, fase.classificamDireto);
+  if (fase.tipo === "fase-de-liga") {
+    if (fase.playoff) return geral.slice(fase.playoff.de - 1, fase.playoff.ate);
+    // Várias ligas (Oeste e Leste): os primeiros de cada uma, alternando por colocação.
+    return geral.slice(0, fase.classificamDireto * (e.fases[f]?.grupos?.length ?? 1));
+  }
   if (fase.faixaClassificada) {
     const t = tabelaDoGrupo(c, e, f, 0);
     return t.slice(fase.faixaClassificada.de - 1, fase.faixaClassificada.ate).map((l) => l.clube);

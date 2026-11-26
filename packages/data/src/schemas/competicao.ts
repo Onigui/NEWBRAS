@@ -114,6 +114,9 @@ export const FaseDeLiga = BaseFase.extend({
   tipo: z.literal("fase-de-liga"),
   jogosPorTime: z.int().min(2),
   potes: z.int().min(1),
+  /** Ligas separadas por caminho (a Champions da Ásia tem uma no Oeste e outra no Leste). */
+  grupos: z.int().min(1).default(1),
+  /** Quantos avançam direto (em cada liga, quando há mais de uma). */
   classificamDireto: z.int().min(0),
   /** Colocações que vão para o playoff antes do mata-mata (ex.: 9º ao 24º). */
   playoff: z.object({ de: z.int().min(1), ate: z.int().min(1) }).optional(),
@@ -133,10 +136,11 @@ export const FaseMataMata = BaseFase.extend({
   /**
    * Como os confrontos são definidos. "pais": só entre clubes do mesmo país (1ª fase da
    * Sul-Americana); "potes": a metade de cima sorteada contra a de baixo (oitavas da Libertadores);
-   * "caminhos": sorteio dentro de cada caminho (qualificatórias da UEFA).
+   * "caminhos": sorteio dentro de cada caminho (qualificatórias da UEFA); "caminhos-campanha": dentro
+   * de cada caminho, pela campanha (1º x 8º do Oeste da Ásia), mantendo as regiões separadas.
    */
   chaveamento: z
-    .enum(["sorteio", "campanha", "chave-fixa", "pais", "potes", "caminhos"])
+    .enum(["sorteio", "campanha", "chave-fixa", "pais", "potes", "caminhos", "caminhos-campanha"])
     .default("sorteio"),
   /** Em jogo único, quem manda: sorteado, melhor campanha ou campo neutro. */
   mando: z.enum(["sorteio", "melhor-campanha", "neutro"]).default("sorteio"),
