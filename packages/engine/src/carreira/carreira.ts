@@ -8,6 +8,7 @@ import type {
   Banco,
   Clube,
   Competicao,
+  Contrato,
   DataFifa,
   Jogador,
   PapelEmCampo,
@@ -58,7 +59,15 @@ import {
 import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
-import { mundoNaData } from "../elenco/mundo";
+import { evolucaoDe, mundoNaData } from "../elenco/mundo";
+import {
+  depoisDoJogo,
+  diaDoElenco,
+  lesionado,
+  minutosNaVirada,
+  moralDe,
+  type Lesao,
+} from "../elenco/vida";
 import { noticiasDoElenco } from "../elenco/noticias";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
@@ -99,6 +108,16 @@ export interface EstadoJogador {
   suspensoes?: Record<string, number>;
   /** Jogos e gols pela seleção desde o começo da carreira. */
   selecao?: { jogos: number; gols: number };
+  /** Lesão: fora até a data. */
+  lesao?: Lesao;
+  /** Moral do jogador, de 0 a 100 (60 é o normal; sem o campo, 60). */
+  moral?: number;
+  /** Atacante: jogos seguidos sem marcar. */
+  jogosSemGol?: number;
+  /** Força a mais (ou a menos) pelos minutos jogados quando jovem, somada à evolução. */
+  ajuste?: number;
+  /** Minutos totais na última virada de temporada (para contar os da temporada). */
+  minutosNaVirada?: number;
 }
 
 export interface GolDoJogo {
@@ -171,6 +190,10 @@ export interface Carreira {
   noticias: Noticia[];
   /** Ligas, estaduais e copas do mundo inteiro, na temporada de cada país. */
   competicoes: MundoCompeticoes;
+  /** Contratos renovados pelo técnico (os outros são os do banco). */
+  contratos?: Record<string, Contrato>;
+  /** Quem saiu do clube (contrato terminado). */
+  saidas?: string[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -438,6 +461,7 @@ export function indisponiveisNoJogo(
 ): Set<string> {
   const ids = suspensosNaCompeticao(c, competicao);
   for (const id of foraPelaSelecao(c, mundo, data).keys()) ids.add(id);
+  for (const [id, e] of Object.entries(c.jogadores)) if (lesionado(e, data)) ids.add(id);
   return ids;
 }
 
@@ -453,7 +477,9 @@ export function recuperacaoDiaria(j: Pick<Jogador, "atributos" | "nascimento">, 
 }
 
 /** Para onde o humor puxa hoje: moral do time, cansaço e falta de jogos. */
-function pesosHumor(e: EstadoJogador, moral: number): (h: Humor) => number {
+function pesosHumor(e: EstadoJogador, moralDoTime: number): (h: Humor) => number {
+  // A moral do time e a do jogador puxam juntas.
+  const moral = (moralDoTime + moralDe(e)) / 2;
   const m = (Math.max(0, Math.min(100, moral)) - 50) / 50;
   return (h) => {
     let p = CHANCE_HUMOR[h];
@@ -598,12 +624,25 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     foraPelaSelecao(proximo, mundoAmanha, data),
     data,
   );
-  // Temporada nova no elenco: aposentadorias, juniores, lendas que renascem e a evolução.
-  const elenco = noticiasDoElenco(c, mundo, mundoAmanha, data, convocados.jogadores);
+  // Temporada nova no elenco: aposentadorias, juniores, lendas que renascem e a evolução. Os
+  // minutos da temporada que acabou pesam na força dos jovens.
+  const evolucao = evolucaoDe(mundoDoBanco, c);
+  const virou =
+    !!evolucao && evolucao.dataDoClube(c.clube, c.data) !== evolucao.dataDoClube(c.clube, data);
+  const elenco = noticiasDoElenco(
+    c,
+    mundo,
+    mundoAmanha,
+    data,
+    virou ? minutosNaVirada(mundo, c.clube, data, convocados.jogadores) : convocados.jogadores,
+  );
+  // Lesões, moral e contratos do dia.
+  const dia = diaDoElenco(c, mundoAmanha, data, elenco.jogadores);
   for (const n of [
     ...convocados.noticias,
     ...(apresentacao ? [apresentacao] : []),
     ...elenco.noticias,
+    ...dia.noticias,
   ]) {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -612,7 +651,8 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     ...c,
     data,
     competicoes,
-    jogadores: elenco.jogadores,
+    jogadores: dia.jogadores,
+    ...(dia.saidas.length ? { saidas: [...(c.saidas ?? []), ...dia.saidas] } : {}),
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };
@@ -850,6 +890,11 @@ export function registrarJogo(
 ): Carreira {
   const x = agendaCompleta(c).find((y) => y.id === compromissoId);
   if (!x || x.resultado) return c;
+  // Depois do placar e dos cartões: lesões e a moral de cada jogador.
+  return depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r);
+}
+
+function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoPartida): Carreira {
   const nosso: LadoCampo = x.mando === "casa" ? "casa" : "fora";
   const [gc, gf] = r.placar;
   const pro = nosso === "casa" ? gc : gf;

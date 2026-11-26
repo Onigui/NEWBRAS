@@ -9,7 +9,7 @@ export * from "./competicoes";
 export { convocar, TAMANHO_DA_CONVOCACAO, VAGAS_DA_CONVOCACAO } from "./selecoes/convocacao";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.24.0";
+export const ENGINE_VERSION = "0.25.0";
 export {
   CHANCE_DE_AMISTOSO,
   diasDosAmistosos,
@@ -28,3 +28,17 @@ export {
   type EventoElenco,
 } from "./elenco/evolucao";
 export { evolucaoDe, forcasDaTemporadaAnterior, mundoDoBancoDe, mundoNaData } from "./elenco/mundo";
+export {
+  CHANCE_LESAO_TREINO,
+  contratoDe,
+  faixaDaMoral,
+  lesionado,
+  MORAL_NORMAL,
+  moralDe,
+  propostaDeRenovacao,
+  renovarContrato,
+  somarMeses,
+  TIPOS_DE_LESAO,
+  type Lesao,
+  type PropostaDeRenovacao,
+} from "./elenco/vida";

@@ -73,12 +73,15 @@ function diasDasSelecoes(mundo: Mundo, estado: MundoCompeticoes): Map<string, nu
  * torneios (a Copa América e a Copa da Ásia caem com muitas ligas em andamento).
  */
 export function foraPelaSelecao(
-  c: Pick<Carreira, "clube" | "competicoes">,
+  c: Pick<Carreira, "clube" | "competicoes"> & Partial<Pick<Carreira, "jogadores">>,
   mundo: Mundo,
   data: string,
 ): Map<string, string> {
   const fora = new Map<string, string>();
   const convocados = convocadosDoClube(mundo, c.clube);
+  // Lesionado não vai à seleção (fica no clube se tratando).
+  for (const [id, e] of Object.entries(c.jogadores ?? {}))
+    if (e.lesao && e.lesao.ate > data) convocados.delete(id);
   if (!convocados.size) return fora;
   if (janelaDaData(mundo.datasFifa, data)) {
     for (const [id, pais] of convocados) if (mundo.pais(pais)) fora.set(id, pais);
@@ -140,7 +143,7 @@ export function diaDosConvocados(
     const autores: string[] = [];
     for (const [id, pais] of nossos) {
       const e = novos[id];
-      if (!e) continue;
+      if (!e || (e.lesao && e.lesao.ate > dia)) continue;
       const lado = pais === j.casa ? 0 : 1;
       const gols = j.competicao
         ? (depois.competicoes[j.competicao]?.artilharia[id]?.[0] ?? 0) -
