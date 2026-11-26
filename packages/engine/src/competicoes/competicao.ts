@@ -83,6 +83,8 @@ export interface EstadoCompeticao {
   caminhos?: Record<string, string>;
   /** Divisão de cada clube nas copas nacionais (para o mando do clube de divisão mais baixa). */
   divisoes?: Record<string, number>;
+  /** Eliminatórias: quem se classificou, pelas regras de `classificados` (quando termina). */
+  classificados?: string[];
 }
 
 /** Vaga pela tabela da própria competição (os primeiros da fase de grupos direto às oitavas). */
@@ -95,7 +97,7 @@ export function vagaDaPropria(
 
 /** Vaga que só se resolve durante a temporada (eliminados ou colocação numa fase de outra). */
 export function vagaDinamica(v: { criterio: string; fase?: string | undefined }): boolean {
-  return v.criterio === "eliminados" || v.fase !== undefined;
+  return v.criterio === "eliminados" || v.criterio === "classificados" || v.fase !== undefined;
 }
 
 /** Quantos clubes uma vaga traz (para o calendário). */
@@ -131,8 +133,9 @@ function planoDasFases(c: Competicao, n: number) {
     // Os classificados direto da fase de liga entram depois do playoff (Champions League).
     const liga = c.fases[i - 2];
     const diretos = liga?.tipo === "fase-de-liga" && liga.playoff ? liga.classificamDireto : 0;
-    const e =
+    const soma =
       vindos + diretos + (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + tamanhoDaVaga(v), 0));
+    const e = f.limiteDeEntradas ? Math.min(soma, f.limiteDeEntradas) : soma;
     entram.push(e);
     const ultima = i === c.fases.length - 1;
     if (f.tipo === "mata-mata") {
@@ -174,7 +177,10 @@ function eliminatoriasDaFase(f: Fase, times: number, ultima: boolean): number {
 /** Ano em que uma temporada termina ("2026/27" → 2027; "2027" → 2027). */
 export function anoFinal(temporada: string): number {
   const inicio = Number(temporada.slice(0, 4));
-  return temporada.includes("/") ? inicio + 1 : inicio;
+  if (!temporada.includes("/")) return inicio;
+  // "2026/27" → 2027; edições de mais de um ano: "2027/29" → 2029.
+  const fim = Number(temporada.slice(0, 2) + temporada.slice(5, 7));
+  return fim > inicio ? fim : inicio + 1;
 }
 
 function pernas(f: Fase, rodadaEliminatoria: number, total: number): number {
@@ -306,7 +312,11 @@ export function montarCompeticao(
   o: OpcoesMontagem,
 ): EstadoCompeticao {
   const { inicio, fim } = datasDaCompeticao(c.calendario, inicioTemporada);
-  const plano = planoDasFases(c, participantes.length);
+  // Sem ninguém no começo (todos chegam de outras competições), o plano é pelo previsto.
+  const plano = planoDasFases(
+    c,
+    participantes.length || (o.quantidadePlanejada ?? quantidadeInicial(c)),
+  );
   const datas = datasPlanejadas(
     c,
     inicioTemporada,
@@ -372,7 +382,9 @@ function abrirFase(
     grupos =
       regioes.length > 1 && numGrupos % regioes.length === 0
         ? regioes.flatMap((r) => gruposPorPotes(r, numGrupos / regioes.length, rng, e.paises))
-        : gruposPorPotes(times, numGrupos, rng, e.paises);
+        : gruposPorPotes(times, numGrupos, rng, separacao(fase, e.paises));
+    if (fase.tipo === "grupos" && fase.menoresPara)
+      grupos = cabecasNosMenores(grupos, times, fase.menoresPara);
   } else if (divisao === "sorteio" && f === 0) {
     rng.shuffle(times).forEach((t, i) => grupos[i % numGrupos]?.push(t));
   } else if (divisao === "sorteio") {
@@ -420,8 +432,14 @@ function abrirFase(
       });
     }
   }
+  const maiorGrupo = Math.max(0, ...grupos.map((g) => g.length));
   grupos.forEach((g, gi) => {
     let rodadas = todosContraTodos(g.length, turnos, rng);
+    // Grupos menores jogam só as últimas rodadas (eliminatórias da UEFA com grupos de 4 e de 5).
+    const atraso =
+      fase.tipo === "grupos" && fase.menoresNoFim && g.length < maiorGrupo
+        ? Math.max(0, (e.rodadasDaFase[f] ?? 0) - rodadas.length)
+        : 0;
     // Fase de liga: cada um joga só `jogosPorTime` vezes, contra adversários de todo o grupo.
     if (fase.tipo === "fase-de-liga") {
       const k = Math.min(fase.jogosPorTime, rodadas.length);
@@ -430,7 +448,8 @@ function abrirFase(
         (_, i) => rodadas[Math.floor((i * rodadas.length) / k)] as [number, number][],
       );
     }
-    rodadas.forEach((rodada, r) => {
+    rodadas.forEach((rodada, r0) => {
+      const r = r0 + atraso;
       if (r >= (e.rodadasDaFase[f] ?? 0)) return;
       for (const [a, b] of rodada)
         jogos.push({
@@ -444,6 +463,41 @@ function abrirFase(
   });
   estadoFase = { times, grupos, rodadaInicial, encerrada: false };
   return garantirDatas({ ...e, jogos, fases: e.fases.map((x, i) => (i === f ? estadoFase : x)) });
+}
+
+/** Restrição de sorteio: o país (continentais) ou o grupo de times a separar (anfitriões). */
+function separacao(
+  fase: Fase,
+  paises?: Record<string, string>,
+): Record<string, string> | undefined {
+  if (fase.tipo !== "grupos" || !fase.separar?.length) return paises;
+  return { ...paises, ...Object.fromEntries(fase.separar.map((t) => [t, "separados"])) };
+}
+
+/**
+ * Os `n` primeiros da lista de entrada vão para os grupos menores: cada um que caiu num grupo maior
+ * troca de lugar com um companheiro de pote que está num menor.
+ */
+function cabecasNosMenores(grupos0: string[][], times: readonly string[], n: number): string[][] {
+  const grupos = grupos0.map((g) => [...g]);
+  const maior = Math.max(...grupos.map((g) => g.length));
+  const cabecas = new Set(times.slice(0, n));
+  const pote = (t: string) => Math.floor(times.indexOf(t) / grupos.length);
+  for (const t of cabecas) {
+    const gi = grupos.findIndex((g) => g.includes(t));
+    if (gi < 0 || (grupos[gi] as string[]).length < maior) continue;
+    for (const g of grupos) {
+      if (g.length >= maior) continue;
+      const k = g.findIndex((x) => pote(x) === pote(t) && !cabecas.has(x));
+      if (k < 0) continue;
+      const outro = g[k] as string;
+      g[k] = t;
+      const de = grupos[gi] as string[];
+      de[de.indexOf(t)] = outro;
+      break;
+    }
+  }
+  return grupos;
 }
 
 /** Separa os times por caminho, na ordem em que cada caminho aparece (mantém a ordem de força). */
@@ -993,6 +1047,10 @@ function entradaDaFase(
   const antes: string[] = [];
   const depois: string[] = [];
   const usados = new Set(classificados);
+  // Quem já se classificou pelas fases anteriores (eliminatórias) fica fora das vagas marcadas.
+  const jaClassificados = fase.entramAqui.some((v) => v.foraDosClassificados)
+    ? new Set(classificadosPelasRegras(c, e, p))
+    : new Set<string>();
   const por = (lista: readonly string[], destino: string[]) => {
     for (const t of lista)
       if (!usados.has(t)) {
@@ -1010,12 +1068,14 @@ function entradaDaFase(
       antes,
     );
   fase.entramAqui.forEach((v, vi) => {
-    const lista = vagaDaPropria(c, v)
+    const bruta = vagaDaPropria(c, v)
       ? daPropriaTabela(c, e, v)
       : (e.entrantes?.[`${p}.${vi}`] ?? []);
+    const lista = v.foraDosClassificados ? bruta.filter((t) => !jaClassificados.has(t)) : bruta;
     por(lista, v.depois ? depois : antes);
   });
-  return [...antes, ...classificados, ...depois];
+  const todos = [...antes, ...classificados, ...depois];
+  return fase.limiteDeEntradas ? todos.slice(0, fase.limiteDeEntradas) : todos;
 }
 
 /**
@@ -1033,6 +1093,8 @@ export function resolverVagaDinamica(
     doCaminho?: string | undefined;
   },
 ): string[] | null {
+  // Classificados pelas eliminatórias: quando elas terminam.
+  if (v.criterio === "classificados") return e.encerrada ? (e.classificados ?? []) : null;
   // Campeão (ou vice) da edição: quando ela termina.
   if (v.criterio === "campeao" || v.criterio === "vice") {
     if (!e.encerrada) return null;
@@ -1099,7 +1161,64 @@ function encerrar(c: Competicao, e: EstadoCompeticao): EstadoCompeticao {
     ...(campeao ? { campeao } : {}),
     ...(playoff[ultima] && vencedorUltima ? { vencedorPlayoff: vencedorUltima } : {}),
     ...(playoff[ultima] && vencedores.length > 1 ? { vencedoresPlayoff: vencedores } : {}),
+    ...(c.classificados.length ? { classificados: classificadosPelasRegras(c, e) } : {}),
   };
+}
+
+/** Linhas de tabela em ordem entre grupos diferentes: pontos por jogo, saldo por jogo, gols. */
+function porCampanha(linhas: LinhaTabela[]): LinhaTabela[] {
+  const pj = (l: LinhaTabela) => Math.max(1, l.jogos);
+  return [...linhas].sort(
+    (a, b) =>
+      b.pontos / pj(b) - a.pontos / pj(a) ||
+      (b.golsPro - b.golsContra) / pj(b) - (a.golsPro - a.golsContra) / pj(a) ||
+      b.golsPro / pj(b) - a.golsPro / pj(a) ||
+      a.clube.localeCompare(b.clube),
+  );
+}
+
+/**
+ * Quem as eliminatórias classificam, pelas regras de `classificados`, olhando só as fases antes de
+ * `ateFase` (para os playoffs saberem quem já foi direto).
+ */
+export function classificadosPelasRegras(
+  c: Competicao,
+  e: EstadoCompeticao,
+  ateFase = Infinity,
+): string[] {
+  const lista: string[] = [];
+  for (const r of c.classificados) {
+    const fi = c.fases.findIndex((f) => f.id === r.fase);
+    const ef = e.fases[fi];
+    if (fi < 0 || fi >= ateFase || !ef?.encerrada) continue;
+    const ja = new Set(lista);
+    if (r.vencedores) {
+      for (const p of ef.chaves?.at(-1) ?? [])
+        if (p.vencedor && !ja.has(p.vencedor)) lista.push(p.vencedor);
+      continue;
+    }
+    const grupos = (ef.grupos ?? []).map((_, g) => tabelaDoGrupo(c, e, fi, g));
+    const candidatos = porCampanha(
+      grupos.flatMap((t) =>
+        (r.posicoes ?? []).map((p) => t[p - 1]).filter((l) => !!l),
+      ) as LinhaTabela[],
+    )
+      .map((l) => l.clube)
+      .filter((t) => !ja.has(t));
+    if (r.reservados) {
+      // Vagas reservadas (anfitriões): os mais bem colocados que ainda não se classificaram.
+      const todos = porCampanha(grupos.flat()).map((l) => l.clube);
+      const donos = todos.filter((t) => r.reservados!.includes(t) && !ja.has(t));
+      const n = r.quantidade ?? donos.length;
+      const escolhidos = donos.slice(0, n);
+      for (const t of candidatos)
+        if (escolhidos.length < n && !escolhidos.includes(t)) escolhidos.push(t);
+      lista.push(...escolhidos);
+      continue;
+    }
+    lista.push(...candidatos.slice(0, r.melhores ?? r.quantidade ?? candidatos.length));
+  }
+  return lista;
 }
 
 /**

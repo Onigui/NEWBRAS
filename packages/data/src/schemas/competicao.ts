@@ -57,9 +57,18 @@ export const Vaga = z.object({
    * eliminados: quem caiu numa fase da origem na mesma temporada (a 3ª fase da Libertadores manda os
    * eliminados para a Sul-Americana). campeoes: os campeões das últimas `edicoes` edições (Mundial
    * de Clubes; campeão repetido dá a vaga ao próximo do ranking); ranking: os melhores pelas
-   * campanhas nas últimas `edicoes` edições da origem.
+   * campanhas nas últimas `edicoes` edições da origem. classificados: quem a origem (eliminatórias)
+   * classificou, pelas regras de `classificados` dela, quando ela termina.
    */
-  criterio: z.enum(["campeao", "vice", "posicoes", "eliminados", "campeoes", "ranking"]),
+  criterio: z.enum([
+    "campeao",
+    "vice",
+    "posicoes",
+    "eliminados",
+    "campeoes",
+    "ranking",
+    "classificados",
+  ]),
   /** Colocações que dão a vaga, quando o critério é "posicoes" (1 = primeiro). */
   posicoes: z.array(z.int().min(1)).optional(),
   /**
@@ -91,6 +100,11 @@ export const Vaga = z.object({
   edicoes: z.int().min(1).max(8).optional(),
   /** No critério "ranking", no máximo tantos clubes do mesmo país (sem contar os campeões). */
   maximoPorPais: z.int().min(1).optional(),
+  /**
+   * Na fase da própria competição: deixa de fora quem já se classificou pelas regras de
+   * `classificados` das fases anteriores (os 2º colocados que não foram direto para a Euro).
+   */
+  foraDosClassificados: z.boolean().optional(),
 });
 export type Vaga = z.infer<typeof Vaga>;
 
@@ -106,6 +120,8 @@ const BaseFase = z.object({
    * League nas datas FIFA. Valem quando são tantos quantas as rodadas da fase.
    */
   datas: z.array(DiaDoAno).optional(),
+  /** No máximo tantos entram na fase, na ordem das vagas (os playoffs da Euro têm 8). */
+  limiteDeEntradas: z.int().min(2).optional(),
 });
 
 /** Grupos em pontos corridos. Uma liga comum é 1 grupo com 2 turnos. */
@@ -121,6 +137,14 @@ export const FaseGrupos = BaseFase.extend({
   divisaoGrupos: z.enum(["sorteio", "ordem-da-lista", "regional", "potes"]).default("sorteio"),
   /** Faixa da tabela que segue para a próxima fase, quando não começa no 1º (ex.: 3º ao 6º no playoff da Série B). */
   faixaClassificada: z.object({ de: z.int().min(1), ate: z.int().min(1) }).optional(),
+  /**
+   * Grupos de tamanhos diferentes (eliminatórias da UEFA, com grupos de 4 e de 5): os menores jogam
+   * só as últimas rodadas, e os `menoresPara` primeiros da lista de entrada vão para eles.
+   */
+  menoresNoFim: z.boolean().optional(),
+  menoresPara: z.int().min(1).optional(),
+  /** Times que não podem cair no mesmo grupo (os anfitriões da Euro 2028). */
+  separar: z.array(z.string().min(3)).optional(),
 });
 
 /** Fase de liga com tabela única e adversários sorteados por potes (formato suíço da UEFA). */
@@ -223,6 +247,30 @@ export const Competicao = z
       .default({ aCadaAnos: 1, anoBase: 2026 }),
     /** Quando a competição é disputada dentro do ano. */
     calendario: Periodo,
+    /**
+     * Quantos anos uma edição dura (eliminatórias da Euro: de março de 2027 a março de 2028). O fim
+     * do calendário cai no ano da edição; o começo, tantos anos antes.
+     */
+    anos: z.int().min(1).max(4).default(1),
+    /**
+     * Quem a competição classifica para outra (eliminatórias), em ordem: as posições numa fase (em
+     * cada grupo, ou só os `melhores` entre os grupos), os vencedores de um playoff e as vagas
+     * reservadas (os anfitriões que ainda não se classificaram; sem eles, o próximo da regra
+     * `senao`).
+     */
+    classificados: z
+      .array(
+        z.object({
+          fase: Id,
+          posicoes: z.array(z.int().min(1)).optional(),
+          porGrupo: z.boolean().default(false),
+          melhores: z.int().min(1).optional(),
+          vencedores: z.boolean().optional(),
+          reservados: z.array(z.string().min(3)).optional(),
+          quantidade: z.int().min(1).optional(),
+        }),
+      )
+      .default([]),
     /** Dias da semana dos jogos (0 = domingo), quando fogem do padrão do tipo (Recopa às quintas). */
     diasDeJogo: z.array(z.int().min(0).max(6)).min(1).optional(),
     participantes: z.object({
