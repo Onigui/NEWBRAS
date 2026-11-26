@@ -1216,9 +1216,21 @@ describe("copas continentais", () => {
     for (const c of continentais) {
       const conf = c.escopo.tipo === "confederacao" ? c.escopo.confederacao : "";
       let total = 0;
-      for (const v of c.participantes.vagas) {
+      const vagas = [
+        ...c.participantes.vagas,
+        // Vagas das fases adiante, menos as da própria tabela (os primeiros dos grupos etc.).
+        ...c.fases.flatMap((f) =>
+          f.entramAqui.filter((v) => !(v.de === c.id && v.criterio === "posicoes")),
+        ),
+      ];
+      for (const v of vagas) {
         const origem = competicao(v.de);
         expect(origem, `${c.id} → ${v.de}`).toBeDefined();
+        if (origem!.escopo.tipo === "confederacao") {
+          expect(origem!.escopo.confederacao).toBe(conf);
+          total += v.quantidade ?? v.posicoes?.length ?? 1;
+          continue;
+        }
         const pais = origem!.escopo.tipo === "pais" ? origem!.escopo.pais : "";
         expect(confDoPais.get(pais), `${c.id} → ${v.de}`).toBe(conf);
         if (v.criterio === "posicoes") {
@@ -1234,8 +1246,22 @@ describe("copas continentais", () => {
 
   it("Libertadores e Champions no formato atual", () => {
     const liberta = competicao("conmebol-libertadores")!;
-    expect(liberta.participantes.quantidade).toBe(32);
-    expect(liberta.fases.map((f) => f.tipo)).toEqual(["grupos", "mata-mata"]);
+    expect(liberta.participantes.quantidade).toBe(47);
+    expect(liberta.fases.map((f) => f.id)).toEqual([
+      "fase-1",
+      "fase-2",
+      "fase-3",
+      "grupos",
+      "mata-mata",
+    ]);
+    expect(liberta.fases[3]?.entramAqui.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0)).toBe(
+      28,
+    );
+    expect(liberta.fases[1]?.entramAqui.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0)).toBe(
+      13,
+    );
+    const sula = competicao("conmebol-sul-americana")!;
+    expect(sula.participantes.quantidade).toBe(56);
     const ucl = competicao("uefa-champions-league")!;
     expect(ucl.participantes.quantidade).toBe(36);
     expect(ucl.fases.map((f) => f.tipo)).toEqual(["fase-de-liga", "mata-mata", "mata-mata"]);

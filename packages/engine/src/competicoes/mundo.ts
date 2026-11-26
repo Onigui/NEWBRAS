@@ -10,6 +10,11 @@ import { diaAbsoluto, somarDias } from "../carreira/datas";
 import {
   avancarCompeticao,
   datasPlanejadas,
+  quantidadeInicial,
+  receberEntrantes,
+  resolverVagaDinamica,
+  vagaDaPropria,
+  vagaDinamica,
   desempateDoJogo,
   jogosDoDia,
   lancarResultado,
@@ -52,6 +57,8 @@ export interface MundoParaCompeticoes {
   pais(codigo: string): Pais | undefined;
   elenco(clube: string): readonly Jogador[];
   datasFifa: readonly DataFifa[];
+  /** País do clube, para os sorteios das continentais evitarem clubes do mesmo país. */
+  clube?(id: string): { pais: string } | undefined;
 }
 
 /** País de uma competição nacional ou estadual (null nas continentais). */
@@ -182,42 +189,154 @@ function ranking(
   );
 }
 
+/** Clubes que entram numa competição: na primeira fase e, pelo índice "fase.vaga", nas adiante. */
+interface Resolucao {
+  inicial: string[];
+  entrantes: Record<string, string[]>;
+}
+
+const continentalOuMais = (c: Competicao | undefined) =>
+  c?.tipo === "continental" || c?.tipo === "intercontinental";
+
 /**
- * Participantes de uma copa ou supercopa pelas vagas: os primeiros de cada liga, o campeão e o
- * vice (da temporada anterior; na primeira, os mais fortes). Vaga repetida passa para o próximo.
+ * Participantes pelas vagas: os primeiros de cada liga, o campeão e o vice (da última edição; na
+ * primeira temporada, o campeão anterior ao banco ou os mais fortes). As vagas das fases mais
+ * adiantadas são resolvidas antes (o campeão da Libertadores entra nos grupos e empurra os do país
+ * para baixo, como no real). Vaga repetida passa para o próximo da tabela.
  */
-function participantesPorVagas(
+function resolverParticipantes(
   m: MundoParaCompeticoes,
   estado: MundoCompeticoes,
   c: Competicao,
   daTemporada: Record<string, EstadoCompeticao>,
-): string[] {
+): Resolucao {
   const escolhidos: string[] = [];
   // Quem já está numa competição excluída (a Libertadores, para a Sul-Americana) não entra.
   const fora = new Set(
     c.participantes.exclui.flatMap((id) => daTemporada[id]?.participantes ?? []),
   );
   const ocupado = (x: string) => escolhidos.includes(x) || fora.has(x);
-  for (const v of c.participantes.vagas) {
-    const ordem = ranking(m, estado, v.de, daTemporada);
-    const proximo = (desde: number) => ordem.slice(desde).find((x) => !ocupado(x));
+  // Reserva para vaga de campeão sem dono conhecido: o mais forte que sobra entre as origens.
+  const origens = [
+    ...c.participantes.vagas,
+    ...c.fases.flatMap((f) => f.entramAqui.filter((v) => !vagaDaPropria(c, v) && !vagaDinamica(v))),
+  ].filter((v) => v.criterio === "posicoes");
+  const maisForteQueSobra = () =>
+    origens
+      .flatMap((v) => ranking(m, estado, v.de, daTemporada))
+      .filter((x) => !ocupado(x))
+      .sort((a, b) => forca(m, b) - forca(m, a))[0];
+  const resolver = (v: Competicao["participantes"]["vagas"][number]): string[] => {
+    if (v.criterio === "eliminados") return [];
     if (v.criterio === "posicoes") {
+      const ordem = ranking(m, estado, v.de, daTemporada);
+      const proximo = (desde: number) => ordem.slice(desde).find((x) => !ocupado(x));
+      const lista: string[] = [];
       for (const p of v.posicoes ?? []) {
         const x = ordem[p - 1];
         const escolhido = x && !ocupado(x) ? x : v.repassa ? proximo(p - 1) : undefined;
-        if (escolhido) escolhidos.push(escolhido);
+        if (escolhido) {
+          escolhidos.push(escolhido);
+          lista.push(escolhido);
+        }
       }
-      continue;
+      return lista;
     }
+    const origem = m.competicao(v.de);
     const registro = [...estado.historico].reverse().find((h) => h.competicao === v.de);
-    const doHistorico = v.criterio === "campeao" ? registro?.campeao : registro?.vice;
-    const escolhido =
-      doHistorico && !ocupado(doHistorico)
-        ? doHistorico
-        : proximo(v.criterio === "campeao" ? 0 : 1);
-    if (escolhido) escolhidos.push(escolhido);
+    const anterior = origem?.campeaoAnterior;
+    const dono =
+      v.criterio === "campeao"
+        ? (registro?.campeao ?? anterior?.campeao)
+        : registro
+          ? registro.vice
+          : anterior?.vice;
+    let escolhido = dono && !ocupado(dono) ? dono : undefined;
+    if (!escolhido)
+      escolhido =
+        continentalOuMais(origem) || v.de === c.id
+          ? maisForteQueSobra()
+          : ranking(m, estado, v.de, daTemporada)
+              .slice(v.criterio === "campeao" ? 0 : 1)
+              .find((x) => !ocupado(x));
+    if (!escolhido) return [];
+    escolhidos.push(escolhido);
+    return [escolhido];
+  };
+  const entrantes: Record<string, string[]> = {};
+  for (let p = c.fases.length - 1; p >= 1; p--) {
+    const fase = c.fases[p] as Competicao["fases"][number];
+    const fixas = fase.entramAqui
+      .map((v, vi) => ({ v, vi }))
+      .filter(({ v }) => !vagaDaPropria(c, v) && !vagaDinamica(v));
+    if (!fixas.length) continue;
+    // Campeões continentais primeiro (o atual campeão no pote 1), depois os outros por força.
+    const campeoes: string[] = [];
+    const outros: string[] = [];
+    for (const { v } of fixas)
+      (v.criterio !== "posicoes" && continentalOuMais(m.competicao(v.de)) ? campeoes : outros).push(
+        ...resolver(v),
+      );
+    outros.sort((a, b) => forca(m, b) - forca(m, a));
+    entrantes[`${p}.${fixas[0]!.vi}`] = [...campeoes, ...outros];
   }
-  return escolhidos;
+  const inicial = c.participantes.vagas.flatMap(resolver);
+  return { inicial, entrantes };
+}
+
+/** Todos os participantes previstos pelas vagas (para a ordem de força de uma copa ainda fechada). */
+function participantesPorVagas(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  c: Competicao,
+  daTemporada: Record<string, EstadoCompeticao>,
+): string[] {
+  const r = resolverParticipantes(m, estado, c, daTemporada);
+  return [...r.inicial, ...Object.values(r.entrantes).flat()];
+}
+
+/**
+ * Entrega a cada competição os clubes que vêm de outra durante a temporada (os eliminados da 3ª
+ * fase da Libertadores para os grupos da Sul-Americana, os 3º colocados dos grupos para o playoff),
+ * assim que a fase de origem termina.
+ */
+function distribuirEntrantes(
+  m: MundoParaCompeticoes,
+  competicoes: Record<string, EstadoCompeticao>,
+  semente: string,
+): Record<string, EstadoCompeticao> | null {
+  let mudou: Record<string, EstadoCompeticao> | null = null;
+  for (const c of m.competicoes) {
+    if (!c.fases.some((f) => f.entramAqui.some((v) => !vagaDaPropria(c, v) && vagaDinamica(v))))
+      continue;
+    let e = (mudou ?? competicoes)[c.id];
+    if (!e || e.encerrada) continue;
+    for (let p = 1; p < c.fases.length; p++) {
+      const fase = c.fases[p] as Competicao["fases"][number];
+      const dinamicas = fase.entramAqui
+        .map((v, vi) => ({ v, vi }))
+        .filter(({ v }) => !vagaDaPropria(c, v) && vagaDinamica(v));
+      if (!dinamicas.length || e.recebidos?.[p]) continue;
+      const porVaga: Record<number, string[]> = {};
+      let pronto = true;
+      for (const { v, vi } of dinamicas) {
+        const origem = m.competicao(v.de);
+        const eo = (mudou ?? competicoes)[v.de];
+        const lista =
+          origem && eo && eo.temporada === e.temporada ? resolverVagaDinamica(origem, eo, v) : null;
+        if (!lista) {
+          pronto = false;
+          break;
+        }
+        porVaga[vi] = lista;
+      }
+      if (!pronto) continue;
+      e = receberEntrantes(c, e, p, porVaga, semente);
+      mudou ??= { ...competicoes };
+      mudou[c.id] = e;
+    }
+  }
+  return mudou;
 }
 
 /** Abre a temporada de um país (a que contém a data, ou a próxima) com todas as competições dele. */
@@ -256,25 +375,34 @@ function abrirTemporada(
   // atrapalha o Carioca; a Copa do Nordeste só pesa para quem a joga).
   const marcadas: { clubes: Set<string>; datas: readonly string[] }[] = [];
   for (const c of ordem) {
+    const porVagas = !c.participantes.fixos.length && c.participantes.vagas.length > 0;
+    const resolucao = porVagas ? resolverParticipantes(m, estado, c, competicoes) : undefined;
     const participantes =
-      c.participantes.fixos.length || !c.participantes.vagas.length
-        ? (estado.participantes[c.id] ?? participantesIniciais(c))
-        : participantesPorVagas(m, estado, c, competicoes);
+      resolucao?.inicial ?? estado.participantes[c.id] ?? participantesIniciais(c);
     if (participantes.length < 2) continue;
+    const entrantes =
+      resolucao && Object.keys(resolucao.entrantes).length ? resolucao.entrantes : undefined;
+    const todos = [...participantes, ...Object.values(entrantes ?? {}).flat()];
+    const paises =
+      m.clube && continentalOuMais(c)
+        ? Object.fromEntries(todos.map((x) => [x, m.clube?.(x)?.pais ?? ""]))
+        : undefined;
     let bloqueadas: Set<string> | undefined;
     if (!continental) {
       bloqueadas = new Set(c.tipo === "liga" && (c.divisao ?? 1) > 1 ? [] : reservadas);
       for (const x of marcadas)
-        if (participantes.some((p) => x.clubes.has(p))) for (const d of x.datas) bloqueadas.add(d);
+        if (todos.some((p) => x.clubes.has(p))) for (const d of x.datas) bloqueadas.add(d);
     }
     const e = montarCompeticao(c, participantes, t.inicio, {
       datasFifa: m.datasFifa,
       semente,
       temporada: temporada.nome,
-      ...(bloqueadas ? { bloqueadas } : { quantidadePlanejada: c.participantes.quantidade }),
+      ...(entrantes ? { entrantes } : {}),
+      ...(paises ? { paises } : {}),
+      ...(bloqueadas ? { bloqueadas } : { quantidadePlanejada: quantidadeInicial(c) }),
     });
     competicoes[c.id] = e;
-    if (!continental) marcadas.push({ clubes: new Set(participantes), datas: e.datas });
+    if (!continental) marcadas.push({ clubes: new Set(todos), datas: e.datas });
   }
   return { ...estado, competicoes, temporadas: { ...estado.temporadas, [codigo]: temporada } };
 }
@@ -445,7 +573,9 @@ export function jogarDia(
     competicoes ??= { ...estado.competicoes };
     competicoes[id] = e;
   }
-  return competicoes ? { ...estado, competicoes } : estado;
+  if (!competicoes) return estado;
+  // Quem caiu numa competição e segue em outra (eliminados da Libertadores na Sul-Americana).
+  return { ...estado, competicoes: distribuirEntrantes(m, competicoes, semente) ?? competicoes };
 }
 
 /**

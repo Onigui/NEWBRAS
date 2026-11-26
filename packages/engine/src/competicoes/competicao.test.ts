@@ -331,4 +331,48 @@ describe("competições", () => {
     expect(final.neutro).toBe(true);
     expect(e.classificacao?.[0]).toBe(e.campeao);
   });
+
+  it("sorteios: 1ª fase só entre clubes do mesmo país e grupos por potes sem compatriotas", () => {
+    const paises = Object.fromEntries(
+      times("t", 32).map((t, i) => [
+        t,
+        ["BRA", "ARG", "URU", "CHI", "COL", "PAR", "PER", "ECU"][i % 8]!,
+      ]),
+    );
+    const primeira = comp({
+      tipo: "continental",
+      escopo: { tipo: "confederacao", confederacao: "CONMEBOL" },
+      divisao: undefined,
+      participantes: { fixos: [], quantidade: 32 },
+      fases: [
+        { id: "f1", nome: "1ª fase", tipo: "mata-mata", jogos: 1, chaveamento: "pais" },
+        {
+          id: "g",
+          nome: "Grupos",
+          tipo: "grupos",
+          grupos: 4,
+          turnos: 2,
+          classificamPorGrupo: 2,
+          divisaoGrupos: "potes",
+          entramAqui: [
+            {
+              de: "outra",
+              criterio: "posicoes",
+              posicoes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            },
+          ],
+        },
+        { id: "mm", nome: "Mata-mata", tipo: "mata-mata", jogos: 2, chaveamento: "potes" },
+      ],
+    });
+    const e = montarCompeticao(primeira, times("t", 32), "2027-01-10", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2027",
+      paises,
+    });
+    const pares = e.fases[0]!.chaves![0]!;
+    expect(pares).toHaveLength(16);
+    for (const p of pares) expect(paises[p.a]).toBe(paises[p.b]);
+  });
 });

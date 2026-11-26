@@ -58,6 +58,45 @@ export interface EstadoCompeticao {
   classificacao?: string[];
   /** Gols e assistências de cada jogador na competição. */
   artilharia: Record<string, [number, number]>;
+  /**
+   * Quem entra numa fase adiante, pelo índice da fase: os que já têm vaga desde o começo (os 28 dos
+   * grupos da Libertadores) e os que vêm de outra competição durante a temporada.
+   */
+  entrantes?: Record<string, string[]>;
+  /** Fases cujos entrantes de outra competição já chegaram. */
+  recebidos?: Record<string, boolean>;
+  /** A próxima fase espera os entrantes de outra competição para abrir. */
+  aguardando?: number;
+  /** País de cada clube (para os sorteios evitarem clubes do mesmo país). */
+  paises?: Record<string, string>;
+}
+
+/** Vaga pela tabela da própria competição (os primeiros da fase de grupos direto às oitavas). */
+export function vagaDaPropria(
+  c: Pick<Competicao, "id">,
+  v: { de: string; criterio: string },
+): boolean {
+  return v.de === c.id && v.criterio === "posicoes";
+}
+
+/** Vaga que só se resolve durante a temporada (eliminados ou colocação numa fase de outra). */
+export function vagaDinamica(v: { criterio: string; fase?: string | undefined }): boolean {
+  return v.criterio === "eliminados" || v.fase !== undefined;
+}
+
+/** Quantos clubes uma vaga traz (para o calendário). */
+function tamanhoDaVaga(v: {
+  posicoes?: number[] | undefined;
+  quantidade?: number | undefined;
+}): number {
+  return v.quantidade ?? v.posicoes?.length ?? 1;
+}
+
+/** Quantos entram na primeira fase pelos dados (fixos ou vagas da competição). */
+export function quantidadeInicial(c: Competicao): number {
+  if (c.participantes.vagas.length)
+    return c.participantes.vagas.reduce((s, v) => s + tamanhoDaVaga(v), 0);
+  return c.participantes.fixos.length || c.participantes.quantidade;
 }
 
 const criteriosDe = (c: Competicao): Criterio[] =>
@@ -75,9 +114,7 @@ function planoDasFases(c: Competicao, n: number) {
     const liga = c.fases[i - 2];
     const diretos = liga?.tipo === "fase-de-liga" && liga.playoff ? liga.classificamDireto : 0;
     const e =
-      vindos +
-      diretos +
-      (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0));
+      vindos + diretos + (i === 0 ? 0 : f.entramAqui.reduce((s, v) => s + tamanhoDaVaga(v), 0));
     entram.push(e);
     const ultima = i === c.fases.length - 1;
     if (f.tipo === "mata-mata") {
@@ -149,6 +186,10 @@ export interface OpcoesMontagem {
    * e as ligas de cada país conseguem fugir delas.
    */
   quantidadePlanejada?: number;
+  /** Quem entra direto numa fase adiante, pelo índice da fase (já em ordem de força). */
+  entrantes?: Record<string, string[]>;
+  /** País de cada clube, para os sorteios. */
+  paises?: Record<string, string>;
 }
 
 /**
@@ -167,12 +208,28 @@ export function datasPlanejadas(
   c: Competicao,
   inicioTemporada: string,
   datasFifa: readonly DataFifa[],
-  quantidade = c.participantes.quantidade,
+  quantidade = quantidadeInicial(c),
   bloqueadas?: ReadonlySet<string>,
 ): string[] {
   const { inicio, fim } = datasDaCompeticao(c.calendario, inicioTemporada);
-  const total = planoDasFases(c, quantidade).rodadas.reduce((s, r) => s + r, 0);
-  return datasDasRodadas(total, inicio, fim, datasFifa, semanaDaCompeticao(c), bloqueadas);
+  const plano = planoDasFases(c, quantidade);
+  const semana = semanaDaCompeticao(c);
+  // Fases com janela própria (as continentais seguem o calendário real de cada fase).
+  if (c.fases.some((f) => f.periodo)) {
+    const datas: string[] = [];
+    c.fases.forEach((f, i) => {
+      const n = plano.rodadas[i] ?? 0;
+      const janela = f.periodo ? datasDaCompeticao(f.periodo, inicio) : { inicio, fim };
+      const desde =
+        datas.at(-1) && datas.at(-1)! >= janela.inicio
+          ? somarDias(datas.at(-1)!, 2)
+          : janela.inicio;
+      datas.push(...datasDasRodadas(n, desde, janela.fim, datasFifa, semana, bloqueadas));
+    });
+    return datas;
+  }
+  const total = plano.rodadas.reduce((s, r) => s + r, 0);
+  return datasDasRodadas(total, inicio, fim, datasFifa, semana, bloqueadas);
 }
 
 /** Monta a competição da temporada: datas de todas as rodadas e a primeira fase. */
@@ -204,7 +261,12 @@ export function montarCompeticao(
     jogos: [],
     encerrada: false,
     artilharia: {},
+    ...(o.entrantes ? { entrantes: o.entrantes } : {}),
+    ...(o.paises ? { paises: o.paises } : {}),
   };
+  // Na lista de participantes entram também os que só jogam a partir de uma fase adiante.
+  const adiante = Object.values(o.entrantes ?? {}).flat();
+  if (adiante.length) estado.participantes = [...participantes, ...adiante];
   return abrirFase(c, estado, 0, [...participantes], o.semente);
 }
 
@@ -233,8 +295,10 @@ function abrirFase(
   const numGrupos = fase.tipo === "grupos" ? fase.grupos : 1;
   const turnos = fase.tipo === "grupos" ? fase.turnos : 1;
   const divisao = fase.tipo === "grupos" ? fase.divisaoGrupos : "sorteio";
-  const grupos: string[][] = Array.from({ length: numGrupos }, () => []);
-  if (divisao === "sorteio" && f === 0) {
+  let grupos: string[][] = Array.from({ length: numGrupos }, () => []);
+  if (divisao === "potes") {
+    grupos = gruposPorPotes(times, numGrupos, rng, e.paises);
+  } else if (divisao === "sorteio" && f === 0) {
     rng.shuffle(times).forEach((t, i) => grupos[i % numGrupos]?.push(t));
   } else if (divisao === "sorteio") {
     // Depois da primeira fase, os grupos são montados em "serpente" pela campanha.
@@ -273,6 +337,108 @@ function abrirFase(
   return garantirDatas({ ...e, jogos, fases: e.fases.map((x, i) => (i === f ? estadoFase : x)) });
 }
 
+/**
+ * Sorteio por potes: cada pote tem um time de cada grupo, na ordem de força. Dentro do pote, o
+ * sorteio tenta não pôr dois clubes do mesmo país no mesmo grupo.
+ */
+function gruposPorPotes(
+  times: readonly string[],
+  numGrupos: number,
+  rng: Rng,
+  paises?: Record<string, string>,
+): string[][] {
+  const grupos: string[][] = Array.from({ length: numGrupos }, () => []);
+  for (let k = 0; k * numGrupos < times.length; k++) {
+    const pote = times.slice(k * numGrupos, (k + 1) * numGrupos);
+    let melhor: string[] = pote;
+    let menor = Infinity;
+    for (let tentativa = 0; tentativa < 200 && menor > 0; tentativa++) {
+      const ordem = rng.shuffle(pote);
+      const choques = paises
+        ? ordem.filter((t, g) => grupos[g]?.some((x) => paises[x] && paises[x] === paises[t]))
+            .length
+        : 0;
+      if (choques < menor) {
+        menor = choques;
+        melhor = ordem;
+      }
+    }
+    melhor.forEach((t, g) => grupos[g]?.push(t));
+  }
+  return grupos;
+}
+
+/** Quantos confrontos entre clubes do mesmo país uma lista de pares tem. */
+function choquesDePais(
+  pares: readonly (readonly [string, string])[],
+  paises?: Record<string, string>,
+) {
+  if (!paises) return 0;
+  return pares.filter(([a, b]) => a && b && paises[a] && paises[a] === paises[b]).length;
+}
+
+/** Pares da primeira eliminatória de uma fase, conforme o chaveamento. */
+function paresIniciais(
+  fase: Extract<Fase, { tipo: "mata-mata" }>,
+  times: readonly string[],
+  tamanho: number,
+  rng: Rng,
+  paises?: Record<string, string>,
+  rodadaUnica = false,
+): [string, string][] {
+  const pela = (ordem: readonly string[]) => {
+    // Fase de uma eliminatória só (pré-Libertadores): todos jogam, sem folga (1 x n, 2 x n-1...).
+    if (rodadaUnica) {
+      const pares: [string, string][] = [];
+      for (let i = 0; i < Math.ceil(ordem.length / 2); i++)
+        pares.push([
+          ordem[i] ?? "",
+          i === ordem.length - 1 - i ? "" : (ordem[ordem.length - 1 - i] ?? ""),
+        ]);
+      return pares;
+    }
+    const sementes = ordemDaChave(tamanho).map((s) => ordem[s - 1] ?? "");
+    const pares: [string, string][] = [];
+    for (let i = 0; i < sementes.length; i += 2)
+      pares.push([sementes[i] ?? "", sementes[i + 1] ?? ""]);
+    return pares;
+  };
+  if (fase.chaveamento === "pais" && paises) {
+    // Só entre clubes do mesmo país: o mais bem colocado contra o pior, e assim por diante.
+    const porPais = new Map<string, string[]>();
+    for (const t of times)
+      porPais.set(paises[t] ?? "", [...(porPais.get(paises[t] ?? "") ?? []), t]);
+    const pares: [string, string][] = [];
+    const sobra: string[] = [];
+    for (const lista of porPais.values()) {
+      while (lista.length >= 2) pares.push([lista.shift() as string, lista.pop() as string]);
+      if (lista.length) sobra.push(lista[0] as string);
+    }
+    for (let i = 0; i < sobra.length; i += 2) pares.push([sobra[i] ?? "", sobra[i + 1] ?? ""]);
+    return rng.shuffle(pares);
+  }
+  if (fase.chaveamento === "potes") {
+    // Metade de cima (melhores) contra a de baixo, sorteada.
+    const meio = Math.ceil(times.length / 2);
+    const cima = times.slice(0, meio);
+    const baixo = rng.shuffle(times.slice(meio));
+    return cima.map((t, i) => [t, baixo[i] ?? ""] as [string, string]);
+  }
+  if (fase.chaveamento !== "sorteio") return pela(times);
+  // Sorteio livre, tentando evitar clubes do mesmo país frente a frente.
+  let melhor = pela(rng.shuffle(times));
+  let menor = choquesDePais(melhor, paises);
+  for (let tentativa = 0; tentativa < 100 && menor > 0; tentativa++) {
+    const pares = pela(rng.shuffle(times));
+    const choques = choquesDePais(pares, paises);
+    if (choques < menor) {
+      menor = choques;
+      melhor = pares;
+    }
+  }
+  return melhor;
+}
+
 /** Abre uma rodada eliminatória com os times na ordem de semente. */
 function abrirRodadaEliminatoria(
   c: Competicao,
@@ -291,15 +457,13 @@ function abrirRodadaEliminatoria(
   const tamanho = 2 ** Math.ceil(Math.log2(Math.max(2, times.length)));
   let pares: Confronto[];
   if (x === 0) {
-    const ordem = fase.chaveamento === "sorteio" ? rng.shuffle(times) : times;
-    const sementes = ordemDaChave(tamanho).map((s) => ordem[s - 1] ?? "");
-    pares = [];
-    for (let i = 0; i < sementes.length; i += 2) {
-      const p = sementes[i] ?? "";
-      const q = sementes[i + 1] ?? "";
+    // Eliminatória que alimenta uma fase onde entram outros clubes (pré-Libertadores): todos jogam,
+    // sem folga. Nas outras, a chave completa com folgas para os melhores.
+    const semFolga = !ultimaFase && (c.fases[f + 1]?.entramAqui.length ?? 0) > 0;
+    pares = paresIniciais(fase, times, tamanho, rng, e.paises, semFolga).map(([p, q]) => {
       const [a, b] = seed(ef.times, p, q);
-      pares.push(b ? { a, b } : { a, b: "", vencedor: a });
-    }
+      return b ? { a, b } : { a, b: "", vencedor: a };
+    });
   } else {
     pares = [];
     for (let i = 0; i < times.length; i += 2) {
@@ -377,7 +541,17 @@ export function desempateDoJogo(
 ): { desempate: "nenhum" | "penaltis" | "prorrogacao"; agregado?: [number, number] } {
   const fase = c.fases[j.fase];
   if (!fase || fase.tipo !== "mata-mata" || j.perna !== 2) return { desempate: "nenhum" };
-  const desempate = fase.prorrogacao ? "prorrogacao" : fase.penaltis ? "penaltis" : "nenhum";
+  // É a final? Última fase e última eliminatória dela.
+  const ef = e.fases[j.fase];
+  const final =
+    j.fase === c.fases.length - 1 &&
+    (j.chave ?? 0) === Math.max(1, Math.ceil(Math.log2(Math.max(2, ef?.times.length ?? 2)))) - 1;
+  const desempate =
+    fase.prorrogacao || (final && fase.prorrogacaoNaFinal)
+      ? "prorrogacao"
+      : fase.penaltis
+        ? "penaltis"
+        : "nenhum";
   const ida = e.jogos.find(
     (x) => x.fase === j.fase && x.chave === j.chave && x.confronto === j.confronto && x.perna === 1,
   );
@@ -493,13 +667,25 @@ export function avancarCompeticao(
 ): EstadoCompeticao {
   let e = e0;
   for (let guarda = 0; guarda < 40 && !e.encerrada; guarda++) {
+    // Fase esperando clubes de outra competição (os eliminados da Libertadores na Sul-Americana).
+    if (e.aguardando !== undefined) {
+      const p = e.aguardando;
+      if (esperaOutra(c, e, p)) break;
+      const { aguardando: _feito, ...resto } = e;
+      e = abrirFase(
+        c,
+        resto,
+        p,
+        entradaDaFase(c, resto, p, classificadosDaFase(c, resto, p - 1)),
+        semente,
+      );
+      continue;
+    }
     const f = e.fases.findIndex((x) => x && !x.encerrada);
     if (f < 0) break;
     const fase = c.fases[f] as Fase;
     const ef = e.fases[f] as EstadoFase;
     const rng = new Rng(`${semente}:${c.id}:${e.temporada}:avanco-${f}-${ef.chaves?.length ?? 0}`);
-    let concluida: boolean;
-    let classificados: string[];
     if (fase.tipo === "mata-mata") {
       const chaves = ef.chaves ?? [];
       const atual = chaves[chaves.length - 1] ?? [];
@@ -515,41 +701,142 @@ export function avancarCompeticao(
         e = abrirRodadaEliminatoria(c, e, f, vencedores as string[], rng);
         continue;
       }
-      concluida = true;
-      classificados = vencedores as string[];
-    } else {
-      const jogos = e.jogos.filter((j) => j.fase === f);
-      if (jogos.some((j) => !j.placar)) break;
-      concluida = true;
-      classificados = classificadosDosGrupos(c, e, f);
-    }
-    if (!concluida) break;
+    } else if (e.jogos.some((j) => j.fase === f && !j.placar)) break;
     e = {
       ...e,
       fases: e.fases.map((y, i) => (i === f ? { ...(y as EstadoFase), encerrada: true } : y)),
     };
-    const proxima = c.fases[f + 1];
-    if (!proxima) {
+    if (!c.fases[f + 1]) {
       e = encerrar(c, e);
       break;
     }
-    // Quem entra direto na próxima fase pela colocação numa fase anterior desta competição.
-    const extras: string[] = [];
-    const liga = c.fases[f - 1];
-    if (liga?.tipo === "fase-de-liga" && liga.playoff)
-      for (const l of tabelaDoGrupo(c, e, f - 1, 0).slice(0, liga.classificamDireto))
-        extras.push(l.clube);
-    for (const v of proxima.entramAqui) {
-      if (v.de !== c.id) continue;
-      const tabela = tabelaDoGrupo(c, e, 0, 0);
-      for (const p of v.posicoes ?? []) {
-        const t = tabela[p - 1]?.clube;
-        if (t && !classificados.includes(t)) extras.push(t);
-      }
+    if (esperaOutra(c, e, f + 1)) {
+      e = { ...e, aguardando: f + 1 };
+      break;
     }
-    e = abrirFase(c, e, f + 1, [...extras, ...classificados], semente);
+    e = abrirFase(c, e, f + 1, entradaDaFase(c, e, f + 1, classificadosDaFase(c, e, f)), semente);
   }
   return e;
+}
+
+/** Quem passou da fase f (encerrada), na ordem de semente. */
+function classificadosDaFase(c: Competicao, e: EstadoCompeticao, f: number): string[] {
+  const fase = c.fases[f];
+  const ef = e.fases[f];
+  if (!fase || !ef) return [];
+  if (fase.tipo === "mata-mata") return (ef.chaves?.at(-1) ?? []).map((p) => p.vencedor ?? p.a);
+  return classificadosDosGrupos(c, e, f);
+}
+
+/** A fase p ainda espera clubes que vêm de outra competição durante a temporada. */
+function esperaOutra(c: Competicao, e: EstadoCompeticao, p: number): boolean {
+  const fase = c.fases[p];
+  if (!fase) return false;
+  return fase.entramAqui.some((v) => !vagaDaPropria(c, v) && vagaDinamica(v)) && !e.recebidos?.[p];
+}
+
+/** Colocados da própria competição numa fase anterior (sem fase: a tabela da primeira). */
+function daPropriaTabela(
+  c: Competicao,
+  e: EstadoCompeticao,
+  v: { fase?: string | undefined; posicoes?: number[] | undefined; porGrupo: boolean },
+): string[] {
+  const fi = v.fase ? c.fases.findIndex((x) => x.id === v.fase) : 0;
+  const grupos = v.porGrupo ? (e.fases[fi]?.grupos ?? []).map((_, g) => g) : [0];
+  const lista: string[] = [];
+  for (const p of v.posicoes ?? [])
+    for (const g of grupos) {
+      const t = tabelaDoGrupo(c, e, fi, g)[p - 1]?.clube;
+      if (t) lista.push(t);
+    }
+  return lista;
+}
+
+/**
+ * Times da fase p na ordem de semente: quem entra direto (vagas em ordem), os classificados da fase
+ * anterior e, por último, as vagas marcadas para entrar depois (pote mais baixo).
+ */
+function entradaDaFase(
+  c: Competicao,
+  e: EstadoCompeticao,
+  p: number,
+  classificados: readonly string[],
+): string[] {
+  const fase = c.fases[p] as Fase;
+  const antes: string[] = [];
+  const depois: string[] = [];
+  const usados = new Set(classificados);
+  const por = (lista: readonly string[], destino: string[]) => {
+    for (const t of lista)
+      if (!usados.has(t)) {
+        usados.add(t);
+        destino.push(t);
+      }
+  };
+  // Os primeiros da fase de liga entram depois do playoff (Champions League).
+  const liga = c.fases[p - 2];
+  if (liga?.tipo === "fase-de-liga" && liga.playoff)
+    por(
+      tabelaDoGrupo(c, e, p - 2, 0)
+        .slice(0, liga.classificamDireto)
+        .map((l) => l.clube),
+      antes,
+    );
+  fase.entramAqui.forEach((v, vi) => {
+    const lista = vagaDaPropria(c, v)
+      ? daPropriaTabela(c, e, v)
+      : (e.entrantes?.[`${p}.${vi}`] ?? []);
+    por(lista, v.depois ? depois : antes);
+  });
+  return [...antes, ...classificados, ...depois];
+}
+
+/**
+ * Clubes de uma vaga que depende do andamento de outra competição na mesma temporada (null se a
+ * fase de origem ainda não acabou).
+ */
+export function resolverVagaDinamica(
+  origem: Competicao,
+  e: EstadoCompeticao,
+  v: {
+    criterio: string;
+    fase?: string | undefined;
+    posicoes?: number[] | undefined;
+    porGrupo: boolean;
+  },
+): string[] | null {
+  const fi = v.fase ? origem.fases.findIndex((x) => x.id === v.fase) : -1;
+  const ef = e.fases[fi];
+  if (fi < 0 || !ef?.encerrada) return null;
+  if (v.criterio === "eliminados") {
+    const passaram = new Set(classificadosDaFase(origem, e, fi));
+    return ef.times.filter((t) => !passaram.has(t));
+  }
+  return daPropriaTabela(origem, e, v);
+}
+
+/** Entrega à competição os clubes que vêm de outra para a fase p e abre a fase, se esperava. */
+export function receberEntrantes(
+  c: Competicao,
+  e: EstadoCompeticao,
+  p: number,
+  porVaga: Record<number, string[]>,
+  semente: string,
+): EstadoCompeticao {
+  const entrantes = { ...e.entrantes };
+  const novos: string[] = [];
+  for (const [vi, lista] of Object.entries(porVaga)) {
+    entrantes[`${p}.${vi}`] = lista;
+    novos.push(...lista);
+  }
+  const participantes = [...e.participantes, ...novos.filter((t) => !e.participantes.includes(t))];
+  const recebido = {
+    ...e,
+    entrantes,
+    participantes,
+    recebidos: { ...e.recebidos, [p]: true },
+  };
+  return avancarCompeticao(c, recebido, semente);
 }
 
 function encerrar(c: Competicao, e: EstadoCompeticao): EstadoCompeticao {

@@ -55,7 +55,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 3;
+export const FORMATO_CARREIRA = 4;
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -884,12 +884,26 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
     competicoes?: MundoCompeticoes;
   };
   if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
-  // Formato 1: sem competições. Formato 2: sem as continentais (abertas aqui, em dia com a data).
+  // Formato 1: sem competições. Formato 2: sem as continentais. Formato 3: continentais sem as fases
+  // preliminares (abertas de novo no formato real). Tudo em dia com a data da carreira.
+  let competicoes = antiga.competicoes;
+  if (competicoes && antiga.formato === 3) {
+    const continental = (id: string) => mundo.competicao(id)?.escopo.tipo === "confederacao";
+    competicoes = {
+      ...competicoes,
+      competicoes: Object.fromEntries(
+        Object.entries(competicoes.competicoes).filter(([id]) => !continental(id)),
+      ),
+      temporadas: Object.fromEntries(
+        Object.entries(competicoes.temporadas).filter(([chave]) => !chave.startsWith("conf:")),
+      ),
+    };
+  }
   return {
     ...antiga,
     formato: FORMATO_CARREIRA,
-    competicoes: antiga.competicoes
-      ? abrirTemporadasFaltando(mundo, antiga.competicoes, c.data, c.semente)
+    competicoes: competicoes
+      ? abrirTemporadasFaltando(mundo, competicoes, c.data, c.semente)
       : iniciarMundo(mundo, c.data, c.semente),
   };
 }
