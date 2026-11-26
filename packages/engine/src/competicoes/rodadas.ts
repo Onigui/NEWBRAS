@@ -2,7 +2,7 @@
  * Tabela de jogos (todos contra todos, pelo método do círculo) e as datas das rodadas dentro
  * do período da competição, fugindo das datas FIFA.
  */
-import { periodoContem, type DataFifa, type Periodo } from "@newbras/data";
+import { emDataFifa, type DataFifa, type Periodo } from "@newbras/data";
 import type { Rng } from "../rng";
 import { diaDaSemana, diasEntre, somarDias } from "../carreira/datas";
 
@@ -77,7 +77,7 @@ export function datasDasRodadas(
     for (let d = 0; d <= dias; d++) {
       const data = somarDias(inicio, d);
       if (!permitidos.includes(diaDaSemana(data))) continue;
-      if (datasFifa.some((f) => periodoContem(f.periodo, data))) continue;
+      if (datasFifa.some((f) => emDataFifa(f, data))) continue;
       if (evitar && perto(data)) continue;
       lista.push(data);
     }

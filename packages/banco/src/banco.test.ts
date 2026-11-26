@@ -1263,7 +1263,47 @@ describe("copas continentais", () => {
     const sula = competicao("conmebol-sul-americana")!;
     expect(sula.participantes.quantidade).toBe(56);
     const ucl = competicao("uefa-champions-league")!;
-    expect(ucl.participantes.quantidade).toBe(36);
-    expect(ucl.fases.map((f) => f.tipo)).toEqual(["fase-de-liga", "mata-mata", "mata-mata"]);
+    expect(ucl.fases.filter((f) => f.tipo === "fase-de-liga")).toHaveLength(1);
+  });
+});
+
+describe("UEFA 2026/27 pela lista de acesso", () => {
+  const comp = (id: string) => banco.competicoes.find((c) => c.id === id)!;
+  const conta = (vagas: { posicoes?: number[] | undefined; quantidade?: number | undefined }[]) =>
+    vagas.reduce((s, v) => s + (v.quantidade ?? v.posicoes?.length ?? 1), 0);
+
+  it("Champions: 28 na 1ª qualificatória, 29 direto na fase de liga, 81 no total", () => {
+    const ucl = comp("uefa-champions-league");
+    expect(conta(ucl.participantes.vagas)).toBe(28);
+    expect(ucl.fases.map((f) => f.id)).toEqual([
+      "q1",
+      "q2",
+      "q3",
+      "rodada-playoff",
+      "fase-de-liga",
+      "playoff",
+      "mata-mata",
+    ]);
+    expect(conta(ucl.fases[4]!.entramAqui)).toBe(29);
+    expect(ucl.participantes.quantidade).toBe(81);
+    // Inglaterra e Espanha com 5 (vagas de desempenho europeu).
+    const doPais = (liga: string) =>
+      ucl.fases[4]!.entramAqui.find((v) => v.de === liga)?.posicoes?.length;
+    expect(doPais("eng-premier-league")).toBe(5);
+    expect(doPais("esp-laliga")).toBe(5);
+    expect(doPais("ita-serie-a")).toBe(4);
+  });
+
+  it("Europa League e Conference League recebem os eliminados de cima em cada rodada", () => {
+    const uel = comp("uefa-europa-league");
+    const uecl = comp("uefa-conference-league");
+    expect(uel.participantes.exclui).toEqual(["uefa-champions-league"]);
+    expect(uecl.participantes.exclui).toEqual(["uefa-champions-league", "uefa-europa-league"]);
+    const eliminados = (c: typeof uel) =>
+      c.fases.flatMap((f) => f.entramAqui.filter((v) => v.criterio === "eliminados"));
+    expect(conta(eliminados(uel))).toBe(12 + 2 + 6 + 7 + 4);
+    expect(conta(eliminados(uecl))).toBe(14 + 6 + 9 + 6 + 7 + 12);
+    expect(conta(uecl.participantes.vagas)).toBe(52);
+    expect(uecl.fases[4]).toMatchObject({ tipo: "fase-de-liga", jogosPorTime: 6, potes: 6 });
   });
 });

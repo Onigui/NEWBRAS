@@ -14,3 +14,17 @@ export function periodoContem(periodo: Periodo, data: string): boolean {
 export function janelaAberta(pais: Pick<Pais, "janelas">, data: string): boolean {
   return pais.janelas.some((j) => periodoContem(j, data));
 }
+
+/** A data cai numa data FIFA? Respeita as que valem só em alguns anos (Copa do Mundo). */
+export function emDataFifa(
+  f: { periodo: Periodo; anos?: readonly number[] | undefined },
+  data: string,
+): boolean {
+  if (!periodoContem(f.periodo, data)) return false;
+  if (!f.anos) return true;
+  // Período que vira o ano: a parte de janeiro pertence ao ano anterior.
+  const ano = Number(data.slice(0, 4));
+  const doInicio =
+    f.periodo.fim < f.periodo.inicio && data.slice(5) <= f.periodo.fim ? ano - 1 : ano;
+  return f.anos.includes(doInicio);
+}

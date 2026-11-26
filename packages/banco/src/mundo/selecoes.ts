@@ -117,10 +117,14 @@ export const SELECOES: readonly Selecao[] = PAISES.map((p) => ({
   reputacao: reputacaoDe(p.codigo, p.nivel),
 }));
 
-/** Datas FIFA de 2026, conforme o calendário divulgado pela CBF (com a pausa da Copa do Mundo). */
+/**
+ * Datas FIFA, conforme o calendário divulgado pela CBF para 2026. A pausa da Copa do Mundo vale só
+ * em 2026; nos outros anos, junho tem a data FIFA normal (a Fase 11 traz as Copas de cada ano).
+ */
 export const DATAS_FIFA: readonly DataFifa[] = [
   { nome: "Data FIFA de março", periodo: { inicio: "03-23", fim: "03-31" } },
-  { nome: "Copa do Mundo e Data FIFA de junho", periodo: { inicio: "06-01", fim: "07-20" } },
+  { nome: "Data FIFA de junho", periodo: { inicio: "06-01", fim: "06-10" } },
+  { nome: "Copa do Mundo de 2026", periodo: { inicio: "06-11", fim: "07-20" }, anos: [2026] },
   { nome: "Data FIFA de setembro e outubro", periodo: { inicio: "09-21", fim: "10-06" } },
   { nome: "Data FIFA de novembro", periodo: { inicio: "11-09", fim: "11-17" } },
 ];
