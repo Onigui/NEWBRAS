@@ -2503,6 +2503,40 @@ const DESEMPATE_CBF = [
   "sorteio",
 ] as const;
 
+/**
+ * Vagas de cada federação na Série D de 2027 (pelo ranking de federações da CBF; no mínimo duas).
+ * A lista publicada soma 65 com uma vaga de São Paulo ainda a definir; aqui ficam as 64 oficiais.
+ */
+const VAGAS_SERIE_D: Record<string, number> = {
+  ac: 2,
+  al: 3,
+  ap: 2,
+  am: 2,
+  ba: 3,
+  ce: 3,
+  df: 2,
+  es: 3,
+  go: 3,
+  ma: 2,
+  mt: 2,
+  ms: 2,
+  mg: 3,
+  pa: 2,
+  pb: 2,
+  pr: 3,
+  pe: 2,
+  pi: 2,
+  rj: 3,
+  rn: 2,
+  rs: 3,
+  ro: 2,
+  rr: 2,
+  sc: 2,
+  sp: 3,
+  se: 2,
+  to: 2,
+};
+
 export const COMPETICOES: readonly CompeticaoEntrada[] = [
   {
     id: "bra-serie-a",
@@ -2611,7 +2645,21 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     escopo: { tipo: "pais", pais: "BRA" },
     divisao: 4,
     calendario: { inicio: "04-05", fim: "09-13" },
-    participantes: { fixos: ids(SERIE_D), quantidade: 96 },
+    participantes: {
+      fixos: ids(SERIE_D),
+      quantidade: 96,
+      // A partir de 2027: ficam os 32 que chegaram à 3ª fase (menos os que sobem) e os rebaixados
+      // da Série C; as 64 vagas estaduais vão para os melhores dos estaduais que não estão nas
+      // Séries A a C, e o ranking (aqui, a força) completa os 96.
+      renovacao: {
+        ficam: "terceira-fase",
+        vagas: Object.entries(VAGAS_SERIE_D).map(([uf, n]) => ({
+          de: `bra-estadual-${uf}`,
+          criterio: "posicoes" as const,
+          posicoes: Array.from({ length: n }, (_, i) => i + 1),
+        })),
+      },
+    },
     fases: [
       {
         id: "grupos",

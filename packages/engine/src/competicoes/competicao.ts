@@ -75,6 +75,8 @@ export interface EstadoCompeticao {
   paises?: Record<string, string>;
   /** Caminho de cada clube nas qualificatórias da UEFA ("campeoes" ou "liga"). */
   caminhos?: Record<string, string>;
+  /** Divisão de cada clube nas copas nacionais (para o mando do clube de divisão mais baixa). */
+  divisoes?: Record<string, number>;
 }
 
 /** Vaga pela tabela da própria competição (os primeiros da fase de grupos direto às oitavas). */
@@ -133,7 +135,9 @@ function planoDasFases(c: Competicao, n: number) {
       let r = 0;
       for (let x = 0; x < k; x++) r += pernas(f, x, k);
       rodadas.push(r);
-      saem.push(ultima ? 1 : Math.ceil(e / 2));
+      // Com lugares do real, a rodada classifica metade deles (os que faltam viram folga).
+      const lugares = f.lugares && f.lugares >= e ? f.lugares : 0;
+      saem.push(ultima ? 1 : lugares ? lugares / 2 : Math.ceil(e / 2));
     } else {
       const grupos = f.tipo === "grupos" ? f.grupos : 1;
       const turnos = f.tipo === "grupos" ? f.turnos : 1;
@@ -215,6 +219,8 @@ export interface OpcoesMontagem {
   paises?: Record<string, string>;
   /** Caminho de cada clube (qualificatórias da UEFA). */
   caminhos?: Record<string, string>;
+  /** Divisão de cada clube (copas nacionais). */
+  divisoes?: Record<string, number>;
 }
 
 /**
@@ -304,6 +310,7 @@ export function montarCompeticao(
     ...(o.entrantes ? { entrantes: o.entrantes } : {}),
     ...(o.paises ? { paises: o.paises } : {}),
     ...(o.caminhos && Object.keys(o.caminhos).length ? { caminhos: o.caminhos } : {}),
+    ...(o.divisoes ? { divisoes: o.divisoes } : {}),
   };
   // Na lista de participantes entram também os que só jogam a partir de uma fase adiante.
   const adiante = Object.values(o.entrantes ?? {}).flat();
@@ -589,14 +596,31 @@ function abrirRodadaEliminatoria(
     // Eliminatória que alimenta uma fase onde entram outros clubes (pré-Libertadores), ou marcada
     // para todos jogarem (3ª fase da Copa do Brasil, com 48): sem folga. Nas outras, a chave
     // completa com folgas para os melhores.
+    // Lugares do real que faltam no banco (os amadores): folga para os primeiros da ordem de
+    // entrada, e os outros jogam todos entre si.
+    const folgas = fase.lugares
+      ? Math.max(0, Math.min(times.length, fase.lugares - times.length))
+      : 0;
     const semFolga =
-      !ultimaFase && ((c.fases[f + 1]?.entramAqui.length ?? 0) > 0 || fase.todosJogam === true);
-    pares = paresIniciais(fase, times, tamanho, rng, e.paises, semFolga, e.caminhos).map(
-      ([p, q]) => {
-        const [a, b] = seed(ef.times, p, q);
-        return b ? { a, b } : { a, b: "", vencedor: a };
-      },
-    );
+      folgas > 0 ||
+      (!ultimaFase && ((c.fases[f + 1]?.entramAqui.length ?? 0) > 0 || fase.todosJogam === true));
+    const jogam = times.slice(folgas);
+    const tamanhoJogam = 2 ** Math.ceil(Math.log2(Math.max(2, jogam.length)));
+    pares = [
+      ...times.slice(0, folgas).map((t) => [t, ""] as [string, string]),
+      ...paresIniciais(
+        fase,
+        jogam,
+        folgas ? tamanhoJogam : tamanho,
+        rng,
+        e.paises,
+        semFolga,
+        e.caminhos,
+      ),
+    ].map(([p, q]) => {
+      const [a, b] = seed(ef.times, p, q);
+      return b ? { a, b } : { a, b: "", vencedor: a };
+    });
   } else {
     pares = [];
     for (let i = 0; i < times.length; i += 2) {
@@ -630,7 +654,11 @@ function abrirRodadaEliminatoria(
       });
     } else {
       const neutro = fase.mando === "neutro";
-      const inverte = fase.mando === "sorteio" && rng.chance(0.5);
+      const doMenor = fase.mando === "menor-divisao" ? mandanteDeBaixo(fase, e, p.a, p.b) : null;
+      const inverte =
+        doMenor !== null
+          ? doMenor === p.b
+          : (fase.mando === "sorteio" || fase.mando === "menor-divisao") && rng.chance(0.5);
       jogos.push({
         fase: f,
         rodada: ef.rodadaInicial + offset,
@@ -657,6 +685,24 @@ function garantirDatas(e: EstadoCompeticao): EstadoCompeticao {
   const datas = [...e.datas];
   while (datas.length <= maior) datas.push(somarDias(datas.at(-1) ?? e.inicio, 3));
   return { ...e, datas };
+}
+
+/**
+ * Mando do clube de divisão mais baixa (Copa del Rey, DFB-Pokal): quem manda, ou null quando a regra
+ * não se aplica (mesma divisão, diferença pequena ou acima da divisão mínima) e o mando é sorteado.
+ */
+function mandanteDeBaixo(
+  fase: Extract<Fase, { tipo: "mata-mata" }>,
+  e: EstadoCompeticao,
+  a: string,
+  b: string,
+): string | null {
+  const regra = fase.menorDivisao ?? { aPartirDe: 1, diferenca: 1 };
+  const divisao = (x: string) => e.divisoes?.[x] ?? 99;
+  const [da, db] = [divisao(a), divisao(b)];
+  if (Math.abs(da - db) < regra.diferenca) return null;
+  const [baixo, d] = da > db ? [a, da] : [b, db];
+  return d >= regra.aPartirDe ? baixo : null;
 }
 
 /** Os dois na ordem de semente: o que entrou melhor colocado primeiro. */

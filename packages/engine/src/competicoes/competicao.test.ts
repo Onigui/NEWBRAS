@@ -40,7 +40,11 @@ function jogarTudo(
   c: Competicao,
   participantes: string[],
   semente = "s",
-  extra: { caminhos?: Record<string, string> } = {},
+  extra: {
+    caminhos?: Record<string, string>;
+    entrantes?: Record<string, string[]>;
+    divisoes?: Record<string, number>;
+  } = {},
 ): EstadoCompeticao {
   let e = montarCompeticao(c, participantes, "2027-01-10", {
     datasFifa: SEM_FIFA,
@@ -621,6 +625,47 @@ describe("competições", () => {
     expect(sobem).toHaveLength(4);
     for (const g of [0, 1])
       expect(sobem.map((m) => m.clube)).toContain(tabelaDoGrupo(c, e, 0, g)[0]?.clube);
+  });
+
+  it("copa com lugares do real: os que faltam viram folga para os primeiros e o de baixo manda", () => {
+    const fase = (id: string, o: Record<string, unknown> = {}) => ({
+      id,
+      nome: id,
+      tipo: "mata-mata" as const,
+      jogos: 1,
+      chaveamento: "sorteio" as const,
+      mando: "menor-divisao" as const,
+      ...o,
+    });
+    const c = comp({
+      tipo: "copa",
+      divisao: undefined,
+      participantes: { fixos: [], quantidade: 11 },
+      fases: [
+        // 12 lugares e 9 clubes: 3 folgas para os primeiros e 3 jogos, 6 seguem.
+        fase("primeira", { lugares: 12, chaveamento: "potes" }),
+        fase("segunda", {
+          entramAqui: [{ de: "liga", criterio: "posicoes", posicoes: [1, 2] }],
+        }),
+        fase("semi"),
+        fase("final", { mando: "neutro" }),
+      ] as CompeticaoEntrada["fases"],
+    });
+    const clubes = times("D", 9);
+    // D1 a D3 na 1ª divisão, D4 a D6 na 2ª, D7 a D9 fora das ligas (amadores).
+    const divisoes = { D1: 1, D2: 1, D3: 1, D4: 2, D5: 2, D6: 2, X1: 1, X2: 1 };
+    const e = jogarTudo(c, clubes, "s", { entrantes: { "1.0": ["X1", "X2"] }, divisoes });
+    const primeira = e.fases[0]!.chaves![0]!;
+    expect(primeira.filter((p) => !p.b).map((p) => p.a)).toEqual(["D1", "D2", "D3"]);
+    expect(primeira.filter((p) => p.b)).toHaveLength(3);
+    expect(e.fases[1]?.times).toHaveLength(8);
+    // Jogo único com o mando do clube de divisão mais baixa (quem não tem liga conta como a última).
+    const div = (x: string) => divisoes[x as keyof typeof divisoes] ?? 99;
+    for (const j of e.jogos.filter((j) => j.fase < 3)) {
+      if (div(j.casa) !== div(j.fora)) expect(div(j.casa)).toBeGreaterThan(div(j.fora));
+    }
+    expect(e.encerrada).toBe(true);
+    expect(e.jogos.at(-1)?.neutro).toBe(true);
   });
 
   it("movimento com anos: só vale nas temporadas dele (ampliação da Série C)", () => {

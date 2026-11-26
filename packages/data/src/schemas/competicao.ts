@@ -148,8 +148,26 @@ export const FaseMataMata = BaseFase.extend({
   chaveamento: z
     .enum(["sorteio", "campanha", "chave-fixa", "pais", "potes", "caminhos", "caminhos-campanha"])
     .default("sorteio"),
-  /** Em jogo único, quem manda: sorteado, melhor campanha ou campo neutro. */
-  mando: z.enum(["sorteio", "melhor-campanha", "neutro"]).default("sorteio"),
+  /**
+   * Em jogo único, quem manda: sorteado, melhor campanha, campo neutro ou o clube da divisão mais
+   * baixa (Copa del Rey, DFB-Pokal, Coupe de France), conforme `menorDivisao`.
+   */
+  mando: z.enum(["sorteio", "melhor-campanha", "neutro", "menor-divisao"]).default("sorteio"),
+  /**
+   * Regra do mando "menor-divisao": o de baixo manda quando está pelo menos `diferenca` divisões
+   * abaixo e a partir da divisão `aPartirDe` (DFB-Pokal: só os da 3. Liga para baixo; Coupe de
+   * France: dois níveis de diferença). Fora disso, sorteio. Quem não está em liga nenhuma do país
+   * conta como a divisão mais baixa.
+   */
+  menorDivisao: z
+    .object({ aPartirDe: z.int().min(1).default(1), diferenca: z.int().min(1).default(1) })
+    .optional(),
+  /**
+   * Lugares da rodada no real (Copa del Rey: 112 na 1ª eliminatória). Os que faltam no banco (os
+   * clubes amadores) viram folga para os melhores pela ordem de entrada, e a rodada classifica
+   * metade dos lugares; os outros jogam entre si. Só na primeira rodada da fase.
+   */
+  lugares: z.int().min(2).optional(),
   /**
    * Quantas eliminatórias a última fase tem (sem isso, até sobrar um). Playoff da Série B: 1, e os
    * dois vencedores sobem.
@@ -208,6 +226,13 @@ export const Competicao = z
       exclui: z.array(Id).default([]),
       /** Quantidade esperada de participantes, para validar. */
       quantidade: z.int().min(2),
+      /**
+       * Liga aberta (Série D): na virada, ficam os que chegaram à fase `ficam` e os que vieram por
+       * acesso ou rebaixamento; os outros saem, e as vagas (dos estaduais) completam até a
+       * quantidade, sem repetir clubes das outras ligas do país. A ordem segue a geografia da lista
+       * inicial (os estados na ordem em que aparecem nela), para os grupos regionais.
+       */
+      renovacao: z.object({ ficam: Id, vagas: z.array(Vaga).min(1) }).optional(),
     }),
     fases: z.array(Fase).min(1),
     pontos: z
