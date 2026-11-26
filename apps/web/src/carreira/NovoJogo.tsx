@@ -14,7 +14,7 @@ import {
 } from "@newbras/engine";
 import type { Clube } from "@newbras/data";
 import { Escudo } from "../components/Escudo";
-import { procurar } from "../editor/indices";
+import { gruposDoPais, procurar } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { useEditor } from "../editor/useEditor";
 import { novoId } from "./salvamentos";
@@ -32,20 +32,37 @@ export function NovoJogo({
   const ed = useEditor();
   const [tecnico, setTecnico] = useState("");
   const [pais, setPais] = useState("BRA");
+  // Liga escolhida no país ("" = todas); começa na 1ª divisão.
+  const [liga, setLiga] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [clubeId, setClubeId] = useState<string | null>(null);
   const [preparando, setPreparando] = useState(false);
 
   const indices = ed.indices;
   const banco = ed.banco;
+  // Só clubes com elenco para jogar, agrupados por liga (da 1ª divisão para baixo).
+  const grupos = useMemo(
+    () =>
+      banco && indices
+        ? gruposDoPais(banco, indices, pais)
+            .map((g) => ({
+              ...g,
+              clubes: g.clubes.filter(
+                (c) =>
+                  (indices.jogadoresDoClube.get(c.id) ?? []).filter((j) => !j.base).length >= 11,
+              ),
+            }))
+            .filter((g) => g.clubes.length)
+        : [],
+    [banco, indices, pais],
+  );
+  const ligaAtual = liga ?? grupos[0]?.id ?? "";
   const clubesDoPais = useMemo(
     () =>
-      [...(indices?.clubesDoPais.get(pais) ?? [])]
-        .filter(
-          (c) => (indices?.jogadoresDoClube.get(c.id) ?? []).filter((j) => !j.base).length >= 11,
-        )
-        .sort((a, b) => b.nivel - a.nivel),
-    [indices, pais],
+      (ligaAtual ? grupos.filter((g) => g.id === ligaAtual) : grupos)
+        .flatMap((g) => g.clubes)
+        .sort((a, b) => b.nivel - a.nivel || a.nome.localeCompare(b.nome, "pt-BR")),
+    [grupos, ligaAtual],
   );
   const achados = useMemo(
     () => (banco && busca.trim() ? procurar(banco, busca, 10).clubes : []),
@@ -134,7 +151,10 @@ export function NovoJogo({
                 <select
                   className={estiloCampo}
                   value={pais}
-                  onChange={(e) => setPais(e.target.value)}
+                  onChange={(e) => {
+                    setPais(e.target.value);
+                    setLiga(null);
+                  }}
                 >
                   {indices.paises.map((p) => (
                     <option key={p.codigo} value={p.codigo}>
@@ -143,6 +163,24 @@ export function NovoJogo({
                   ))}
                 </select>
               </Campo>
+              {grupos.length > 1 && (
+                <Campo rotulo="Liga">
+                  <select
+                    className={estiloCampo}
+                    value={ligaAtual}
+                    onChange={(e) => setLiga(e.target.value)}
+                  >
+                    {grupos.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.nome} ({g.clubes.length})
+                      </option>
+                    ))}
+                    <option value="">
+                      Todas as ligas ({grupos.reduce((s, g) => s + g.clubes.length, 0)})
+                    </option>
+                  </select>
+                </Campo>
+              )}
               <ListaClubes clubes={clubesDoPais} onEscolher={escolher} selecionado={clubeId} />
             </>
           )}
