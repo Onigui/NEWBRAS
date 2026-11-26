@@ -1373,6 +1373,40 @@ export function jogosDoDia(e: EstadoCompeticao, data: string): number[] {
 }
 
 /** Lança o placar de um jogo (sem avançar de fase). */
+/** Lança vários resultados de uma vez (copia os jogos e a artilharia uma vez só). */
+export function lancarResultados(
+  e: EstadoCompeticao,
+  lista: readonly {
+    indice: number;
+    placar: [number, number];
+    penaltis?: [number, number] | undefined;
+    gols?: readonly { jogador: string; assistencia?: string }[];
+  }[],
+): EstadoCompeticao {
+  if (!lista.length) return e;
+  const jogos = e.jogos.slice();
+  let artilharia = e.artilharia;
+  let copiada = false;
+  for (const r of lista) {
+    const j = jogos[r.indice];
+    if (!j || j.placar) continue;
+    jogos[r.indice] = { ...j, placar: r.placar, ...(r.penaltis ? { penaltis: r.penaltis } : {}) };
+    for (const g of r.gols ?? []) {
+      if (!copiada) {
+        artilharia = { ...artilharia };
+        copiada = true;
+      }
+      const a = artilharia[g.jogador] ?? [0, 0];
+      artilharia[g.jogador] = [a[0] + 1, a[1]];
+      if (g.assistencia) {
+        const b = artilharia[g.assistencia] ?? [0, 0];
+        artilharia[g.assistencia] = [b[0], b[1] + 1];
+      }
+    }
+  }
+  return { ...e, jogos, artilharia };
+}
+
 export function lancarResultado(
   e: EstadoCompeticao,
   indice: number,

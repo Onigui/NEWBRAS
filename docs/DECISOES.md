@@ -409,3 +409,36 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Plantel: marca de convocado.
   - Escalação: aviso "com a seleção" para quem estiver fora no próximo jogo.
 - **Para depois:** escolher a convocação à mão, ser técnico de seleção e receber convites vêm na Fase 15. A convocação ainda não acompanha a evolução dos jogadores na carreira.
+
+## O mundo envelhece: evolução, aposentadoria, juniores e lendas (etapa 12a, 26/11/2026)
+
+- **Fase 12 em etapas:**
+  - 12a: evolução do mundo inteiro, aposentadoria com júnior no lugar e renascimento das lendas.
+  - 12b: lesões, contratos (fim, renovação e jogador livre) e moral de cada jogador.
+  - 12c: categoria de base com olheiros, promoção dos jovens e os ícones subindo da base.
+- **Sem peso no salvamento:** a evolução sai da semente da carreira e da data, e nada vai para o arquivo. Cada jogador do banco é uma vaga no clube. Quando ele para, o júnior que entra ocupa a mesma vaga, e o júnior desse júnior também.
+- **Quando muda:** no começo de cada temporada do país do clube (agosto na Inglaterra, janeiro no Brasil). A primeira temporada da carreira começa com o banco como está.
+- **Evolução:**
+  - O jovem cresce pela curva até o potencial real aos 28 anos. O potencial real é o mostrado com um sorteio de ±2,5, e o potencial mostrado nunca baixa.
+  - Depois do auge, a força cai pela curva. Cada jogador tem de 1,5 ano a menos a 2 anos a mais de auge, e a estrela ganha mais 1.
+  - Até os 30 anos, cada temporada tem uma pequena variação.
+  - Os atributos acompanham a força na mesma proporção. Depois dos 29, o físico (velocidade, resistência e força física) cai 2,5% por ano a mais, e o resto compensa um pouco.
+- **Aposentadoria:**
+  - Idade sorteada em torno de 35 anos, entre 32 e 41. Goleiros jogam 2 anos a mais e estrelas, 1.
+  - Quem já passou da idade joga ao menos mais uma temporada (o CR7, com 41, para em 2027).
+  - No lugar entra um júnior de 17 a 20 anos, do país do clube e da mesma posição, com força pelo nível do clube. Raramente é estrela; o aposentado estrela tem mais chance de deixar um júnior estrela.
+- **Lendas que renascem:**
+  - Quem chegou a força 80 ou é estrela renasce com 16 a 18 anos, com o mesmo nome, as mesmas características e o perfil reduzido.
+  - O potencial é a força do auge (o Messi volta podendo chegar a 97).
+  - Renasce na base de um clube sorteado; os de nível mais alto têm mais chance. Sobe ao profissional aos 18, numa vaga nova do clube.
+- **Notícias:**
+  - Do clube: aposentadorias, quem sobe dos juniores ou da base e quem mais evoluiu e mais caiu na temporada nova.
+  - Do mundo: até 6 lendas famosas por dia (força de auge 86 ou mais), com o clube onde renasceram.
+- **Interface:** o plantel mostra quanto cada jogador subiu ou caiu desde a temporada anterior.
+- **Desempenho:**
+  - Uma temporada da carreira leva cerca de 10 segundos no total.
+  - Para isso, as contas de datas ficam guardadas, os resultados do dia entram de uma vez em cada competição e os atributos evoluídos só são calculados quando alguém os usa.
+- **Para depois:**
+  - Os minutos jogados ainda não pesam na evolução (fica para a 12b, com a moral).
+  - Os jogadores da base do banco ainda não sobem; isso vem na 12c.
+  - Os elencos crescem um pouco com as lendas renascidas, até o mercado (Fase 13) trazer as dispensas.

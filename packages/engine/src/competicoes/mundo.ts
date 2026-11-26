@@ -19,7 +19,7 @@ import {
   vagaDinamica,
   desempateDoJogo,
   jogosDoDia,
-  lancarResultado,
+  lancarResultados,
   montarCompeticao,
   movimentosDaTemporada,
   type EstadoCompeticao,
@@ -981,15 +981,15 @@ export function jogarDia(
     if (!c) continue;
     const jogos = simularJogosDoDia(m, c, e0, data, semente, pular);
     if (!jogos.length) continue;
-    let e = e0;
-    for (const j of jogos)
-      e = lancarResultado(
-        e,
-        j.indice,
-        j.placar,
-        j.penaltis,
-        j.gols.filter((g) => g.jogador),
-      );
+    let e = lancarResultados(
+      e0,
+      jogos.map((j) => ({
+        indice: j.indice,
+        placar: j.placar,
+        penaltis: j.penaltis,
+        gols: j.gols.filter((g) => g.jogador),
+      })),
+    );
     e = avancarCompeticao(c, e, semente);
     competicoes ??= { ...estado.competicoes };
     competicoes[id] = e;

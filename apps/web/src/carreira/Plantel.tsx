@@ -19,6 +19,7 @@ import {
   convocadosDoClube,
   dataCurta,
   foraPelaSelecao,
+  forcasDaTemporadaAnterior,
   estadoDe,
   idadeEm,
   type Carreira,
@@ -50,6 +51,8 @@ interface Linha {
   e: EstadoJogador;
   idade: number;
   media: number | null;
+  /** Força na temporada anterior (para mostrar quanto evoluiu). */
+  antes?: number;
   /** Seleção que o convocou (nome) e se está com ela agora. */
   selecao?: string;
   comASelecao?: boolean;
@@ -66,6 +69,7 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
   const linhas: Linha[] = useMemo(() => {
     const convocados = convocadosDoClube(mundo, c.clube);
     const fora = foraPelaSelecao(c, mundo, c.data);
+    const anterior = forcasDaTemporadaAnterior(mundo, c, c.clube);
     return mundo.elenco(c.clube).map((j) => {
       const e = estadoDe(c, j.id);
       const pais = convocados.get(j.id);
@@ -74,6 +78,7 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
         e,
         idade: idadeEm(j.nascimento, c.data),
         media: e.jogos ? e.somaNotas / e.jogos : null,
+        ...(anterior.has(j.id) ? { antes: anterior.get(j.id) as number } : {}),
         ...(pais ? { selecao: mundo.pais(pais)?.nome ?? pais, comASelecao: fora.has(j.id) } : {}),
       };
     });
@@ -194,7 +199,10 @@ export function Plantel({ c, montado }: { c: Carreira; montado: MundoMontado }) 
                     {l.j.posicoesCampo?.slice(0, 2).join(", ") ?? NOME_POSICAO[l.j.posicao]}
                   </td>
                   <td className="py-1 pr-2 text-right">{l.idade}</td>
-                  <td className="py-1 pr-2 text-right font-bold">{l.j.forca}</td>
+                  <td className="py-1 pr-2 text-right font-bold">
+                    {l.j.forca}
+                    <Evolucao antes={l.antes} agora={l.j.forca} />
+                  </td>
                   <td className="py-1 pr-2 text-right text-suave">{l.j.potencial}</td>
                   <td className="w-28 py-1 pr-2">
                     <Folego valor={l.e.condicao} />
@@ -339,5 +347,20 @@ function Ficha({ l }: { l: Linha }) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** Quanto a força mudou desde a temporada anterior. */
+function Evolucao({ antes, agora }: { antes: number | undefined; agora: number }) {
+  if (antes === undefined || antes === agora) return null;
+  const sobe = agora > antes;
+  return (
+    <span
+      className={`ml-1 text-xs font-normal ${sobe ? "text-[#7ed37a]" : "text-[#ff8a7a]"}`}
+      title={t("Na temporada anterior: {antes}", { antes })}
+    >
+      {sobe ? "▲" : "▼"}
+      {Math.abs(agora - antes)}
+    </span>
   );
 }
