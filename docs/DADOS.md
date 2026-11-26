@@ -45,7 +45,7 @@ O banco oficial é montado pelo pacote `packages/banco`; o progresso e as fontes
 | `fase-de-liga` | Tabela única com adversários sorteados por potes, como a Champions League desde 2024                                         |
 | `mata-mata`    | Jogo único ou ida e volta, com prorrogação, pênaltis e regra de mando configuráveis                                          |
 
-Times podem entrar no meio da competição (`entramAqui`), como os classificados para a Libertadores que entram mais tarde na Copa do Brasil.
+Times podem entrar no meio da competição (`entramAqui`), como os classificados para a Libertadores que entram mais tarde na Copa do Brasil. Uma vaga pode depender do andamento de outra competição na mesma temporada: `criterio: "eliminados"` com `fase` (quem caiu na 3ª fase da Libertadores) ou `posicoes` com `fase` e `porGrupo` (os 3º de cada grupo); `quantidade` diz quantos clubes ela traz e `depois` põe esses clubes no pote mais baixo. Cada fase pode ter `periodo` (a janela dela no ano). Chaveamentos `pais` (só entre clubes do mesmo país) e `potes` (metade de cima sorteada contra a de baixo); grupos com `divisaoGrupos: "potes"`, sem compatriotas juntos quando possível. `prorrogacaoNaFinal` deixa a prorrogação só para a final. `campeaoAnterior` guarda o último campeão antes do banco.
 
 Ligas com playoffs têm a temporada regular seguida de fases de mata-mata. Os melhores colocados podem entrar direto numa fase adiante: na Championship, 5º a 8º jogam a eliminatória e 3º e 4º entram nas semifinais.
 
@@ -77,7 +77,7 @@ O Editor de Equipes grava tudo o que o usuário muda num patch com id `usuario/m
 
 ## Carreira salva
 
-Cada carreira é um objeto JSON (formato `3`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
+Cada carreira é um objeto JSON (formato `4`, `FORMATO_CARREIRA` em `packages/engine/src/carreira/carreira.ts`), guardado no IndexedDB do navegador e exportável como arquivo `.json`:
 
 | Campo                                    | O que é                                                                                                                                                                                                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

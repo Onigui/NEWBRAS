@@ -362,7 +362,7 @@ describe("carreira", () => {
     const { competicoes: _c, ...resto } = nova(mundo);
     const antiga = { ...resto, formato: 1 } as unknown as Carreira;
     const nova2 = atualizarCarreira(antiga, mundo);
-    expect(nova2.formato).toBe(3);
+    expect(nova2.formato).toBe(4);
     expect(nova2.competicoes.competicoes["liga-teste"]).toBeDefined();
   });
 });

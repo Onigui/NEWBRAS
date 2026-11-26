@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Competicao, gerarAtributos, type Jogador, type Pais, type Posicao } from "@newbras/data";
 import { somarDias } from "../carreira/datas";
-import { jogosDoDia, lancarResultado } from "./competicao";
+import { jogosDoDia, lancarResultado, tabelaDoGrupo } from "./competicao";
 import {
   abrirTemporadasFaltando,
   datasContinentais,
@@ -298,5 +298,112 @@ describe("continentais", () => {
     expect(passados.every((j) => j.placar)).toBe(true);
     // As competições que já existiam não mudam.
     expect(w.competicoes["serie-a"]).toBe(antigo.competicoes["serie-a"]);
+  });
+});
+
+describe("fases preliminares e clubes que passam de uma competição para outra", () => {
+  const ida = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    nome: id,
+    tipo: "mata-mata" as const,
+    jogos: 2 as const,
+    prorrogacao: false,
+    chaveamento: "sorteio" as const,
+    ...extra,
+  });
+  function mundoPreliminar(): MundoParaCompeticoes {
+    const base = mundo();
+    const libertadores = Competicao.parse({
+      id: "lib",
+      nome: "Libertadores",
+      tipo: "continental",
+      categoria: "clubes",
+      escopo: { tipo: "confederacao", confederacao: "CONMEBOL" },
+      calendario: { inicio: "02-01", fim: "11-28" },
+      participantes: {
+        fixos: [],
+        vagas: [{ de: "serie-b", criterio: "posicoes", posicoes: [1, 2, 3, 4] }],
+        quantidade: 10,
+      },
+      fases: [
+        ida("previa", { periodo: { inicio: "02-01", fim: "02-28" } }),
+        {
+          id: "grupos",
+          nome: "Grupos",
+          tipo: "grupos",
+          grupos: 2,
+          turnos: 1,
+          classificamPorGrupo: 2,
+          divisaoGrupos: "potes",
+          periodo: { inicio: "04-01", fim: "05-31" },
+          entramAqui: [
+            { de: "lib", criterio: "campeao" },
+            { de: "serie-a", criterio: "posicoes", posicoes: [1, 2, 3, 4, 5] },
+          ],
+        },
+        { ...ida("final", { chaveamento: "potes" }), periodo: { inicio: "08-01", fim: "11-28" } },
+      ],
+    });
+    const sul = Competicao.parse({
+      id: "sul",
+      nome: "Sul-Americana",
+      tipo: "continental",
+      categoria: "clubes",
+      escopo: { tipo: "confederacao", confederacao: "CONMEBOL" },
+      calendario: { inicio: "02-01", fim: "11-21" },
+      participantes: {
+        fixos: [],
+        vagas: [{ de: "serie-b", criterio: "posicoes", posicoes: [1, 2, 3, 4] }],
+        exclui: ["lib"],
+        quantidade: 8,
+      },
+      fases: [
+        ida("primeira", { periodo: { inicio: "03-01", fim: "03-31" } }),
+        {
+          ...ida("final", { chaveamento: "potes" }),
+          periodo: { inicio: "08-01", fim: "11-21" },
+          entramAqui: [
+            {
+              de: "lib",
+              criterio: "posicoes",
+              fase: "grupos",
+              posicoes: [3],
+              porGrupo: true,
+              quantidade: 2,
+            },
+            { de: "lib", criterio: "eliminados", fase: "previa", quantidade: 2, depois: true },
+          ],
+        },
+      ],
+    });
+    const competicoes = [...base.competicoes, libertadores, sul];
+    return { ...base, competicoes, competicao: (id) => competicoes.find((c) => c.id === id) };
+  }
+
+  it("prévia, grupos com o campeão e os da liga, e os eliminados seguindo na outra copa", () => {
+    const m = mundoPreliminar();
+    let w = iniciarMundo(m, "2027-01-05", "s");
+    const lib0 = w.competicoes.lib!;
+    // A prévia tem os 4 da Série B; os 6 dos grupos (o campeão e 5 da Série A) entram depois.
+    expect(lib0.fases[0]?.times.sort()).toEqual(["b1", "b2", "b3", "b4"]);
+    expect(lib0.participantes).toHaveLength(10);
+    // A Sul-Americana não repete ninguém da Libertadores.
+    const sul0 = w.competicoes.sul!;
+    expect(sul0.participantes.sort()).toEqual(["b5", "b6", "b7", "b8"]);
+    w = jogarAte(m, w, "2027-01-05", "2027-12-01");
+    const lib = w.competicoes.lib!;
+    const sul = w.competicoes.sul!;
+    expect(lib.fases[1]?.times).toHaveLength(8);
+    expect(lib.campeao).toBeDefined();
+    expect(sul.campeao).toBeDefined();
+    // Os 2 eliminados da prévia e os 3º colocados dos grupos estão na fase final da Sul-Americana.
+    const passaram = new Set(lib.fases[1]!.times);
+    const eliminados = lib.fases[0]!.times.filter((t) => !passaram.has(t));
+    const terceiros = [0, 1].map((g) => tabelaDoGrupo(m.competicao("lib")!, lib, 1, g)[2]!.clube);
+    const finalSul = sul.fases[1]!.times;
+    for (const t of [...eliminados, ...terceiros]) expect(finalSul).toContain(t);
+    // Os 3º da Libertadores são a metade de cima; os eliminados da prévia vêm por último.
+    expect(finalSul.slice(0, 2).sort()).toEqual([...terceiros].sort());
+    expect(finalSul.slice(-2).sort()).toEqual([...eliminados].sort());
   });
 });

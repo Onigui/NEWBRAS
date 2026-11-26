@@ -49,9 +49,25 @@ export type Escopo = z.infer<typeof Escopo>;
 /** De onde vem uma vaga: a colocação ou o título em outra competição. */
 export const Vaga = z.object({
   de: Id,
-  criterio: z.enum(["campeao", "vice", "posicoes"]),
+  /**
+   * campeao e vice: da última edição da competição de origem; posicoes: colocações na tabela;
+   * eliminados: quem caiu numa fase da origem na mesma temporada (a 3ª fase da Libertadores manda os
+   * eliminados para a Sul-Americana).
+   */
+  criterio: z.enum(["campeao", "vice", "posicoes", "eliminados"]),
   /** Colocações que dão a vaga, quando o critério é "posicoes" (1 = primeiro). */
   posicoes: z.array(z.int().min(1)).optional(),
+  /**
+   * Fase da origem, na mesma temporada (ex.: os 3º colocados dos grupos da Libertadores). Sem ela,
+   * "posicoes" é a classificação final da temporada anterior.
+   */
+  fase: Id.optional(),
+  /** As posições valem em cada grupo da fase (os 3º de cada um dos 8 grupos). */
+  porGrupo: z.boolean().default(false),
+  /** Quantos clubes a vaga traz, quando não dá para contar pelas posições (para o calendário). */
+  quantidade: z.int().min(1).optional(),
+  /** Entra depois dos que vêm da fase anterior, no pote mais baixo (eliminados da Libertadores). */
+  depois: z.boolean().default(false),
   /** Se o dono da vaga já estiver classificado, ela passa para o próximo da tabela de origem. */
   repassa: z.boolean().default(true),
 });
@@ -60,6 +76,8 @@ export type Vaga = z.infer<typeof Vaga>;
 const BaseFase = z.object({
   id: Id,
   nome: NomeTexto,
+  /** Janela da fase no ano (ex.: 1ª fase da Libertadores em fevereiro); sem ela, a fase se espalha. */
+  periodo: Periodo.optional(),
   /** Times que entram direto nesta fase (ex.: classificados para a Libertadores na Copa do Brasil). */
   entramAqui: z.array(Vaga).default([]),
 });
@@ -74,7 +92,7 @@ export const FaseGrupos = BaseFase.extend({
   /** Melhores colocados extras entre os grupos (ex.: melhores terceiros). */
   melhores: z.object({ posicao: z.int().min(1), quantidade: z.int().min(1) }).optional(),
   /** Como os times são divididos nos grupos: sorteio, pela ordem da lista de participantes ou por região. */
-  divisaoGrupos: z.enum(["sorteio", "ordem-da-lista", "regional"]).default("sorteio"),
+  divisaoGrupos: z.enum(["sorteio", "ordem-da-lista", "regional", "potes"]).default("sorteio"),
   /** Faixa da tabela que segue para a próxima fase, quando não começa no 1º (ex.: 3º ao 6º no playoff da Série B). */
   faixaClassificada: z.object({ de: z.int().min(1), ate: z.int().min(1) }).optional(),
 });
@@ -96,10 +114,15 @@ export const FaseMataMata = BaseFase.extend({
   jogos: z.union([z.literal(1), z.literal(2)]),
   finalJogoUnico: z.boolean().default(false),
   prorrogacao: z.boolean().default(true),
+  /** Prorrogação só na final (CONMEBOL: nas outras eliminatórias o empate vai direto aos pênaltis). */
+  prorrogacaoNaFinal: z.boolean().default(false),
   penaltis: z.boolean().default(true),
   golForaDesempata: z.boolean().default(false),
-  /** Como os confrontos são definidos. */
-  chaveamento: z.enum(["sorteio", "campanha", "chave-fixa"]).default("sorteio"),
+  /**
+   * Como os confrontos são definidos. "pais": só entre clubes do mesmo país (1ª fase da
+   * Sul-Americana); "potes": a metade de cima sorteada contra a de baixo (oitavas da Libertadores).
+   */
+  chaveamento: z.enum(["sorteio", "campanha", "chave-fixa", "pais", "potes"]).default("sorteio"),
   /** Em jogo único, quem manda: sorteado, melhor campanha ou campo neutro. */
   mando: z.enum(["sorteio", "melhor-campanha", "neutro"]).default("sorteio"),
 });
@@ -153,6 +176,10 @@ export const Competicao = z
       .min(1)
       .default(["pontos", "vitorias", "saldo", "gols-pro"]),
     movimentos: z.array(MovimentoTabela).default([]),
+    /** Último campeão antes do banco (para a supercopa e as vagas de campeão da primeira temporada). */
+    campeaoAnterior: z
+      .object({ temporada: z.string().min(4).max(9), campeao: Id, vice: Id.optional() })
+      .optional(),
     /** Vagas que esta competição distribui em outras. */
     classificaPara: z
       .array(z.object({ competicao: Id, posicoes: z.array(z.int().min(1)) }))
