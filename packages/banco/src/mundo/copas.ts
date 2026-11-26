@@ -1,11 +1,13 @@
 /**
- * Copas nacionais e supercopas (etapa 9b). Os participantes vêm das ligas do país (os primeiros de
+ * Copas nacionais e supercopas (etapa 9b). A Copa do Brasil (9d) e as principais da Europa (9e)
+ * têm arquivo próprio, no formato real; as daqui seguem o aproximado. Os participantes vêm das ligas do país (os primeiros de
  * cada divisão, pela campanha da temporada anterior ou, na primeira, pela força) e, nas
  * supercopas, dos campeões da liga e da copa. Formato aproximado do real: mata-mata em jogo único
  * na maioria, ida e volta onde a copa faz assim, final em campo neutro onde é tradição.
  */
 import type { CompeticaoEntrada } from "@newbras/data";
 import { COPA_DO_BRASIL } from "./copaDoBrasil";
+import { COPAS_EUROPEIAS } from "./copasEuropeias";
 
 type FaseCopa = CompeticaoEntrada["fases"][number];
 
@@ -173,6 +175,7 @@ const c = (inicio: string, fim: string) => ({ inicio, fim });
 export const COPAS: readonly CompeticaoEntrada[] = [
   // ---------------------------------------------------------------- nível 1
   COPA_DO_BRASIL,
+  ...COPAS_EUROPEIAS,
   supercopa({
     id: "bra-supercopa",
     nome: "Supercopa do Brasil",
@@ -182,32 +185,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     liga: "bra-serie-a",
     copa: "bra-copa-do-brasil",
   }),
-  copa({
-    id: "eng-fa-cup",
-    nome: "FA Cup",
-    nomeCurto: "FA Cup",
-    pais: "ENG",
-    calendario: c("11-01", "05-16"),
-    divisoes: [
-      { liga: "eng-premier-league", quantos: 20 },
-      { liga: "eng-championship", quantos: 24 },
-      { liga: "eng-league-one", quantos: 20 },
-    ],
-    fases: { finalNeutra: true },
-  }),
-  copa({
-    id: "eng-league-cup",
-    nome: "EFL Cup",
-    nomeCurto: "Copa da Liga",
-    pais: "ENG",
-    calendario: c("08-12", "03-15"),
-    divisoes: [
-      { liga: "eng-premier-league", quantos: 20 },
-      { liga: "eng-championship", quantos: 24 },
-      { liga: "eng-league-one", quantos: 20 },
-    ],
-    fases: { idaEVolta: [4], finalNeutra: true },
-  }),
   supercopa({
     id: "eng-community-shield",
     nome: "Community Shield",
@@ -216,19 +193,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     calendario: c("08-09", "08-14"),
     liga: "eng-premier-league",
     copa: "eng-fa-cup",
-  }),
-  copa({
-    id: "esp-copa-del-rey",
-    nome: "Copa del Rey",
-    nomeCurto: "Copa del Rey",
-    pais: "ESP",
-    calendario: c("10-28", "04-25"),
-    divisoes: [
-      { liga: "esp-laliga", quantos: 20 },
-      { liga: "esp-laliga-2", quantos: 22 },
-      { liga: "esp-primera-federacion", quantos: 22 },
-    ],
-    fases: { idaEVolta: [4], finalNeutra: true },
   }),
   supercopa({
     id: "esp-supercopa",
@@ -240,18 +204,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     copa: "esp-copa-del-rey",
     quatro: true,
   }),
-  copa({
-    id: "ita-coppa-italia",
-    nome: "Coppa Italia",
-    nomeCurto: "Coppa Italia",
-    pais: "ITA",
-    calendario: c("08-10", "05-14"),
-    divisoes: [
-      { liga: "ita-serie-a", quantos: 20 },
-      { liga: "ita-serie-b", quantos: 12 },
-    ],
-    fases: { idaEVolta: [4], finalNeutra: true },
-  }),
   supercopa({
     id: "ita-supercoppa",
     nome: "Supercoppa Italiana",
@@ -261,18 +213,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     liga: "ita-serie-a",
     copa: "ita-coppa-italia",
     quatro: true,
-  }),
-  copa({
-    id: "ger-dfb-pokal",
-    nome: "DFB-Pokal",
-    nomeCurto: "DFB-Pokal",
-    pais: "GER",
-    calendario: c("08-14", "05-23"),
-    divisoes: [
-      { liga: "ger-bundesliga", quantos: 18 },
-      { liga: "ger-2-bundesliga", quantos: 14 },
-    ],
-    fases: { finalNeutra: true },
   }),
   supercopa({
     id: "ger-supercup",
@@ -284,18 +224,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     copa: "ger-dfb-pokal",
     mandoDoCampeao: true,
   }),
-  copa({
-    id: "fra-coupe-de-france",
-    nome: "Coupe de France",
-    nomeCurto: "Coupe de France",
-    pais: "FRA",
-    calendario: c("10-30", "05-23"),
-    divisoes: [
-      { liga: "fra-ligue-1", quantos: 18 },
-      { liga: "fra-ligue-2", quantos: 14 },
-    ],
-    fases: { finalNeutra: true },
-  }),
   supercopa({
     id: "fra-trophee-des-champions",
     nome: "Trophée des Champions",
@@ -306,18 +234,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     copa: "fra-coupe-de-france",
   }),
   // ---------------------------------------------------------------- nível 2
-  copa({
-    id: "por-taca-de-portugal",
-    nome: "Taça de Portugal",
-    nomeCurto: "Taça de Portugal",
-    pais: "POR",
-    calendario: c("10-15", "05-24"),
-    divisoes: [
-      { liga: "por-liga-portugal", quantos: 18 },
-      { liga: "por-liga-portugal-2", quantos: 14 },
-    ],
-    fases: { idaEVolta: [4], finalNeutra: true },
-  }),
   supercopa({
     id: "por-supertaca",
     nome: "Supertaça Cândido de Oliveira",
@@ -326,18 +242,6 @@ export const COPAS: readonly CompeticaoEntrada[] = [
     calendario: c("08-02", "08-07"),
     liga: "por-liga-portugal",
     copa: "por-taca-de-portugal",
-  }),
-  copa({
-    id: "ned-knvb-beker",
-    nome: "KNVB Beker",
-    nomeCurto: "KNVB Beker",
-    pais: "NED",
-    calendario: c("10-28", "04-20"),
-    divisoes: [
-      { liga: "ned-eredivisie", quantos: 18 },
-      { liga: "ned-eerste-divisie", quantos: 14 },
-    ],
-    fases: { finalNeutra: true },
   }),
   ...(
     [

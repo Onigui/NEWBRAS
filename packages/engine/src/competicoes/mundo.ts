@@ -64,7 +64,7 @@ export interface MundoParaCompeticoes {
   elenco(clube: string): readonly Jogador[];
   datasFifa: readonly DataFifa[];
   /** País do clube, para os sorteios das continentais evitarem clubes do mesmo país. */
-  clube?(id: string): { pais: string } | undefined;
+  clube?(id: string): { pais: string; filialDe?: string | undefined } | undefined;
 }
 
 /** País de uma competição nacional ou estadual (null nas continentais). */
@@ -254,9 +254,13 @@ function ranking(
   daTemporada: Record<string, EstadoCompeticao>,
 ): string[] {
   const def = m.competicao(id);
+  // Liga da temporada que acabou (as divisões de baixo abrem depois das copas, na virada): os
+  // participantes já são os da próxima, com quem subiu e quem caiu.
+  const daVez = daTemporada[id];
+  const atual = daVez && !(daVez.encerrada && def?.tipo === "liga") ? daVez : undefined;
   // A supercopa abre antes das outras: uma copa ainda fechada tem os participantes pelas vagas.
   const membros =
-    daTemporada[id]?.participantes ??
+    atual?.participantes ??
     (def && !def.participantes.fixos.length && def.participantes.vagas.length
       ? participantesPorVagas(m, estado, def, daTemporada)
       : (estado.participantes[id] ?? (def ? participantesIniciais(def) : [])));
@@ -387,7 +391,10 @@ function resolverParticipantes(
   const fora = new Set(
     c.participantes.exclui.flatMap((id) => daTemporada[id]?.participantes ?? []),
   );
-  const ocupado = (x: string) => escolhidos.includes(x) || fora.has(x);
+  // Times B e sub-23 não jogam as copas nacionais.
+  const semFiliais = c.tipo === "copa";
+  const ocupado = (x: string) =>
+    escolhidos.includes(x) || fora.has(x) || (semFiliais && !!m.clube?.(x)?.filialDe);
   // Reserva para vaga de campeão sem dono conhecido: o mais forte que sobra entre as origens.
   const origens = [
     ...c.participantes.vagas,
@@ -505,6 +512,25 @@ function resolverParticipantes(
   }
   const inicial = c.participantes.vagas.flatMap(resolver);
   return { inicial, entrantes, caminhos };
+}
+
+/** Divisão de cada clube nas ligas do país da copa nesta temporada (para o mando do de baixo). */
+function divisoesDoPais(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  daTemporada: Record<string, EstadoCompeticao>,
+  c: Competicao,
+): Record<string, number> | undefined {
+  const pais = paisDaCompeticao(c);
+  if (!pais || c.escopo.tipo !== "pais") return undefined;
+  const r: Record<string, number> = {};
+  for (const l of m.competicoes) {
+    if (l.tipo !== "liga" || paisDaCompeticao(l) !== pais || l.escopo.tipo !== "pais") continue;
+    const membros =
+      daTemporada[l.id]?.participantes ?? estado.participantes[l.id] ?? participantesIniciais(l);
+    for (const t of membros) r[t] = Math.min(r[t] ?? 99, l.divisao ?? 1);
+  }
+  return Object.keys(r).length ? r : undefined;
 }
 
 /** Todos os participantes previstos pelas vagas (para a ordem de força de uma copa ainda fechada). */
@@ -649,6 +675,7 @@ function abrirTemporada(
       resolucao && Object.keys(resolucao.entrantes).length ? resolucao.entrantes : undefined;
     const todos = [...participantes, ...Object.values(entrantes ?? {}).flat()];
     const paises = m.clube && continentalOuMais(c) ? origemDosClubes(m, c, todos) : undefined;
+    const divisoes = c.tipo === "copa" ? divisoesDoPais(m, estado, competicoes, c) : undefined;
     let bloqueadas: Set<string> | undefined;
     if (!continental) {
       // Todas reservam as datas continentais: até um campeão de copa da 2ª divisão pode jogá-las.
@@ -662,6 +689,7 @@ function abrirTemporada(
       temporada: temporada.nome,
       ...(entrantes ? { entrantes } : {}),
       ...(paises ? { paises } : {}),
+      ...(divisoes ? { divisoes } : {}),
       ...(resolucao && Object.keys(resolucao.caminhos).length
         ? { caminhos: resolucao.caminhos }
         : {}),
@@ -996,10 +1024,85 @@ export function virarTemporadas(
       participantes[mv.para] = destino.includes(mv.clube) ? destino : [...destino, mv.clube];
     }
     estado = { ...estado, historico, participantes, classificacoes };
+    renovarLigasAbertas(m, estado, doPais, participantes);
     estado = abrirTemporada(m, estado, codigo, somarDias(data, 0), semente);
     encerradas.push({ pais: codigo, temporada: t.nome, movimentos });
   }
   return { estado, encerradas };
+}
+
+/**
+ * Ligas abertas (Série D), na virada (muda `participantes`): ficam os que chegaram à fase marcada e
+ * os que vieram por acesso ou rebaixamento; as vagas dos estaduais completam o resto, cada uma com o
+ * melhor colocado que não está em outra liga do país; faltando, entram os mais fortes que sobraram.
+ * A lista sai na ordem dos estados da lista inicial, para os grupos regionais.
+ */
+function renovarLigasAbertas(
+  m: MundoParaCompeticoes,
+  estado: MundoCompeticoes,
+  doPais: readonly EstadoCompeticao[],
+  participantes: Record<string, string[]>,
+): void {
+  for (const e of doPais) {
+    const c = m.competicao(e.id);
+    const r = c?.participantes.renovacao;
+    if (!c || !r) continue;
+    const pais = paisDaCompeticao(c);
+    const fi = c.fases.findIndex((f) => f.id === r.ficam);
+    const chegaram = new Set(e.fases[fi]?.times ?? []);
+    const atuais = participantes[c.id] ?? [...e.participantes];
+    const lista = atuais.filter((x) => !e.participantes.includes(x) || chegaram.has(x));
+    const ocupados = new Set(lista);
+    for (const l of m.competicoes)
+      if (l.id !== c.id && l.tipo === "liga" && paisDaCompeticao(l) === pais)
+        for (const x of participantes[l.id] ??
+          estado.competicoes[l.id]?.participantes ??
+          participantesIniciais(l))
+          ocupados.add(x);
+    const sobras: string[] = [];
+    for (const v of r.vagas) {
+      const ordem = ranking(m, estado, v.de, estado.competicoes);
+      const desde = Math.max(0, Math.min(...(v.posicoes ?? [1])) - 1);
+      let faltam = v.posicoes?.length ?? 1;
+      for (const x of ordem.slice(desde)) {
+        if (ocupados.has(x)) continue;
+        if (faltam > 0 && lista.length < c.participantes.quantidade) {
+          lista.push(x);
+          ocupados.add(x);
+          faltam--;
+        } else sobras.push(x);
+      }
+    }
+    const resto = sobras
+      .filter((x) => !ocupados.has(x))
+      .sort((a, b) => forca(m, b) - forca(m, a) || a.localeCompare(b));
+    while (lista.length < c.participantes.quantidade && resto.length) {
+      const x = resto.shift() as string;
+      if (!ocupados.has(x)) {
+        lista.push(x);
+        ocupados.add(x);
+      }
+    }
+    // Estado de cada clube pelos estaduais; os estados na ordem da lista inicial.
+    const uf = new Map<string, string>();
+    for (const x of m.competicoes)
+      if (x.tipo === "estadual" && x.escopo.tipo === "estado" && x.escopo.pais === pais)
+        for (const t of participantesIniciais(x)) if (!uf.has(t)) uf.set(t, x.escopo.estado);
+    const ordemUf: string[] = [];
+    for (const t of participantesIniciais(c)) {
+      const u = uf.get(t);
+      if (u && !ordemUf.includes(u)) ordemUf.push(u);
+    }
+    const posUf = (t: string) => {
+      const i = ordemUf.indexOf(uf.get(t) ?? "");
+      return i < 0 ? ordemUf.length : i;
+    };
+    participantes[c.id] = lista
+      .slice(0, c.participantes.quantidade)
+      .map((t, i) => ({ t, i }))
+      .sort((a, b) => posUf(a.t) - posUf(b.t) || a.i - b.i)
+      .map((x) => x.t);
+  }
 }
 
 /**

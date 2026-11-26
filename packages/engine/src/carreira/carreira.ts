@@ -58,7 +58,19 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 8;
+export const FORMATO_CARREIRA = 9;
+
+/** Copas que mudaram de formato no formato 9 (as de salvamentos antigos são montadas de novo). */
+const COPAS_DA_ETAPA_9E = [
+  "eng-fa-cup",
+  "eng-league-cup",
+  "esp-copa-del-rey",
+  "ita-coppa-italia",
+  "ger-dfb-pokal",
+  "fra-coupe-de-france",
+  "por-taca-de-portugal",
+  "ned-knvb-beker",
+];
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -981,6 +993,9 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
   // Formatos 1 a 7: a Copa do Brasil mudou para o formato de 126 clubes (montada de novo).
   if (competicoes && antiga.formato < 8)
     competicoes = reabrirCompeticoes(mundo, competicoes, ["bra-copa-do-brasil"], c.data, c.semente);
+  // Formatos 1 a 8: as principais copas da Europa mudaram para o formato real (montadas de novo).
+  if (competicoes && antiga.formato < 9)
+    competicoes = reabrirCompeticoes(mundo, competicoes, COPAS_DA_ETAPA_9E, c.data, c.semente);
   return {
     ...antiga,
     formato: FORMATO_CARREIRA,

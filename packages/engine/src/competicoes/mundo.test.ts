@@ -192,6 +192,79 @@ describe("copas e supercopas", () => {
   });
 });
 
+describe("liga aberta", () => {
+  it("Série D: ficam os da fase marcada, entra o rebaixado e os melhores do estadual completam", () => {
+    const C = ["c1", "c2", "c3", "c4"];
+    const D = ["d1", "d2", "d3", "d4", "d5", "d6"];
+    const E = ["e1", "e2", "e3"];
+    const competicoes = [
+      {
+        ...liga("serie-c", 1, C, [{ tipo: "rebaixamento", posicoes: [4], para: "serie-d" }]),
+        participantes: { fixos: C, quantidade: 4, vagas: [], exclui: [] },
+      },
+      Competicao.parse({
+        id: "serie-d",
+        nome: "serie-d",
+        tipo: "liga",
+        categoria: "clubes",
+        escopo: { tipo: "pais", pais: "BRA" },
+        divisao: 2,
+        calendario: { inicio: "04-01", fim: "11-30" },
+        participantes: {
+          fixos: D,
+          quantidade: 6,
+          renovacao: {
+            ficam: "mata",
+            vagas: [{ de: "estadual", criterio: "posicoes", posicoes: [1, 2] }],
+          },
+        },
+        fases: [
+          { id: "pc", nome: "pc", tipo: "grupos", grupos: 1, turnos: 2, classificamPorGrupo: 4 },
+          { ...mataMata("mata", 1, "sorteio"), chaveamento: "campanha" },
+        ],
+        movimentos: [{ tipo: "acesso", posicoes: [1], para: "serie-c" }],
+      }),
+      Competicao.parse({
+        id: "estadual",
+        nome: "estadual",
+        tipo: "estadual",
+        categoria: "clubes",
+        escopo: { tipo: "estado", pais: "BRA", estado: "SP" },
+        calendario: { inicio: "01-15", fim: "03-25" },
+        participantes: { fixos: [...D, ...E], quantidade: 9 },
+        fases: [{ id: "pc", nome: "pc", tipo: "grupos", grupos: 1, turnos: 1 }],
+      }),
+    ];
+    const elencos = new Map([...C, ...D, ...E].map((c, i) => [c, elenco(c, 80 - i * 2)]));
+    const m: MundoParaCompeticoes = {
+      competicoes,
+      competicao: (id) => competicoes.find((c) => c.id === id),
+      pais: (codigo) => (codigo === "BRA" ? BRASIL : undefined),
+      elenco: (clube) => elencos.get(clube) ?? [],
+      datasFifa: [],
+    };
+    let w = iniciarMundo(m, "2027-01-05", "s");
+    w = jogarAte(m, w, "2027-01-05", "2027-12-08");
+    const antes = w.competicoes["serie-d"]!;
+    expect(antes.encerrada).toBe(true);
+    w = jogarAte(m, w, "2027-12-08", "2028-01-15");
+    expect(w.temporadas.BRA?.nome).toBe("2028");
+    const nova = w.competicoes["serie-d"]!.participantes;
+    expect(nova).toHaveLength(6);
+    const rebaixado = w.classificacoes?.["serie-c"]?.[3];
+    const promovido = w.classificacoes?.["serie-d"]?.[0];
+    expect(nova).toContain(rebaixado);
+    expect(nova).not.toContain(promovido);
+    // Ficam os 4 que chegaram ao mata-mata (menos o que subiu).
+    const ficam = antes.fases[1]!.times.filter((x) => x !== promovido);
+    for (const x of ficam) expect(nova).toContain(x);
+    // As duas vagas do estadual: os melhores dele que não estão em outra liga nem já ficaram.
+    const ocupados = new Set([...ficam, rebaixado, ...w.competicoes["serie-c"]!.participantes]);
+    const doEstadual = (w.classificacoes?.estadual ?? []).filter((x) => !ocupados.has(x));
+    expect(nova.filter((x) => !ocupados.has(x)).sort()).toEqual(doEstadual.slice(0, 2).sort());
+  });
+});
+
 describe("plantão de gols", () => {
   it("mostra os mesmos placares que o dia registra, com o jogo do técnico jogado à parte", () => {
     const m = mundo();

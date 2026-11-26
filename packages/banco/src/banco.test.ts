@@ -1134,14 +1134,18 @@ describe("copas nacionais e supercopas", () => {
             origem!.participantes.fixos.length,
           );
           total += v.posicoes?.length ?? 0;
-        } else total += 1;
+          // Campeão e vice de uma liga que já entra pelas posições (os da Supercopa na Copa del Rey)
+          // ou da própria copa não somam clubes novos.
+        } else if (v.de !== c.id && !vagas.some((o) => o.criterio === "posicoes" && o.de === v.de))
+          total += 1;
       }
       expect(total, c.id).toBe(c.participantes.quantidade);
     }
   });
 
   it("copas têm uma fase por eliminatória até a final", () => {
-    for (const c of copas.filter((x) => x.id !== "bra-copa-do-brasil")) {
+    // As de formato real (Copa do Brasil e as principais da Europa) têm a janela de cada fase.
+    for (const c of copas.filter((x) => !x.fases.some((f) => f.periodo))) {
       const n = c.participantes.quantidade;
       expect(c.fases, c.id).toHaveLength(Math.ceil(Math.log2(n)));
       expect(c.fases.at(-1)?.nome, c.id).toBe("Final");
@@ -1161,6 +1165,41 @@ describe("copas nacionais e supercopas", () => {
     expect(copaDoBrasil.fases.map(jogos)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 1]);
     const final = competicao("eng-fa-cup")!.fases.at(-1);
     expect(final?.tipo === "mata-mata" && final.mando).toBe("neutro");
+  });
+
+  it("copas da Europa no formato real: cada divisão entra na rodada dela", () => {
+    const conta = (vs: readonly { posicoes?: number[] | undefined }[]) =>
+      vs.reduce((s, v) => s + (v.posicoes?.length ?? 1), 0);
+    const entradas = (id: string) => {
+      const c = competicao(id)!;
+      return [conta(c.participantes.vagas), ...c.fases.slice(1).map((f) => conta(f.entramAqui))];
+    };
+    const mm = (id: string, fase: string) => {
+      const f = competicao(id)!.fases.find((x) => x.id === fase);
+      return f?.tipo === "mata-mata" ? f : undefined;
+    };
+    // EFL Cup: 4 na preliminar, 68 na 1ª fase, 11 da Premier League na 2ª e 9 na 3ª.
+    expect(entradas("eng-league-cup")).toEqual([4, 68, 11, 9, 0, 0, 0, 0]);
+    // FA Cup: League One e Two na 1ª fase (80 lugares), Premier League e Championship na 3ª.
+    expect(entradas("eng-fa-cup")).toEqual([48, 0, 44, 0, 0, 0, 0, 0]);
+    expect(mm("eng-fa-cup", "1-fase")?.lugares).toBe(80);
+    // Copa del Rey: 112 lugares na 1ª eliminatória; os quatro da Supercopa nos 16 avos.
+    expect(mm("esp-copa-del-rey", "1-eliminatoria")?.lugares).toBe(112);
+    expect(entradas("esp-copa-del-rey")).toEqual([82, 0, 4, 0, 0, 0, 0]);
+    expect(mm("esp-copa-del-rey", "1-eliminatoria")?.mando).toBe("menor-divisao");
+    // Coppa Italia: 8 na preliminar, 28 na 1ª fase, os 8 primeiros da Serie A nas oitavas.
+    expect(entradas("ita-coppa-italia")).toEqual([8, 28, 0, 8, 0, 0, 0]);
+    // DFB-Pokal e Coupe de France: 64 lugares; mando dos amadores e de dois níveis abaixo.
+    expect(mm("ger-dfb-pokal", "1-rodada")?.menorDivisao?.aPartirDe).toBe(3);
+    expect(mm("fra-coupe-de-france", "32-avos")?.menorDivisao?.diferenca).toBe(2);
+    // Coupe de France: pênaltis direto até a semifinal; prorrogação só na final.
+    expect(mm("fra-coupe-de-france", "semifinal")?.prorrogacao).toBe(false);
+    expect(mm("fra-coupe-de-france", "final")?.prorrogacao).toBe(true);
+    // Taça de Portugal e KNVB Beker: os das copas europeias só na rodada seguinte.
+    expect(entradas("por-taca-de-portugal")).toEqual([30, 6, 0, 0, 0, 0]);
+    expect(entradas("ned-knvb-beker")).toEqual([32, 6, 0, 0, 0, 0]);
+    for (const id of ["eng-fa-cup", "esp-copa-del-rey", "ger-dfb-pokal", "ned-knvb-beker"])
+      expect(competicao(id)!.fases.at(-1)?.nome, id).toBe("Final");
   });
 
   it("a temporada de cada país contém todas as competições dele", () => {
