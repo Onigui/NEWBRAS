@@ -11,14 +11,31 @@ function partes(data: string): [number, number, number] {
   return [a, m, d];
 }
 
+// As mesmas datas se repetem o tempo todo (o mundo inteiro joga nelas): a conta fica guardada.
+const dias = new Map<string, number>();
+const datas = new Map<number, string>();
+const LIMITE_CACHE = 100_000;
+
 /** Dias desde 1970-01-01 (para somar e comparar). */
 export function diaAbsoluto(data: string): number {
-  const [a, m, d] = partes(data);
-  return Math.round(Date.UTC(a, m - 1, d) / MS_DIA);
+  let dia = dias.get(data);
+  if (dia === undefined) {
+    const [a, m, d] = partes(data);
+    dia = Math.round(Date.UTC(a, m - 1, d) / MS_DIA);
+    if (dias.size > LIMITE_CACHE) dias.clear();
+    dias.set(data, dia);
+  }
+  return dia;
 }
 
 export function dataDoDia(dia: number): string {
-  return new Date(dia * MS_DIA).toISOString().slice(0, 10);
+  let data = datas.get(dia);
+  if (data === undefined) {
+    data = new Date(dia * MS_DIA).toISOString().slice(0, 10);
+    if (datas.size > LIMITE_CACHE) datas.clear();
+    datas.set(dia, data);
+  }
+  return data;
 }
 
 export function somarDias(data: string, dias: number): string {

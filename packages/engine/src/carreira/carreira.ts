@@ -58,6 +58,8 @@ import {
 import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
+import { mundoNaData } from "../elenco/mundo";
+import { noticiasDoElenco } from "../elenco/noticias";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
 export const FORMATO_CARREIRA = 9;
@@ -182,6 +184,8 @@ export interface Mundo {
   pais(codigo: string): Pais | undefined;
   clubesDoPais(codigo: string): readonly Clube[];
   datasFifa: readonly DataFifa[];
+  /** Todos os clubes (o mundo evolui com eles; sem a lista, fica parado). */
+  clubes?: readonly Clube[];
 }
 
 export function mundoDoBanco(banco: Banco): Mundo {
@@ -231,6 +235,7 @@ export function mundoDoBanco(banco: Banco): Mundo {
     pais: (codigo) => paises.get(codigo),
     clubesDoPais: (codigo) => porPais.get(codigo) ?? [],
     datasFifa: banco.datasFifa,
+    clubes: banco.clubes,
   };
 }
 
@@ -492,8 +497,11 @@ export interface Avanco {
 }
 
 /** Avança um dia. Com jogo marcado para hoje, não avança: o jogo vem antes. */
-export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
+export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   if (compromissoDoDia(c)) return { carreira: c, novidades: [], parouPor: "jogo" };
+  // O mundo de hoje (o dia que fecha) e o de amanhã (pode ser o começo de uma temporada).
+  const mundo = mundoNaData(mundoDoBanco, c, c.data);
+  const mundoAmanha = mundoNaData(mundoDoBanco, c, somarDias(c.data, 1));
   // Fecha o dia: os jogos de hoje no mundo inteiro.
   const antes = c.competicoes;
   let competicoes = jogarDia(mundo, c.competicoes, c.data, c.semente);
@@ -582,15 +590,21 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     antes,
     competicoes,
     c.data,
-    viverDia(c, mundo, data),
+    viverDia(c, mundoAmanha, data),
   );
   const apresentacao = noticiaDaConvocacao(
     mundo,
     foraPelaSelecao(c, mundo, c.data),
-    foraPelaSelecao(proximo, mundo, data),
+    foraPelaSelecao(proximo, mundoAmanha, data),
     data,
   );
-  for (const n of [...convocados.noticias, ...(apresentacao ? [apresentacao] : [])]) {
+  // Temporada nova no elenco: aposentadorias, juniores, lendas que renascem e a evolução.
+  const elenco = noticiasDoElenco(c, mundo, mundoAmanha, data, convocados.jogadores);
+  for (const n of [
+    ...convocados.noticias,
+    ...(apresentacao ? [apresentacao] : []),
+    ...elenco.noticias,
+  ]) {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
@@ -598,7 +612,7 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     ...c,
     data,
     competicoes,
-    jogadores: convocados.jogadores,
+    jogadores: elenco.jogadores,
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };

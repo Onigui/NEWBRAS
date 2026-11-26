@@ -26,6 +26,7 @@ import {
   nomeDoCompromisso,
   suspensosNaCompeticao,
   foraPelaSelecao,
+  mundoNaData,
   type Carreira as CarreiraT,
   type Compromisso,
   type Concentracao,
@@ -86,7 +87,16 @@ export function Carreira({ inicial, onSair }: { inicial: CarreiraT; onSair: () =
 type Cr = ReturnType<typeof useCarreira> & { montado: MundoMontado };
 
 function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
-  const { carreira: c, montado, mudar } = cr;
+  const { carreira: c, mudar } = cr;
+  // O mundo como está na data da carreira: jogadores evoluídos, aposentados fora, juniores dentro.
+  const { semente, inicio, data } = c;
+  const montado = useMemo(
+    () => ({
+      ...cr.montado,
+      mundo: mundoNaData(cr.montado.mundo, { semente, inicio }, data),
+    }),
+    [cr.montado, semente, inicio, data],
+  );
   const { mundo } = montado;
   const [aba, setAba] = useState<Aba>("inicio");
   const [dia, setDia] = useState<"hub" | "pre-jogo" | "jogo">("hub");
