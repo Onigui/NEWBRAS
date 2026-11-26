@@ -10,6 +10,7 @@ import {
   montarCompeticao,
   movimentosDaTemporada,
   receberEntrantes,
+  resolverVagaDinamica,
   tabelaDoGrupo,
   type EstadoCompeticao,
 } from "./competicao";
@@ -762,6 +763,100 @@ describe("competições", () => {
     expect(e.classificados).toHaveLength(4);
     expect(new Set(e.classificados).size).toBe(4);
     expect(e.classificados!.slice(0, 3)).toEqual(diretos);
+  });
+
+  it("Copa: anfitriões na frente, classificados de outras com recorte e repescagem com perdedores", () => {
+    const fase = (id: string, o: Record<string, unknown> = {}) => ({
+      id,
+      nome: id,
+      tipo: "mata-mata" as const,
+      jogos: 1,
+      chaveamento: "campanha" as const,
+      mando: "neutro" as const,
+      ...o,
+    });
+    // Eliminatórias com 4: a final dá o campeão e o vice (perdedores) como classificados.
+    const elim = comp({
+      id: "elim",
+      tipo: "eliminatorias",
+      categoria: "selecoes",
+      escopo: { tipo: "confederacao", confederacao: "OFC" },
+      divisao: undefined,
+      participantes: { fixos: ["AAA", "BBB", "CCC", "DDD"], quantidade: 4 },
+      fases: [
+        fase("semi"),
+        fase("final", { chaveamento: "chave-fixa" }),
+      ] as CompeticaoEntrada["fases"],
+      classificados: [
+        { fase: "final", vencedores: true },
+        { fase: "final", perdedores: true },
+      ],
+    });
+    const e1 = jogarTudo(elim, ["AAA", "BBB", "CCC", "DDD"]);
+    expect(e1.classificados).toHaveLength(2);
+    expect(e1.classificados![0]).toBe(e1.campeao);
+    // A Copa: 2 anfitriões fixos e o campeão das eliminatórias (maximo 1); o vice fica de fora.
+    const copa = comp({
+      id: "copa",
+      tipo: "selecoes",
+      categoria: "selecoes",
+      escopo: { tipo: "mundial" },
+      divisao: undefined,
+      participantes: { fixos: ["HHH", "III"], quantidade: 3 },
+      fases: [
+        fase("final", {
+          todosJogam: true,
+          entramAqui: [{ de: "elim", criterio: "classificados", maximo: 1, quantidade: 1 }],
+        }),
+      ] as CompeticaoEntrada["fases"],
+    });
+    let e2 = montarCompeticao(copa, ["HHH", "III"], "2027-01-10", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2027",
+    });
+    expect(e2.aguardando).toBe(0);
+    const lista = resolverVagaDinamica(elim, e1, {
+      criterio: "classificados",
+      porGrupo: false,
+      maximo: 1,
+    });
+    expect(lista).toEqual([e1.campeao]);
+    expect(
+      resolverVagaDinamica(elim, e1, { criterio: "classificados", porGrupo: false, pular: 1 }),
+    ).toEqual([e1.classificados![1]]);
+    e2 = receberEntrantes(copa, e2, 0, { 0: lista! }, "s");
+    // Os anfitriões vêm na frente da lista da fase.
+    expect(e2.fases[0]?.times.slice(0, 2)).toEqual(["HHH", "III"]);
+    expect(e2.fases[0]?.times).toHaveLength(3);
+  });
+
+  it("datas com * pulam para o ano seguinte", () => {
+    const c = comp({
+      tipo: "eliminatorias",
+      categoria: "selecoes",
+      escopo: { tipo: "confederacao", confederacao: "CONCACAF" },
+      divisao: undefined,
+      calendario: { inicio: "06-01", fim: "11-30" },
+      participantes: { fixos: ["AAA", "BBB"], quantidade: 2 },
+      fases: [
+        {
+          id: "liga",
+          nome: "Liga",
+          tipo: "grupos",
+          grupos: 1,
+          turnos: 2,
+          periodo: { inicio: "06-01", fim: "11-30" },
+          datas: ["06-04", "*09-24"],
+        },
+      ] as CompeticaoEntrada["fases"],
+    });
+    const e = montarCompeticao(c, ["AAA", "BBB"], "2028-06-01", {
+      datasFifa: SEM_FIFA,
+      semente: "s",
+      temporada: "2028",
+    });
+    expect(e.datas).toEqual(["2028-06-04", "2029-09-24"]);
   });
 
   it("movimento com anos: só vale nas temporadas dele (ampliação da Série C)", () => {

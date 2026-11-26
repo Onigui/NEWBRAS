@@ -299,6 +299,11 @@ interface Resolucao {
 const continentalOuMais = (c: Competicao | undefined) =>
   c?.tipo === "continental" || c?.tipo === "intercontinental";
 
+/** Sorteio que evita a mesma origem: continentais e mundiais (a Copa do Mundo, por confederação). */
+const sorteioPorOrigem = (m: MundoParaCompeticoes, c: Competicao) =>
+  !!m.clube &&
+  (continentalOuMais(c) || (c.categoria === "selecoes" && c.escopo.tipo === "mundial"));
+
 /**
  * Origem de cada clube para os sorteios evitarem confrontos da mesma origem: o país nas
  * continentais e a confederação nas mundiais (grupos do Mundial de Clubes sem dois da mesma).
@@ -311,7 +316,7 @@ function origemDosClubes(
   const mundial = c.escopo.tipo === "mundial";
   return Object.fromEntries(
     clubes.map((x) => {
-      const pais = m.clube?.(x)?.pais ?? "";
+      const pais = m.clube?.(x)?.pais ?? (/^[A-Z]{3}$/.test(x) ? x : "");
       return [x, mundial ? (m.pais(pais)?.confederacao ?? pais) : pais];
     }),
   );
@@ -560,14 +565,16 @@ function participantesPorVagas(
 
 /**
  * A edição da origem serve para a vaga: a mesma temporada ou, nas seleções (cada competição tem a
- * sua), a edição da origem que termina no mesmo ano ou no anterior (a Nations League de 2026/27
- * para as eliminatórias da Euro de 2027/28).
+ * sua), a edição da origem que termina até 3 anos antes (a Nations League de 2026/27 para as
+ * eliminatórias da Euro de 2027/28).
  */
 function mesmaEdicao(c: Competicao, origem: string, destino: string): boolean {
   if (origem === destino) return true;
   if (c.categoria !== "selecoes") return false;
+  // A edição mais recente da origem que termina até 3 anos antes (as eliminatórias da CONMEBOL
+  // acabam em 2028 e mandam a 4ª colocada para a repescagem de 2030).
   const d = anoFinal(destino) - anoFinal(origem);
-  return d === 0 || d === 1;
+  return d >= 0 && d <= 3;
 }
 
 /**
@@ -622,7 +629,7 @@ function distribuirEntrantes(
       if (!pronto) continue;
       // País dos que chegam, para o sorteio da fase evitar compatriotas.
       const novos = Object.values(porVaga).flat();
-      const paises = m.clube && continentalOuMais(c) ? origemDosClubes(m, c, novos) : undefined;
+      const paises = sorteioPorOrigem(m, c) ? origemDosClubes(m, c, novos) : undefined;
       e = receberEntrantes(c, e, p, porVaga, semente, paises);
       mudou ??= { ...competicoes };
       mudou[c.id] = e;
@@ -742,7 +749,7 @@ function abrirTemporada(
     const entrantes =
       resolucao && Object.keys(resolucao.entrantes).length ? resolucao.entrantes : undefined;
     const todos = [...participantes, ...Object.values(entrantes ?? {}).flat()];
-    const paises = m.clube && continentalOuMais(c) ? origemDosClubes(m, c, todos) : undefined;
+    const paises = sorteioPorOrigem(m, c) ? origemDosClubes(m, c, todos) : undefined;
     const divisoes = c.tipo === "copa" ? divisoesDoPais(m, estado, competicoes, c) : undefined;
     let bloqueadas: Set<string> | undefined;
     if (!continental) {

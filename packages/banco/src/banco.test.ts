@@ -1263,6 +1263,36 @@ describe("seleções", () => {
     ]);
     expect(euro.campeaoAnterior?.campeao).toBe("ESP");
   });
+
+  it("Copa de 2030: 6 anfitriões e 42 das eliminatórias; cada seleção da FIFA em uma só", () => {
+    const copa = competicao("fifa-copa-do-mundo")!;
+    expect(copa.participantes.fixos).toEqual(["ESP", "POR", "MAR", "ARG", "URU", "PAR"]);
+    const entram = copa.fases[0]!.entramAqui.reduce(
+      (s, v) => s + (v.maximo ?? v.quantidade ?? 0),
+      0,
+    );
+    expect(entram).toBe(42);
+    // As eliminatórias de cada confederação: todos os membros, menos os anfitriões, uma vez.
+    const fixas = [
+      "conmebol-eliminatorias-copa",
+      "concacaf-eliminatorias-copa",
+      "afc-eliminatorias-copa",
+      "caf-eliminatorias-copa",
+      "ofc-eliminatorias-copa",
+    ].flatMap((id) => competicao(id)!.participantes.fixos);
+    expect(new Set(fixas).size).toBe(fixas.length);
+    const foraDaUefa = banco.paises
+      .filter((p) => p.confederacao !== "UEFA")
+      .map((p) => p.codigo)
+      .filter((c) => !copa.participantes.fixos.includes(c));
+    expect([...fixas].sort()).toEqual(foraDaUefa.sort());
+    // UEFA: as 52 da Nations League (sem Espanha e Portugal) entre a Liga 1 (36) e a Liga 2 (16).
+    const conta = (id: string) =>
+      competicao(id)!.fases[0]!.entramAqui.reduce((s, v) => s + (v.quantidade ?? 0), 0);
+    expect(conta("uefa-eliminatorias-copa")).toBe(36);
+    expect(conta("uefa-eliminatorias-copa-liga-2")).toBe(16);
+    expect(copa.campeaoAnterior?.campeao).toBe("ESP");
+  });
 });
 
 describe("copas regionais", () => {

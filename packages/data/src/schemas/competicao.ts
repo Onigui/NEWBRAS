@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CodigoPais, DiaDoAno, Id, NomeTexto, Periodo } from "./comum";
+import { CodigoPais, Id, NomeTexto, Periodo } from "./comum";
 import { Confederacao } from "./mundo";
 
 /**
@@ -105,6 +105,13 @@ export const Vaga = z.object({
    * `classificados` das fases anteriores (os 2º colocados que não foram direto para a Euro).
    */
   foraDosClassificados: z.boolean().optional(),
+  /** Na fase da própria competição com `porGrupo`: só os `melhores` entre os grupos, pela campanha. */
+  melhores: z.int().min(1).optional(),
+  /** Da lista que a vaga traz, pula os `pular` primeiros e fica com no máximo `maximo`. */
+  pular: z.int().min(1).optional(),
+  maximo: z.int().min(1).optional(),
+  /** Seleções que não entram por esta vaga (os anfitriões da Copa nas eliminatórias). */
+  exceto: z.array(z.string().min(3)).optional(),
 });
 export type Vaga = z.infer<typeof Vaga>;
 
@@ -117,9 +124,19 @@ const BaseFase = z.object({
   entramAqui: z.array(Vaga).default([]),
   /**
    * Dias exatos das rodadas (MM-DD, em ordem), quando o calendário é fixo: as rodadas da Nations
-   * League nas datas FIFA. Valem quando são tantos quantas as rodadas da fase.
+   * League nas datas FIFA. Valem quando são tantos quantas as rodadas da fase. Um * na frente pula
+   * para o ano seguinte (as eliminatórias da Concacaf param de março de 2028 a junho de 2029).
    */
-  datas: z.array(DiaDoAno).optional(),
+  datas: z
+    .array(
+      z
+        .string()
+        .regex(
+          /^\*?(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
+          "dia no formato MM-DD (com * na frente: no ano seguinte ao da rodada anterior)",
+        ),
+    )
+    .optional(),
   /** No máximo tantos entram na fase, na ordem das vagas (os playoffs da Euro têm 8). */
   limiteDeEntradas: z.int().min(2).optional(),
 });
@@ -266,6 +283,8 @@ export const Competicao = z
           porGrupo: z.boolean().default(false),
           melhores: z.int().min(1).optional(),
           vencedores: z.boolean().optional(),
+          /** Os que perderam a última rodada da fase (o vice da Oceania vai à repescagem). */
+          perdedores: z.boolean().optional(),
           reservados: z.array(z.string().min(3)).optional(),
           quantidade: z.int().min(1).optional(),
         }),
