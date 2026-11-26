@@ -5,6 +5,7 @@
  * na maioria, ida e volta onde a copa faz assim, final em campo neutro onde é tradição.
  */
 import type { CompeticaoEntrada } from "@newbras/data";
+import { COPA_DO_BRASIL } from "./copaDoBrasil";
 
 type FaseCopa = CompeticaoEntrada["fases"][number];
 
@@ -171,20 +172,7 @@ const c = (inicio: string, fim: string) => ({ inicio, fim });
 
 export const COPAS: readonly CompeticaoEntrada[] = [
   // ---------------------------------------------------------------- nível 1
-  copa({
-    id: "bra-copa-do-brasil",
-    nome: "Copa do Brasil",
-    nomeCurto: "Copa do Brasil",
-    pais: "BRA",
-    calendario: c("02-18", "11-08"),
-    divisoes: [
-      { liga: "bra-serie-a", quantos: 20 },
-      { liga: "bra-serie-b", quantos: 20 },
-      { liga: "bra-serie-c", quantos: 20 },
-      { liga: "bra-serie-d", quantos: 4 },
-    ],
-    fases: { idaEVolta: [16, 8, 4, 2], prorrogacao: false },
-  }),
+  COPA_DO_BRASIL,
   supercopa({
     id: "bra-supercopa",
     nome: "Supercopa do Brasil",

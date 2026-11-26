@@ -8,6 +8,7 @@ import { Rng } from "../rng";
 import { temporadaDe, nomeTemporada } from "../carreira/calendario";
 import { diaAbsoluto, somarDias } from "../carreira/datas";
 import {
+  anoFinal,
   avancarCompeticao,
   datasPlanejadas,
   datasPlanejadasPorFase,
@@ -25,6 +26,8 @@ import {
   type Movimento,
 } from "./competicao";
 import { autoresDosGols, forcaDoElenco, simularRapido } from "./rapida";
+
+export { anoFinal };
 
 export interface TemporadaDoPais {
   nome: string;
@@ -92,12 +95,6 @@ export function chaveDaCompeticao(c: Competicao): string | null {
   if (c.escopo.tipo === "confederacao") return `conf:${c.escopo.confederacao}`;
   if (c.escopo.tipo === "mundial") return c.categoria === "clubes" ? CHAVE_MUNDIAL : null;
   return paisDaCompeticao(c);
-}
-
-/** Ano em que uma temporada termina ("2026/27" → 2027; "2027" → 2027). */
-export function anoFinal(temporada: string): number {
-  const inicio = Number(temporada.slice(0, 4));
-  return temporada.includes("/") ? inicio + 1 : inicio;
 }
 
 /** Período da temporada de uma chave (país, confederação ou mundial). */
@@ -587,6 +584,8 @@ function abrirTemporada(
   codigo: string,
   data: string,
   semente: string,
+  /** Só estas competições (as outras da chave continuam como estão e só ocupam datas). */
+  apenas?: ReadonlySet<string>,
 ): MundoCompeticoes {
   const periodo = periodoDaChave(m, codigo);
   if (!periodo) return estado;
@@ -606,6 +605,7 @@ function abrirTemporada(
   const ordem = competicoesDoMundo(m)
     .filter((c) => chaveDaCompeticao(c) === codigo)
     .filter((c) => (ano - c.periodicidade.anoBase) % c.periodicidade.aCadaAnos === 0)
+    .filter((c) => !apenas || apenas.has(c.id))
     .sort(
       (a, b) =>
         prioridade(a) - prioridade(b) ||
@@ -626,6 +626,11 @@ function abrirTemporada(
   if (!continental)
     for (const e of Object.values(estado.competicoes)) {
       const def = m.competicao(e.id);
+      // Reabrindo só algumas: as outras do país já marcaram as datas delas.
+      if (apenas && def && !apenas.has(e.id) && chaveDaCompeticao(def) === codigo) {
+        marcadas.push({ clubes: new Set(e.participantes), datas: e.datas });
+        continue;
+      }
       if (def?.escopo.tipo !== "mundial" || e.encerrada || !e.participantes.length) continue;
       if (e.fim < t.inicio || e.inicio > t.fim) continue;
       marcadas.push({ clubes: new Set(e.participantes), datas: e.datas });
@@ -674,6 +679,39 @@ function abrirTemporada(
     if (!continental) marcadas.push({ clubes: new Set(todos), datas: e.datas });
   }
   return { ...estado, competicoes, temporadas: { ...estado.temporadas, [codigo]: temporada } };
+}
+
+/**
+ * Monta de novo a edição atual de algumas competições (o formato delas mudou desde o salvamento),
+ * com os jogos que já passaram disputados; as outras ficam como estão.
+ */
+export function reabrirCompeticoes(
+  m: MundoParaCompeticoes,
+  estado0: MundoCompeticoes,
+  ids: readonly string[],
+  data: string,
+  semente: string,
+): MundoCompeticoes {
+  const alvo = new Set(ids.filter((id) => estado0.competicoes[id]));
+  if (!alvo.size) return estado0;
+  const competicoes = Object.fromEntries(
+    Object.entries(estado0.competicoes).filter(([id]) => !alvo.has(id)),
+  );
+  let estado: MundoCompeticoes = { ...estado0, competicoes };
+  const chaves = new Set(
+    [...alvo].map((id) => m.competicao(id)).flatMap((c) => (c ? [chaveDaCompeticao(c)] : [])),
+  );
+  for (const ch of chaves) {
+    const t = ch ? estado.temporadas[ch] : undefined;
+    if (ch && t) estado = abrirTemporada(m, estado, ch, t.inicio, semente, alvo);
+  }
+  const inicios = [...alvo]
+    .map((id) => estado.competicoes[id]?.inicio)
+    .filter((x): x is string => !!x)
+    .sort();
+  for (let d = inicios[0] ?? data; d < data; d = somarDias(d, 1))
+    estado = jogarDia(m, estado, d, semente, (id) => !alvo.has(id));
+  return estado;
 }
 
 /**
@@ -948,6 +986,7 @@ export function virarTemporadas(
       if (c.participantes.fixos.length)
         participantes[e.id] = participantes[e.id] ?? [...e.participantes];
     }
+    resolverBarragens(m, doPais, movimentos, semente);
     for (const mv of movimentos) {
       if (!m.competicao(mv.para)) continue;
       participantes[mv.de] = (participantes[mv.de] ?? []).filter((x) => x !== mv.clube);
@@ -961,6 +1000,63 @@ export function virarTemporadas(
     encerradas.push({ pais: codigo, temporada: t.nome, movimentos });
   }
   return { estado, encerradas };
+}
+
+/**
+ * Barragens entre divisões, na virada da temporada (muda `movimentos`): o 16º da Ligue 1 contra o
+ * vencedor do playoff da Ligue 2, o 10º e o 11º da K League 1 contra os da K League 2, o playout da
+ * Serie B (16º x 17º, quem perde cai). Jogo de ida e volta resumido num confronto em campo neutro,
+ * pela força dos elencos.
+ */
+function resolverBarragens(
+  m: MundoParaCompeticoes,
+  doPais: readonly EstadoCompeticao[],
+  movimentos: Movimento[],
+  semente: string,
+): void {
+  for (const e of doPais) {
+    const c = m.competicao(e.id);
+    if (!c || !e.classificacao) continue;
+    const ano = anoFinal(e.temporada);
+    for (const mv of c.movimentos) {
+      if (mv.tipo !== "playoff-rebaixamento") continue;
+      if ((mv.desde && ano < mv.desde) || (mv.ate && ano > mv.ate)) continue;
+      const rng = new Rng(`${semente}:barragem:${c.id}:${e.temporada}`);
+      // Quem perde a barragem fica com `vence` = false (o de cima cai, ou o de baixo não sobe).
+      const confronto = (a: string, b: string) => {
+        const r = simularRapido(rng, forca(m, a), forca(m, b), {
+          neutro: true,
+          desempate: "penaltis",
+        });
+        const [x, y] = r.placar;
+        const [px, py] = r.penaltis ?? [0, 0];
+        return x > y || (x === y && px > py) ? a : b;
+      };
+      const posicoes = mv.posicoes
+        .map((p) => e.classificacao?.[p - 1])
+        .filter((x): x is string => !!x);
+      if (mv.barragem === "entre-si") {
+        // Playout: o pior contra o melhor das posições, quem perde cai.
+        for (let i = 0; i + 1 < posicoes.length; i += 2) {
+          const [a, b] = [posicoes[i] as string, posicoes[i + 1] as string];
+          const perdeu = confronto(a, b) === a ? b : a;
+          movimentos.push({ clube: perdeu, de: c.id, para: mv.para, tipo: "rebaixamento" });
+        }
+        continue;
+      }
+      // Contra quem subiu pelo playoff da divisão de baixo (o pior de cima contra o primeiro).
+      const candidatos = movimentos.filter(
+        (x) => x.tipo === "acesso" && x.viaPlayoff && x.de === mv.para && x.para === c.id,
+      );
+      [...posicoes].reverse().forEach((deCima, i) => {
+        const deBaixo = candidatos[i];
+        if (!deBaixo) return;
+        if (confronto(deCima, deBaixo.clube) === deCima) {
+          movimentos.splice(movimentos.indexOf(deBaixo), 1);
+        } else movimentos.push({ clube: deCima, de: c.id, para: mv.para, tipo: "rebaixamento" });
+      });
+    }
+  }
 }
 
 /** Jogos de um clube (competição, índice, data), em ordem de data. */

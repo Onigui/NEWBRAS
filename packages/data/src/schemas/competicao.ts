@@ -150,6 +150,13 @@ export const FaseMataMata = BaseFase.extend({
     .default("sorteio"),
   /** Em jogo único, quem manda: sorteado, melhor campanha ou campo neutro. */
   mando: z.enum(["sorteio", "melhor-campanha", "neutro"]).default("sorteio"),
+  /**
+   * Quantas eliminatórias a última fase tem (sem isso, até sobrar um). Playoff da Série B: 1, e os
+   * dois vencedores sobem.
+   */
+  eliminatorias: z.int().min(1).optional(),
+  /** Todos jogam a eliminatória, sem folgas para os melhores (fases da Copa do Brasil). */
+  todosJogam: z.boolean().optional(),
 });
 
 export const Fase = z.discriminatedUnion("tipo", [FaseGrupos, FaseDeLiga, FaseMataMata]);
@@ -162,6 +169,14 @@ export const MovimentoTabela = z.object({
   posicoes: z.array(z.int().min(1)).min(1),
   /** As posições valem dentro de cada grupo da primeira fase (ex.: os 5 últimos de cada grupo caem). */
   porGrupo: z.boolean().default(false),
+  /**
+   * Barragem (playoff-rebaixamento): contra quem vem da divisão de baixo pelo playoff dela (Ligue 1,
+   * K League; padrão) ou entre as próprias posições, e quem perde cai (playout da Serie B).
+   */
+  barragem: z.enum(["divisao-de-baixo", "entre-si"]).default("divisao-de-baixo"),
+  /** Só vale nas temporadas que terminam entre estes anos (mudança de regulamento, como a Série C de 2028). */
+  desde: z.int().min(1900).optional(),
+  ate: z.int().min(1900).optional(),
 });
 
 export const Competicao = z

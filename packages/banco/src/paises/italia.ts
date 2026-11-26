@@ -1608,7 +1608,13 @@ export const COMPETICOES: readonly CompeticaoEntrada[] = [
     movimentos: [
       { tipo: "acesso", para: "ita-serie-a", posicoes: [1, 2] },
       { tipo: "playoff-acesso", para: "ita-serie-a", posicoes: faixa(3, 8) },
-      { tipo: "playoff-rebaixamento", para: "ita-serie-c", posicoes: [16, 17] },
+      // Playout: 16º x 17º, quem perde cai.
+      {
+        tipo: "playoff-rebaixamento",
+        para: "ita-serie-c",
+        posicoes: [16, 17],
+        barragem: "entre-si",
+      },
       { tipo: "rebaixamento", para: "ita-serie-c", posicoes: faixa(18, 20) },
     ],
   }),

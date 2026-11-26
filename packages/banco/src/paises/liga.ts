@@ -58,13 +58,14 @@ export function liga(o: OpcoesLiga): CompeticaoEntrada {
 }
 
 /** Semifinais e final em ida e volta, com o melhor colocado decidindo em casa. */
-export const playoffIdaEVolta = (nome = "Playoffs"): Fase => ({
+export const playoffIdaEVolta = (nome = "Playoffs", eliminatorias?: number): Fase => ({
   id: "playoffs",
   nome,
   tipo: "mata-mata",
   jogos: 2,
   chaveamento: "campanha",
   mando: "melhor-campanha",
+  ...(eliminatorias ? { eliminatorias } : {}),
 });
 
 /** Semifinais em ida e volta e final em jogo único, em campo neutro (modelo inglês). */
@@ -83,6 +84,7 @@ export const rodadaUnica = (
   id: string,
   nome: string,
   entramAqui: Fase["entramAqui"] = [],
+  eliminatorias?: number,
 ): Fase => ({
   id,
   nome,
@@ -91,6 +93,7 @@ export const rodadaUnica = (
   chaveamento: "campanha",
   mando: "melhor-campanha",
   entramAqui,
+  ...(eliminatorias ? { eliminatorias } : {}),
 });
 
 /** Lista de 1 até n, para descrever faixas de posições. */

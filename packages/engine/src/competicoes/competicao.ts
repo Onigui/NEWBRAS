@@ -57,6 +57,8 @@ export interface EstadoCompeticao {
   campeao?: string;
   /** Quem venceu o playoff de acesso (Série B, Championship). */
   vencedorPlayoff?: string;
+  /** Todos os vencedores do playoff, quando ele dá mais de uma vaga (Série B: os dois). */
+  vencedoresPlayoff?: string[];
   classificacao?: string[];
   /** Gols e assistências de cada jogador na competição. */
   artilharia: Record<string, [number, number]>;
@@ -126,7 +128,7 @@ function planoDasFases(c: Competicao, n: number) {
     entram.push(e);
     const ultima = i === c.fases.length - 1;
     if (f.tipo === "mata-mata") {
-      const k = ultima ? Math.max(1, Math.ceil(Math.log2(Math.max(2, e)))) : 1;
+      const k = eliminatoriasDaFase(f, e, ultima);
       eliminatorias.push(k);
       let r = 0;
       for (let x = 0; x < k; x++) r += pernas(f, x, k);
@@ -141,7 +143,7 @@ function planoDasFases(c: Competicao, n: number) {
       const q =
         f.tipo === "grupos"
           ? f.faixaClassificada
-            ? f.faixaClassificada.ate - f.faixaClassificada.de + 1
+            ? (f.faixaClassificada.ate - f.faixaClassificada.de + 1) * f.grupos
             : f.classificamPorGrupo * f.grupos + (f.melhores?.quantidade ?? 0)
           : f.playoff
             ? f.playoff.ate - f.playoff.de + 1
@@ -150,6 +152,19 @@ function planoDasFases(c: Competicao, n: number) {
     }
   });
   return { entram, eliminatorias, rodadas };
+}
+
+/** Quantas eliminatórias a fase tem: até sobrar um na última (ou o limite dela), uma nas outras. */
+function eliminatoriasDaFase(f: Fase, times: number, ultima: boolean): number {
+  if (!ultima) return 1;
+  const ate = Math.max(1, Math.ceil(Math.log2(Math.max(2, times))));
+  return f.tipo === "mata-mata" && f.eliminatorias ? Math.min(ate, f.eliminatorias) : ate;
+}
+
+/** Ano em que uma temporada termina ("2026/27" → 2027; "2027" → 2027). */
+export function anoFinal(temporada: string): number {
+  const inicio = Number(temporada.slice(0, 4));
+  return temporada.includes("/") ? inicio + 1 : inicio;
 }
 
 function pernas(f: Fase, rodadaEliminatoria: number, total: number): number {
@@ -567,13 +582,15 @@ function abrirRodadaEliminatoria(
   const x = ef.chaves.length;
   const ultimaFase = c.fases.length - 1 === f;
   // Quantas eliminatórias a fase tem: até sobrar um (última fase) ou uma só.
-  const k = ultimaFase ? Math.max(1, Math.ceil(Math.log2(Math.max(2, ef.times.length)))) : 1;
+  const k = eliminatoriasDaFase(fase, ef.times.length, ultimaFase);
   const tamanho = 2 ** Math.ceil(Math.log2(Math.max(2, times.length)));
   let pares: Confronto[];
   if (x === 0) {
-    // Eliminatória que alimenta uma fase onde entram outros clubes (pré-Libertadores): todos jogam,
-    // sem folga. Nas outras, a chave completa com folgas para os melhores.
-    const semFolga = !ultimaFase && (c.fases[f + 1]?.entramAqui.length ?? 0) > 0;
+    // Eliminatória que alimenta uma fase onde entram outros clubes (pré-Libertadores), ou marcada
+    // para todos jogarem (3ª fase da Copa do Brasil, com 48): sem folga. Nas outras, a chave
+    // completa com folgas para os melhores.
+    const semFolga =
+      !ultimaFase && ((c.fases[f + 1]?.entramAqui.length ?? 0) > 0 || fase.todosJogam === true);
     pares = paresIniciais(fase, times, tamanho, rng, e.paises, semFolga, e.caminhos).map(
       ([p, q]) => {
         const [a, b] = seed(ef.times, p, q);
@@ -661,7 +678,7 @@ export function desempateDoJogo(
   const ef = e.fases[j.fase];
   const final =
     j.fase === c.fases.length - 1 &&
-    (j.chave ?? 0) === Math.max(1, Math.ceil(Math.log2(Math.max(2, ef?.times.length ?? 2)))) - 1;
+    (j.chave ?? 0) === eliminatoriasDaFase(fase, ef?.times.length ?? 2, true) - 1;
   const desempate =
     fase.prorrogacao || (final && fase.prorrogacaoNaFinal)
       ? "prorrogacao"
@@ -721,11 +738,19 @@ function classificadosDosGrupos(c: Competicao, e: EstadoCompeticao, f: number): 
     // Várias ligas (Oeste e Leste): os primeiros de cada uma, alternando por colocação.
     return geral.slice(0, fase.classificamDireto * (e.fases[f]?.grupos?.length ?? 1));
   }
-  if (fase.faixaClassificada) {
-    const t = tabelaDoGrupo(c, e, f, 0);
-    return t.slice(fase.faixaClassificada.de - 1, fase.faixaClassificada.ate).map((l) => l.clube);
-  }
   const ef = e.fases[f] as EstadoFase;
+  if (fase.faixaClassificada) {
+    // A faixa vale em cada grupo (do 2º ao 5º de cada grupo da Primera Federación).
+    const { de, ate } = fase.faixaClassificada;
+    const naFaixa = new Set(
+      (ef.grupos ?? [[]]).flatMap((_, g) =>
+        tabelaDoGrupo(c, e, f, g)
+          .slice(de - 1, ate)
+          .map((l) => l.clube),
+      ),
+    );
+    return geral.filter((t) => naFaixa.has(t));
+  }
   const tabelas = (ef.grupos ?? []).map((_, g) => tabelaDoGrupo(c, e, f, g));
   const diretos = new Set(
     tabelas.flatMap((t) => t.slice(0, fase.classificamPorGrupo).map((l) => l.clube)),
@@ -813,7 +838,7 @@ export function avancarCompeticao(
       const novaFase: EstadoFase = { ...ef, chaves: [...chaves.slice(0, -1), fechadas] };
       e = { ...e, fases: e.fases.map((y, i) => (i === f ? novaFase : y)) };
       const ultimaFase = c.fases.length - 1 === f;
-      const k = ultimaFase ? Math.max(1, Math.ceil(Math.log2(Math.max(2, ef.times.length)))) : 1;
+      const k = eliminatoriasDaFase(fase, ef.times.length, ultimaFase);
       if (chaves.length < k && vencedores.length > 1) {
         e = abrirRodadaEliminatoria(c, e, f, vencedores as string[], rng);
         continue;
@@ -977,7 +1002,10 @@ function encerrar(c: Competicao, e: EstadoCompeticao): EstadoCompeticao {
   const classificacao = classificacaoFinal(c, e);
   const ultima = c.fases.length - 1;
   const ef = e.fases[ultima];
-  const vencedorUltima = ef?.chaves?.at(-1)?.[0]?.vencedor;
+  const vencedores = (ef?.chaves?.at(-1) ?? [])
+    .map((p) => p.vencedor)
+    .filter((x): x is string => !!x);
+  const vencedorUltima = vencedores[0];
   const campeao = playoff[ultima] ? classificacao[0] : (vencedorUltima ?? classificacao[0]);
   return {
     ...e,
@@ -985,6 +1013,7 @@ function encerrar(c: Competicao, e: EstadoCompeticao): EstadoCompeticao {
     classificacao,
     ...(campeao ? { campeao } : {}),
     ...(playoff[ultima] && vencedorUltima ? { vencedorPlayoff: vencedorUltima } : {}),
+    ...(playoff[ultima] && vencedores.length > 1 ? { vencedoresPlayoff: vencedores } : {}),
   };
 }
 
@@ -1026,20 +1055,31 @@ export interface Movimento {
   de: string;
   para: string;
   tipo: "acesso" | "rebaixamento";
+  /** Subiu pelo playoff da própria divisão: ainda pode ter barragem contra a de cima. */
+  viaPlayoff?: boolean;
 }
 
 /** Quem sobe e quem cai ao fim da temporada (acesso direto, playoff e rebaixamento). */
 export function movimentosDaTemporada(c: Competicao, e: EstadoCompeticao): Movimento[] {
   if (!e.encerrada || !e.classificacao) return [];
   const lista: Movimento[] = [];
+  const ano = anoFinal(e.temporada);
   for (const m of c.movimentos) {
+    if ((m.desde && ano < m.desde) || (m.ate && ano > m.ate)) continue;
     if (m.tipo === "acesso" || m.tipo === "rebaixamento") {
-      for (const p of m.posicoes) {
-        const clube = e.classificacao[p - 1];
-        if (clube) lista.push({ clube, de: c.id, para: m.para, tipo: m.tipo });
-      }
+      // Por grupo: as posições valem em cada grupo da primeira fase (o 1º de cada grupo sobe).
+      const grupos = m.porGrupo ? (e.fases[0]?.grupos ?? []).map((_, g) => g) : [];
+      const tabelas = m.porGrupo
+        ? grupos.map((g) => tabelaDoGrupo(c, e, 0, g).map((l) => l.clube))
+        : [e.classificacao];
+      for (const tabela of tabelas)
+        for (const p of m.posicoes) {
+          const clube = tabela[p - 1];
+          if (clube) lista.push({ clube, de: c.id, para: m.para, tipo: m.tipo });
+        }
     } else if (m.tipo === "playoff-acesso" && e.vencedorPlayoff) {
-      lista.push({ clube: e.vencedorPlayoff, de: c.id, para: m.para, tipo: "acesso" });
+      for (const clube of e.vencedoresPlayoff ?? [e.vencedorPlayoff])
+        lista.push({ clube, de: c.id, para: m.para, tipo: "acesso", viaPlayoff: true });
     }
   }
   return lista;
