@@ -3,6 +3,8 @@ import { Competicao, gerarAtributos, type Jogador, type Pais, type Posicao } fro
 import { somarDias } from "../carreira/datas";
 import { jogosDoDia, lancarResultado } from "./competicao";
 import {
+  abrirTemporadasFaltando,
+  datasContinentais,
   iniciarMundo,
   jogarDia,
   plantaoDoDia,
@@ -216,5 +218,85 @@ describe("plantão de gols", () => {
     const depois = jogarDia(m, comNosso, dia, "s").competicoes["serie-a"]!;
     for (const j of plantao) expect(depois.jogos[j.indice]?.placar).toEqual(j.placar);
     expect(depois.jogos[nosso!]?.placar).toEqual([3, 2]);
+  });
+});
+
+describe("continentais", () => {
+  const continental = (id: string, exclui: string[]) =>
+    Competicao.parse({
+      id,
+      nome: id,
+      tipo: "continental",
+      categoria: "clubes",
+      escopo: { tipo: "confederacao", confederacao: "CONMEBOL" },
+      calendario: { inicio: "04-01", fim: "11-25" },
+      participantes: {
+        fixos: [],
+        vagas: [{ de: "serie-a", criterio: "posicoes", posicoes: [1, 2, 3, 4] }],
+        exclui,
+        quantidade: 4,
+      },
+      fases: [
+        {
+          id: "mm",
+          nome: "Mata-mata",
+          tipo: "mata-mata",
+          jogos: 2,
+          chaveamento: "campanha",
+        },
+      ],
+    });
+
+  function comContinentais(): MundoParaCompeticoes {
+    const base = mundo();
+    const competicoes = [
+      ...base.competicoes,
+      continental("liberta", []),
+      continental("sula", ["liberta"]),
+    ];
+    return { ...base, competicoes, competicao: (id) => competicoes.find((c) => c.id === id) };
+  }
+
+  it("a de baixo exclui quem está na de cima e as ligas fogem das datas continentais", () => {
+    const m = comContinentais();
+    const w = iniciarMundo(m, "2027-01-05", "s");
+    expect(w.temporadas["conf:CONMEBOL"]?.nome).toBe("2027");
+    const liberta = w.competicoes.liberta!.participantes;
+    const sula = w.competicoes.sula!.participantes;
+    expect(liberta).toEqual(["a1", "a2", "a3", "a4"]);
+    expect(sula).toEqual(["a5", "a6", "a7", "a8"]);
+    // A Libertadores às quartas e a Sul-Americana às quintas, nas datas já reservadas.
+    const reservadas = datasContinentais(m, "CONMEBOL", "2027-01-01", "2027-12-31");
+    for (const d of [...w.competicoes.liberta!.datas, ...w.competicoes.sula!.datas])
+      expect(reservadas.has(d)).toBe(true);
+    // A Série A não joga nem no dia nem na véspera ou no dia seguinte de uma data continental.
+    for (const d of w.competicoes["serie-a"]!.datas)
+      for (const r of reservadas)
+        expect(Math.abs(Date.parse(d) - Date.parse(r))).toBeGreaterThan(864e5);
+  });
+
+  it("na temporada seguinte as vagas saem da classificação da liga", () => {
+    const m = comContinentais();
+    let w = iniciarMundo(m, "2027-01-05", "s");
+    w = jogarAte(m, w, "2027-01-05", "2028-01-10");
+    expect(w.competicoes.liberta!.temporada).toBe("2028");
+    const classA = w.classificacoes?.["serie-a"] ?? [];
+    const serieA = w.competicoes["serie-a"]!.participantes;
+    const esperados = classA.filter((x) => serieA.includes(x)).slice(0, 4);
+    expect(w.competicoes.liberta!.participantes).toEqual(esperados);
+    expect(w.historico.some((h) => h.competicao === "liberta" && h.campeao)).toBe(true);
+  });
+
+  it("salvamento sem as continentais ganha a temporada delas, com os jogos passados disputados", () => {
+    const antigo = iniciarMundo(mundo(), "2027-06-10", "s");
+    const m = comContinentais();
+    const w = abrirTemporadasFaltando(m, antigo, "2027-06-10", "s");
+    const liberta = w.competicoes.liberta!;
+    expect(liberta.temporada).toBe("2027");
+    const passados = liberta.jogos.filter((j) => (liberta.datas[j.rodada] ?? "") < "2027-06-10");
+    expect(passados.length).toBeGreaterThan(0);
+    expect(passados.every((j) => j.placar)).toBe(true);
+    // As competições que já existiam não mudam.
+    expect(w.competicoes["serie-a"]).toBe(antigo.competicoes["serie-a"]);
   });
 });

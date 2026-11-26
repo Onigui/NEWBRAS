@@ -8,7 +8,7 @@ import {
   dataCurta,
   nomeCurtoDaCompeticao,
   nomeDaRodada,
-  paisDaCompeticao,
+  chaveDaCompeticao,
   saldo,
   tabelaDoGrupo,
   type Carreira,
@@ -17,6 +17,16 @@ import {
 import { Escudo } from "../components/Escudo";
 import { Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
+
+/** Nome das confederações no seletor de países (as continentais de cada uma). */
+const NOME_CONFEDERACAO: Record<string, string> = {
+  CONMEBOL: "América do Sul (CONMEBOL)",
+  UEFA: "Europa (UEFA)",
+  CONCACAF: "Américas do Norte e Central (CONCACAF)",
+  AFC: "Ásia (AFC)",
+  CAF: "África (CAF)",
+  OFC: "Oceania (OFC)",
+};
 
 /** Cor da zona da posição: classificação para a próxima fase; na fase única, acesso, playoff e rebaixamento. */
 export function zonaDaPosicao(
@@ -31,6 +41,10 @@ export function zonaDaPosicao(
     if (f.faixaClassificada && pos >= f.faixaClassificada.de && pos <= f.faixaClassificada.ate)
       return "#7cc4f5";
     if (f.classificamPorGrupo && pos <= f.classificamPorGrupo) return "#7ed37a";
+  }
+  if (f?.tipo === "fase-de-liga") {
+    if (pos <= f.classificamDireto) return "#7ed37a";
+    if (f.playoff && pos >= f.playoff.de && pos <= f.playoff.ate) return "#7cc4f5";
   }
   if (fase === 0 && grupos === 1)
     for (const m of comp.movimentos) {
@@ -81,7 +95,7 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
     () =>
       Object.values(estados)
         .map((e) => mundo.competicao(e.id))
-        .filter((x): x is Competicao => !!x && paisDaCompeticao(x) === pais)
+        .filter((x): x is Competicao => !!x && chaveDaCompeticao(x) === pais)
         .sort(
           (a, b) =>
             ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] ||
@@ -90,16 +104,26 @@ export function Competicoes({ c, montado }: { c: Carreira; montado: MundoMontado
         ),
     [estados, mundo, pais],
   );
+  // Países em ordem alfabética, com as continentais de cada confederação no topo.
   const paises = useMemo(
     () =>
       [
         ...new Set(
-          Object.values(estados).map((e) => paisDaCompeticao(mundo.competicao(e.id)!) ?? ""),
+          Object.values(estados).map((e) => chaveDaCompeticao(mundo.competicao(e.id)!) ?? ""),
         ),
       ]
         .filter(Boolean)
-        .map((p) => ({ codigo: p, nome: banco.paises.find((x) => x.codigo === p)?.nome ?? p }))
-        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+        .map((p) => ({
+          codigo: p,
+          nome: p.startsWith("conf:")
+            ? (NOME_CONFEDERACAO[p.slice(5)] ?? p.slice(5))
+            : (banco.paises.find((x) => x.codigo === p)?.nome ?? p),
+        }))
+        .sort(
+          (a, b) =>
+            Number(!a.codigo.startsWith("conf:")) - Number(!b.codigo.startsWith("conf:")) ||
+            a.nome.localeCompare(b.nome, "pt-BR"),
+        ),
     [estados, mundo, banco],
   );
   const comp = mundo.competicao(id);

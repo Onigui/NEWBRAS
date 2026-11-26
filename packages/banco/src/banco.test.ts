@@ -1194,3 +1194,50 @@ describe("copas regionais", () => {
     expect(c.fases).toHaveLength(4);
   });
 });
+
+describe("copas continentais", () => {
+  const continentais = banco.competicoes.filter((c) => c.tipo === "continental");
+  const competicao = (id: string) => banco.competicoes.find((c) => c.id === id);
+  const confDoPais = new Map(banco.paises.map((p) => [p.codigo, p.confederacao]));
+
+  it("as seis confederações têm a sua, e CONMEBOL e UEFA têm a segunda e a terceira", () => {
+    const conf = (c: (typeof continentais)[number]) =>
+      c.escopo.tipo === "confederacao" ? c.escopo.confederacao : "";
+    expect(new Set(continentais.map(conf))).toEqual(
+      new Set(["CONMEBOL", "UEFA", "CONCACAF", "AFC", "CAF", "OFC"]),
+    );
+    expect(competicao("conmebol-sul-americana")?.participantes.exclui).toEqual([
+      "conmebol-libertadores",
+    ]);
+    expect(competicao("uefa-conference-league")?.participantes.exclui).toHaveLength(2);
+  });
+
+  it("as vagas vêm de ligas e copas da própria confederação, com posições que existem", () => {
+    for (const c of continentais) {
+      const conf = c.escopo.tipo === "confederacao" ? c.escopo.confederacao : "";
+      let total = 0;
+      for (const v of c.participantes.vagas) {
+        const origem = competicao(v.de);
+        expect(origem, `${c.id} → ${v.de}`).toBeDefined();
+        const pais = origem!.escopo.tipo === "pais" ? origem!.escopo.pais : "";
+        expect(confDoPais.get(pais), `${c.id} → ${v.de}`).toBe(conf);
+        if (v.criterio === "posicoes") {
+          expect(Math.max(...(v.posicoes ?? []))).toBeLessThanOrEqual(
+            origem!.participantes.fixos.length,
+          );
+          total += v.posicoes?.length ?? 0;
+        } else total += 1;
+      }
+      expect(total, c.id).toBe(c.participantes.quantidade);
+    }
+  });
+
+  it("Libertadores e Champions no formato atual", () => {
+    const liberta = competicao("conmebol-libertadores")!;
+    expect(liberta.participantes.quantidade).toBe(32);
+    expect(liberta.fases.map((f) => f.tipo)).toEqual(["grupos", "mata-mata"]);
+    const ucl = competicao("uefa-champions-league")!;
+    expect(ucl.participantes.quantidade).toBe(36);
+    expect(ucl.fases.map((f) => f.tipo)).toEqual(["fase-de-liga", "mata-mata", "mata-mata"]);
+  });
+});

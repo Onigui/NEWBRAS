@@ -23,8 +23,10 @@ import {
   nomeDaRodada,
 } from "../competicoes/competicao";
 import {
+  abrirTemporadasFaltando,
   iniciarMundo,
   jogarDia,
+  chaveDaCompeticao,
   jogosDoClube,
   paisDaCompeticao,
   plantaoDoDia,
@@ -53,7 +55,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 
 /** Formato do salvamento; muda quando um salvamento antigo não puder mais ser lido como está. */
-export const FORMATO_CARREIRA = 2;
+export const FORMATO_CARREIRA = 3;
 
 /** Amarelos acumulados numa competição que dão um jogo de suspensão. */
 export const AMARELOS_SUSPENSAO = 3;
@@ -447,12 +449,14 @@ export function avancarDia(c: Carreira, mundo: Mundo): Avanco {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
   }
-  // Campeões e acessos da temporada do país do técnico.
+  // Campeões e acessos da temporada do país do técnico e das continentais da confederação dele.
+  const continental = pais ? `conf:${pais.confederacao}` : "";
   for (const v of virada.encerradas) {
-    if (v.pais !== clube?.pais) continue;
+    if (v.pais !== clube?.pais && v.pais !== continental) continue;
     for (const h of competicoes.historico.filter((x) => x.temporada === v.temporada)) {
       const comp = mundo.competicao(h.competicao);
       if (!comp || !h.campeao || comp.escopo.tipo === "estado") continue;
+      if (chaveDaCompeticao(comp) !== v.pais) continue;
       const n: Noticia = {
         data,
         tipo: "carreira",
@@ -693,7 +697,11 @@ export function plantaoDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso):
   const ids = Object.values(c.competicoes.competicoes)
     .filter((e) => {
       const comp = mundo.competicao(e.id);
-      return comp && paisDaCompeticao(comp) === pais && jogosDoDia(e, c.data).length > 0;
+      return (
+        comp &&
+        (e.id === x.competicao || paisDaCompeticao(comp) === pais) &&
+        jogosDoDia(e, c.data).length > 0
+      );
     })
     .map((e) => e.id)
     .sort((a, b) => ordem(a) - ordem(b) || a.localeCompare(b));
@@ -876,9 +884,12 @@ export function atualizarCarreira(c: Carreira, mundo: Mundo): Carreira {
     competicoes?: MundoCompeticoes;
   };
   if (antiga.formato === FORMATO_CARREIRA && antiga.competicoes) return c;
+  // Formato 1: sem competições. Formato 2: sem as continentais (abertas aqui, em dia com a data).
   return {
     ...antiga,
     formato: FORMATO_CARREIRA,
-    competicoes: antiga.competicoes ?? iniciarMundo(mundo, c.data, c.semente),
+    competicoes: antiga.competicoes
+      ? abrirTemporadasFaltando(mundo, antiga.competicoes, c.data, c.semente)
+      : iniciarMundo(mundo, c.data, c.semente),
   };
 }
