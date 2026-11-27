@@ -60,6 +60,7 @@ import { eventosDoDia, inicioDaCarreira } from "./calendario";
 import { dataCurta, somarDias } from "./datas";
 import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
 import { evolucaoDe, mundoNaData } from "../elenco/mundo";
+import { elencoSemLesionados, riscoDeLesao } from "../elenco/lesoes";
 import {
   depoisDoJogo,
   diaDoElenco,
@@ -743,9 +744,22 @@ export function jogadorParaPartida(j: Jogador, e: EstadoJogador): JogadorPartida
   };
 }
 
-/** Elenco do clube com o estado da carreira. */
+/**
+ * Elenco do clube com o estado da carreira e o risco de lesão de cada um. Os clubes da CPU vêm sem
+ * os lesionados deles.
+ */
 export function elencoParaPartida(c: Carreira, mundo: Mundo, clube: string): JogadorPartida[] {
-  return mundo.elenco(clube).map((j) => jogadorParaPartida(j, estadoDe(c, j.id)));
+  const humano = clube === c.clube;
+  const elenco = humano
+    ? mundo.elenco(clube)
+    : elencoSemLesionados(mundo.elenco(clube), c.competicoes.lesionados, clube, c.data);
+  return elenco.map((j) => {
+    const e = estadoDe(c, j.id);
+    return {
+      ...jogadorParaPartida(j, e),
+      risco: riscoDeLesao(j, c.data, c.semente, humano ? e.lesao : undefined),
+    };
+  });
 }
 
 /**

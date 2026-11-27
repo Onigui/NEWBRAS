@@ -43,6 +43,11 @@ export interface JogadorPartida {
   humor?: Humor;
   /** Posições de campo em que ele atua (jogadores reais); deixam a nota por posição mais fiel. */
   posicoesCampo?: readonly PosicaoCampo[];
+  /**
+   * Multiplicador do risco de lesão (posição, idade, físico, fragilidade e recaída; padrão 1).
+   * Pesa inteiro no cansaço e pela raiz na pancada.
+   */
+  risco?: number;
 }
 
 /** Cadenciado: toque de bola para segurar o resultado e esfriar o jogo. */

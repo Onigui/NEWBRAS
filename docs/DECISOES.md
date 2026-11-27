@@ -469,3 +469,26 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Ficha: moral, lesão e a renovação com o salário pedido.
   - Escalação: aviso "lesionado até".
 - **Para depois:** lesões e moral dos jogadores dos clubes da CPU (eles seguem com o elenco inteiro), salários pesando no caixa (Fase 14) e jogador livre assinando com outro clube (Fase 13).
+
+## Lesões mais realistas (etapa 12b2, 26/11/2026)
+
+- **O risco de cada jogador** multiplica a chance de lesão no jogo e no treino:
+  - Posição: goleiro ×0,35, zagueiro ×0,9, meia ×1, lateral e atacante ×1,1.
+  - Idade: +4% por ano acima dos 28.
+  - Físico: resistência e força física altas tiram até 12% do risco; baixas somam até 15%. Não vale para goleiros.
+  - Fragilidade: fixa para cada jogador, sorteada pela semente da carreira, de 0,5 a 2,2 com média perto de 1. Na ficha aparece "propenso a lesões" ou "raramente se machuca".
+  - Recaída: na volta, o risco chega a 2,5 vezes e cai até o normal em 4 semanas.
+- **No motor de partida:** o risco pesa inteiro na lesão por cansaço e pela raiz na pancada de falta (quem bate não escolhe a vítima frágil). O evento de lesão guarda quem fez a falta, e isso diz a causa.
+- **O tipo depende da causa:**
+  - Falta: pancada 45%, entorse 22%, fratura 9%, joelho 9%.
+  - Cansaço no jogo: estiramento 40%, lesão na coxa 26%.
+  - Treino: estiramento 35%, pancada 25%, coxa 17%.
+  - Ligamento cruzado: 3% a 5% em todas.
+- **Recuperação:** cada ano acima dos 28 alonga a volta em 2%.
+- **Férias sem treino:** sem lesão de treino entre 3 semanas depois do fim da temporada e 3 semanas antes do começo da seguinte (junho e quase todo julho na Europa, a segunda metade de dezembro no Brasil).
+- **Clubes da CPU:**
+  - Depois de cada jogo simulado, cada time tem 24% de chance de perder alguém (a média do motor), escolhido entre os 16 mais fortes pelo risco.
+  - O lesionado fica fora dos jogos seguintes (força do time e autores dos gols) e também da partida contra o técnico. A lista é limpa uma vez por mês.
+  - Seleções não entram: o elenco delas é a convocação.
+- **Números de uma temporada simulada (Real Madrid, 64 jogos):** cerca de 22 lesões em jogo e 11 em treino, quase nenhuma de goleiro. A média dos estudos com a elite europeia fica perto de 1,5 lesão por jogador por temporada.
+- **Peso:** a lista da CPU soma uns 160 KB ao salvamento, e a temporada continua em cerca de 11 segundos.

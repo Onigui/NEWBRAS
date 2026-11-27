@@ -1337,7 +1337,8 @@ export class Partida {
       this.registrar("cartao-amarelo", { time: infrator.lado, jogador: infrator.j.id });
       if (infrator.amarelos >= 2) this.expulsar(infrator, true);
     }
-    if (vitima.emCampo && this.rng.chance(0.01)) this.lesionar(vitima);
+    if (vitima.emCampo && this.rng.chance(0.01 * Math.sqrt(vitima.j.risco ?? 1)))
+      this.lesionar(vitima, infrator);
 
     const direita = this.paraDireita(vitima.lado);
     const q = noQuadro(vitima.pos, direita);
@@ -1716,9 +1717,14 @@ export class Partida {
     a.est.papel = papel;
   }
 
-  private lesionar(a: Atleta): void {
+  /** Machuca o atleta; com quem fez a falta, a lesão foi de pancada. */
+  private lesionar(a: Atleta, infrator?: Atleta): void {
     a.est.lesionado = true;
-    this.registrar("lesao", { time: a.lado, jogador: a.j.id });
+    this.registrar("lesao", {
+      time: a.lado,
+      jogador: a.j.id,
+      ...(infrator ? { outro: infrator.j.id } : {}),
+    });
     const time = this.times[a.lado];
     const reserva = this.reservaPara(time, a);
     if (reserva && this.podeTrocar(time)) this.trocar(time, a, reserva);
@@ -1766,10 +1772,11 @@ export class Partida {
   private aCadaMinuto(): void {
     for (const time of Object.values(this.times))
       for (const a of this.emCampoDe(time.lado)) this.renovar(a);
-    // Lesões raras (uma a cada duas ou três partidas), mais prováveis em quem está esgotado.
+    // Lesões raras, mais prováveis em quem está esgotado e em quem tem mais risco.
     for (const time of Object.values(this.times))
       for (const a of this.emCampoDe(time.lado))
-        if (this.rng.chance(0.0001 * (1 + (100 - a.condicao) / 40))) this.lesionar(a);
+        if (this.rng.chance(0.0001 * (1 + (100 - a.condicao) / 40) * (a.j.risco ?? 1)))
+          this.lesionar(a);
 
     const minuto = this.minutoDe(this.s).minuto;
     // Quem goleia relaxa: com 3 gols de vantagem, o time rende um pouco menos.
