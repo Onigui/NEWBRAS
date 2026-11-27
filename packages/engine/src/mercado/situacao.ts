@@ -7,14 +7,13 @@
  * título, não precisa de dinheiro e o jogador é peça-chave; mesmo assim, uma proposta absurda
  * (3 vezes o valor) ainda abre a conversa.
  *
- * Até as finanças da Fase 14, "precisa de dinheiro" é uma estimativa: o aperto sorteado do clube
- * na temporada (os pequenos apertam mais) e o saldo das compras e vendas dele na temporada.
+ * "Precisa de dinheiro" vem do caixa do clube (etapa 14a): no vermelho, vende; com meses de folga,
+ * faz jogo duro.
  */
 import type { Jogador } from "@newbras/data";
 import type { Carreira, Mundo } from "../carreira/carreira";
-import { tabelaDoGrupo } from "../competicoes/competicao";
 import { idadeEm } from "../evolucao";
-import { Rng } from "../rng";
+import { posicoesNaLiga, precisaDeDinheiro } from "../financas/financas";
 import { valorDeMercado } from "./valor";
 
 export type Importancia = "craque" | "titular" | "reserva";
@@ -48,79 +47,18 @@ export function importanciaNoElenco(elenco: readonly Jogador[], id: string): Imp
 export const ehProdigio = (j: Jogador, data: string) =>
   idadeEm(j.nascimento, data) <= 21 && j.potencial >= 85;
 
-/** Temporada (ano) para o sorteio do aperto: muda em julho. */
-const anoDoAperto = (data: string) => Number(data.slice(0, 4)) - (data.slice(5) < "07-01" ? 1 : 0);
-
-/** A situação do clube na data. */
+/** A situação do clube na data: o caixa dele (etapa 14a) e a briga pelo título. */
 export function situacaoDoClube(
-  c: Pick<Carreira, "semente" | "competicoes" | "transferencias">,
+  c: Pick<Carreira, "semente" | "competicoes" | "caixasCpu">,
   mundo: Mundo,
   clube: string,
-  data: string,
+  _data: string,
 ): SituacaoDoClube {
-  const info = mundo.clube(clube);
-  const nivel = info?.nivel ?? 50;
-  // O aperto da temporada: crise, aperto ou folga, mais comum nos clubes pequenos.
-  const rng = new Rng(`${c.semente}:aperto:${clube}:${anoDoAperto(data)}`);
-  const crise = nivel < 60 ? 0.18 : nivel < 80 ? 0.1 : 0.05;
-  const sorte = rng.next();
-  let precisa =
-    sorte < crise
-      ? rng.float(0.75, 1)
-      : sorte < crise * 3
-        ? rng.float(0.4, 0.65)
-        : rng.float(0, 0.25);
-  // Quem já vendeu bem na temporada respira; quem gastou muito aperta.
-  const elenco = mundo.elenco(clube);
-  const valorDoElenco = Math.max(
-    1,
-    elenco.reduce((s, j) => s + valorDeMercado(j, data), 0),
-  );
-  const saldo =
-    saldosDaTemporada(c.transferencias ?? [], `${anoDoAperto(data)}-07-01`).get(clube) ?? 0;
-  precisa = Math.min(1, Math.max(0, precisa - (saldo / valorDoElenco) * 2));
+  const nivel = mundo.clube(clube)?.nivel ?? 50;
   return {
-    precisaDeDinheiro: Math.round(precisa * 100) / 100,
+    precisaDeDinheiro: precisaDeDinheiro(c, mundo, clube),
     brigandoPorTitulo: brigando(c, mundo, clube, nivel),
   };
-}
-
-/** Saldo de vendas menos compras de cada clube desde a data (calculado uma vez por lista). */
-const saldos = new WeakMap<readonly object[], { desde: string; mapa: Map<string, number> }>();
-function saldosDaTemporada(
-  lista: NonNullable<Carreira["transferencias"]>,
-  desde: string,
-): Map<string, number> {
-  const guardado = saldos.get(lista);
-  if (guardado?.desde === desde) return guardado.mapa;
-  const mapa = new Map<string, number>();
-  for (const t of lista) {
-    if (t.data < desde || !t.valor) continue;
-    if (t.de) mapa.set(t.de, (mapa.get(t.de) ?? 0) + t.valor);
-    if (t.para) mapa.set(t.para, (mapa.get(t.para) ?? 0) - t.valor);
-  }
-  saldos.set(lista, { desde, mapa });
-  return mapa;
-}
-
-/** Posição e jogos de cada clube na 1ª divisão do país, calculados uma vez por estado do mundo. */
-const posicoes = new WeakMap<object, Map<string, { posicao: number; jogos: number }>>();
-function posicoesNaLiga(c: Pick<Carreira, "competicoes">, mundo: Mundo) {
-  const chave = c.competicoes.competicoes;
-  let mapa = posicoes.get(chave);
-  if (mapa) return mapa;
-  mapa = new Map();
-  for (const e of Object.values(chave)) {
-    const comp = mundo.competicao(e.id);
-    if (!comp || comp.tipo !== "liga" || comp.divisao !== 1 || e.encerrada) continue;
-    (e.fases[0]?.grupos ?? []).forEach((_, g) => {
-      tabelaDoGrupo(comp, e, 0, g).forEach((l, i) =>
-        mapa!.set(l.clube, { posicao: i, jogos: l.jogos }),
-      );
-    });
-  }
-  posicoes.set(chave, mapa);
-  return mapa;
 }
 
 /** Entre os 3 primeiros da 1ª divisão com 5 jogos ou mais; antes disso, a elite (nível 85+). */

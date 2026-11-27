@@ -79,8 +79,12 @@ function sortearLado(rng: Rng, posicao: Posicao): Lado {
 }
 
 /** Salário mensal na moeda do jogo; cresce exponencialmente com a força. Calibrado na Fase 14. */
+/**
+ * Salário mensal pela força (etapa 14a, na escala real): 2 milhões na força 90, uns 4,2 vezes
+ * menos a cada 10 pontos (476 mil na 80, 113 mil na 70, 27 mil na 60, 6 mil na 50).
+ */
 export function salarioBase(forca: number): number {
-  return Math.round((800 * 1.068 ** forca) / 100) * 100;
+  return Math.max(500, Math.round((2_000_000 * 1.1544 ** (forca - 90)) / 100) * 100);
 }
 
 export interface OpcoesJogador {

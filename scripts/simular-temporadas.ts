@@ -13,6 +13,7 @@ import {
   diasEntre,
   mundoNaData,
   novaCarreira,
+  precisaDeDinheiro,
   propostaDeRenovacao,
   renovarContrato,
   partidaDoCompromisso,
@@ -53,8 +54,13 @@ const resumo = () => {
   const tipos = ["emprestimo", "leilao", "troca", "pre-contrato"]
     .map((x) => `${x} ${doAno.filter((t) => t.tipo === x).length}`)
     .join(", ");
+  const clubesCpu = (base.clubes ?? []).filter((x) => !x.filialDe && x.id !== c.clube);
+  const precisas = clubesCpu.map((x) => precisaDeDinheiro(c, m, x.id));
+  const crise = precisas.filter((p) => p >= 0.6).length / precisas.length;
+  const folgados = precisas.filter((p) => p === 0).length / precisas.length;
+  const financas = `CPU em crise ${(crise * 100).toFixed(0)}%, com folga ${(folgados * 100).toFixed(0)}% | caixa do técnico ${((c.caixa ?? 0) / 1e6).toFixed(0)}M`;
   linhas.push(
-    `${c.data} | elencos ${Math.min(...n)}-${Math.max(...n)} (média ${(n.reduce((a, b) => a + b, 0) / n.length).toFixed(1)}) | sem goleiro ${semGoleiro} | top 20 (11 melhores) ${mediaTop.toFixed(1)} | livres ${livresDe(c).length} | transferências guardadas ${transf.length} (${daTemporada} no ano) | ${tipos} | empréstimos ativos ${c.emprestimos?.length ?? 0} | salvamento ${(JSON.stringify(c).length / 1e6).toFixed(1)} MB | ${((Date.now() - inicio) / 1000).toFixed(0)} s`,
+    `${c.data} | ${financas} | elencos ${Math.min(...n)}-${Math.max(...n)} (média ${(n.reduce((a, b) => a + b, 0) / n.length).toFixed(1)}) | sem goleiro ${semGoleiro} | top 20 (11 melhores) ${mediaTop.toFixed(1)} | livres ${livresDe(c).length} | transferências guardadas ${transf.length} (${daTemporada} no ano) | ${tipos} | empréstimos ativos ${c.emprestimos?.length ?? 0} | salvamento ${(JSON.stringify(c).length / 1e6).toFixed(1)} MB | ${((Date.now() - inicio) / 1000).toFixed(0)} s`,
   );
   console.log(linhas.at(-1));
 };

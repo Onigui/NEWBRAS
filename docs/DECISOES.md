@@ -636,3 +636,25 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Uns 100 empréstimos e 50 a 70 leilões por ano no mundo, com 70 a 110 empréstimos em andamento por vez; o total passa a 1.500 a 1.900 transferências por ano.
   - Os 11 melhores dos 20 clubes mais fortes vão de 86,6 a 89,5 e se estabilizam.
   - O salvamento termina com 8,7 a 9,3 MB, e a simulação leva uns 55 segundos por temporada.
+
+## Finanças de verdade (etapa 14a, 27/11/2026)
+
+- **Escala real dos salários:** 2 milhões por mês na força 90, uns 4,2 vezes menos a cada 10 pontos (476 mil na 80, 113 mil na 70, 27 mil na 60, 6 mil na 50). Antes a escala era uns 6 vezes mais baixa que a dos valores de mercado. A mudança vale para os contratos do banco, as renovações, o pré-contrato e a rescisão.
+- **Receita anual pelo nível econômico e pelo país:** o nível econômico é metade o nível do clube (tamanho, torcida, história) e metade a força média dos 11 melhores do elenco, então time que melhora ganha mais (prêmios, público, patrocínio) e o que se desmancha perde. A receita é de 750 milhões no nível econômico 90, uns 3 vezes menos a cada 10 pontos, vezes a economia do país: Premier League 1,3; Arábia Saudita 1,2; Espanha e Alemanha 1,1; Itália 1; França e EUA 0,9; Portugal, Holanda, México e Turquia 0,8; Brasil 0,65; Argentina 0,55; o resto 0,65. A folha fica perto de metade da receita em todos os níveis (mais folgada na Inglaterra e na Arábia, mais apertada na Argentina).
+- **Clube do técnico, todo dia 1:**
+  - Entram cotas de TV (30% da receita anual, divididos por 12), patrocínio (22%) e comercial (6%).
+  - Saem salários (os contratos do elenco; o emprestado a outro clube custa só a parte que o técnico paga), estrutura e funcionários (20%), manutenção do estádio (meio jogo de casa cheia) e olheiros.
+  - Uma notícia fecha o mês com os salários, as receitas e o saldo fixo.
+- **Bilheteria em cada jogo em casa:**
+  - O público vem da reputação do clube (35% da capacidade na reputação 1, 85% na 5), e a moral do time soma ou tira até 20 pontos.
+  - O ingresso médio sobe com o nível (80 no nível 90, 35 no Flamengo) e com a economia do país. O amistoso leva metade do público pela metade do preço.
+  - Preço por setor, sócio-torcedor e obras ficam para a etapa do estádio.
+- **Premiações:** título e vice pagam parte da receita anual, com o vice levando a metade: liga 10%, continental 12%, mundial 8%, copa nacional 4% e estadual 2%.
+- **Aba Finanças (tecla 0):** caixa, receita anual estimada, folha, o que entra e sai todo mês, estádio (público esperado e renda por jogo), extrato dos últimos 12 meses (com bilheteria, premiações, vendas e compras) e os maiores salários.
+- **Caixa de cada clube da CPU:**
+  - Começa sorteado em parte da receita anual. A maioria tem folga; 5% a 18% (mais nos pequenos) começam no vermelho.
+  - Todo dia 1 recebe 78% da receita do mês (10% a mais para os 3 primeiros da 1ª divisão, 8% a menos da 15ª posição para baixo) e paga a folha pela força atual e a estrutura (20%; no vermelho, o clube corta gastos e cai a 8%). Compras e vendas mexem no caixa no dia.
+  - O teto é 60% da receita anual: acima disso, o dono investe ou retira.
+- **"Precisa de dinheiro" vem do caixa:** com 4 meses de receita ou mais de folga, nada; no zero, 0,6; com 2,7 meses no vermelho, 1. A estimativa da etapa 13b (aperto sorteado por temporada menos o saldo de vendas) saiu. O orçamento de compra da CPU agora também respeita o caixa (até 80% dele, sem passar de 15% do valor do elenco).
+- **Fica para as próximas etapas:** dívida, salários atrasados e o efeito cascata, punições e empréstimo bancário com juros para o técnico e para a CPU (14b); ingressos por setor, sócio-torcedor, obras, naming rights e o resto do estádio (14c).
+- **Teste de 4 temporadas só com a CPU:** clubes da CPU no vermelho caem de 18% (sorteio inicial) para 9% a 11% e ficam estáveis. Com o tempo, uns 70% têm folga de 4 meses de receita ou mais. Elencos de 18 a 30, nenhum clube sem goleiro, e uns 45 segundos por temporada.
