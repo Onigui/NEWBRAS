@@ -12,6 +12,7 @@ import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
 import { aceitaOClube, livresDe, presosEmNegocio, type Transferencia } from "./comum";
 import { respostaDeVenda, situacaoDoClube, type SituacaoDoClube } from "./situacao";
+import { caixaDaCpu } from "../financas/financas";
 import { janelaAberta, valorDeMercado } from "./valor";
 
 /** Titulares por posição num 4-4-2 (para achar a posição mais fraca). */
@@ -123,7 +124,11 @@ export function mercadoDaCpu(
     const maximo = comprador.nivel + 6;
     const meu = situacao(comprador.id);
     const valorDoElenco = elenco.reduce((s, j) => s + valorDeMercado(j, data), 0);
-    const orcamento = valorDoElenco * ORCAMENTO * (1 - meu.precisaDeDinheiro);
+    // Gasta o que tem em caixa, sem passar de 15% do valor do elenco por vez.
+    const orcamento = Math.min(
+      valorDoElenco * ORCAMENTO * (1 - meu.precisaDeDinheiro),
+      Math.max(0, caixaDaCpu(c, mundo, comprador.id) * 0.8),
+    );
     const cabe = (j: Jogador) =>
       j.forca >= minimo &&
       j.forca <= maximo &&

@@ -37,6 +37,7 @@ import {
   virarTemporadas,
   type JogoSimulado,
   type MundoCompeticoes,
+  type RegistroHistorico,
 } from "../competicoes/mundo";
 import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
@@ -74,6 +75,7 @@ import {
   type Transferencia,
 } from "../mercado/mercado";
 import { diaDosNegocios } from "../mercado/negocios";
+import { bilheteria, diaDasFinancas, premiacoes, type MesFinanceiro } from "../financas/financas";
 import {
   depoisDoJogo,
   diaDoElenco,
@@ -230,6 +232,10 @@ export interface Carreira {
   leiloes?: Leilao[];
   /** Jogadores do técnico sondados por clubes da CPU no fim do contrato. */
   sondagens?: Sondagem[];
+  /** Extrato do clube do técnico, mês a mês (etapa 14a). */
+  financas?: MesFinanceiro[];
+  /** Caixa de cada clube da CPU (os que ainda não mexeram usam o inicial sorteado). */
+  caixasCpu?: Record<string, number>;
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -594,6 +600,15 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   // Campeões e acessos da temporada do país do técnico, das continentais da confederação dele e das
   // competições mundiais.
   const continental = pais ? `conf:${pais.confederacao}` : "";
+  // Títulos e vices do técnico nas competições que acabaram hoje (premiação, etapa 14a).
+  const premiadas = new Map<string, RegistroHistorico>();
+  for (const v of virada.encerradas) {
+    for (const h of competicoes.historico.filter((x) => x.temporada === v.temporada)) {
+      const comp = mundo.competicao(h.competicao);
+      if (!comp || chaveDaCompeticao(comp) !== v.pais) continue;
+      if (h.campeao === c.clube || h.vice === c.clube) premiadas.set(h.competicao, h);
+    }
+  }
   for (const v of virada.encerradas) {
     if (v.pais !== clube?.pais && v.pais !== continental && v.pais !== CHAVE_MUNDIAL) continue;
     for (const h of competicoes.historico.filter((x) => x.temporada === v.temporada)) {
@@ -735,8 +750,19 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   // Empréstimos que acabam, pré-contratos que chegam, leilões e os empréstimos da CPU.
   const negocios = diaDosNegocios(final, mundoAmanha, data);
   for (const n of negocios.noticias) novidades.unshift(n);
+  // Finanças: premiações, o fechamento do mês e o caixa da CPU.
+  const premios = premiacoes(negocios.carreira, mundoAmanha, data, [...premiadas.values()]);
+  const financas = diaDasFinancas(premios.carreira, mundoAmanha, data);
+  const extras = [...premios.noticias, ...financas.noticias];
+  for (const n of extras) novidades.unshift(n);
+  const comFinancas = extras.length
+    ? {
+        ...financas.carreira,
+        noticias: [...extras, ...financas.carreira.noticias].slice(0, MAX_NOTICIAS),
+      }
+    : financas.carreira;
   return {
-    carreira: negocios.carreira,
+    carreira: comFinancas,
     novidades,
     parouPor: jogo ? "jogo" : negocios.decisao ? "decisao" : "dia",
   };
@@ -992,8 +1018,8 @@ export function registrarJogo(
 ): Carreira {
   const x = agendaCompleta(c).find((y) => y.id === compromissoId);
   if (!x || x.resultado) return c;
-  // Depois do placar e dos cartões: lesões e a moral de cada jogador.
-  return depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r);
+  // Depois do placar e dos cartões: lesões e a moral de cada jogador; em casa, a bilheteria.
+  return bilheteria(depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r), mundo, x);
 }
 
 function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoPartida): Carreira {

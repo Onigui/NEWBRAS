@@ -47,6 +47,7 @@ import { Plantel } from "./Plantel";
 import { Selecoes } from "./Selecoes";
 import { Base } from "./Base";
 import { Mercado } from "./Mercado";
+import { Financas } from "./Financas";
 import { Sondagens } from "./Sondagens";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
@@ -62,7 +63,8 @@ type Aba =
   | "competicoes"
   | "selecoes"
   | "base"
-  | "mercado";
+  | "mercado"
+  | "financas";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "inicio", nome: t("Início"), tecla: "1" },
   { id: "plantel", nome: t("Plantel"), tecla: "2" },
@@ -73,6 +75,7 @@ const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "selecoes", nome: t("Seleções"), tecla: "7" },
   { id: "base", nome: t("Base"), tecla: "8" },
   { id: "mercado", nome: t("Mercado"), tecla: "9" },
+  { id: "financas", nome: t("Finanças"), tecla: "0" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -170,7 +173,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   }, [c, jogadores]);
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
 
-  // F2 salva na hora; 1 a 9 trocam de aba (fora de campos de texto).
+  // F2 salva na hora; 1 a 9 e 0 trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
   const tecla = useCallback(
     (e: KeyboardEvent) => {
@@ -360,6 +363,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
             {aba === "base" && <Base c={c} montado={montado} mudar={mudar} />}
             {aba === "mercado" && <Mercado c={c} montado={montado} mudar={mudar} />}
+            {aba === "financas" && <Financas c={c} montado={montado} />}
             {aba === "escalacao" && (
               <div className="flex flex-col gap-3">
                 <Tatica c={c} mudar={mudar} />
