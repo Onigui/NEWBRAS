@@ -19,6 +19,10 @@ import {
   avisoPoupar,
   contratoDe,
   convocadosDoClube,
+  custoDaDispensa,
+  dispensarJogador,
+  porAVenda,
+  valorDeMercado,
   diasEntre,
   faixaDaMoral,
   fatorDeRecaida,
@@ -430,6 +434,7 @@ function Ficha({
         )}
       </div>
       {l.contrato && <Renovacao l={l} c={c} montado={montado} {...(mudar ? { mudar } : {})} />}
+      {mudar && <AcoesDeMercado l={l} c={c} montado={montado} mudar={mudar} />}
     </aside>
   );
 }
@@ -505,6 +510,59 @@ function Renovacao({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Valor de mercado, pôr à venda e dispensar (com o custo da rescisão). */
+function AcoesDeMercado({
+  l,
+  c,
+  montado,
+  mudar,
+}: {
+  l: Linha;
+  c: Carreira;
+  montado: MundoMontado;
+  mudar: (f: (c: Carreira) => Carreira) => void;
+}) {
+  const aVenda = (c.aVenda ?? []).includes(l.j.id);
+  const custo = custoDaDispensa(c, montado.mundo, l.j.id);
+  return (
+    <div className="text-sm">
+      <p className="mb-1 text-xs font-bold text-suave">{t("Mercado")}</p>
+      <p>
+        {t("Valor de mercado: {valor}.", {
+          valor: valorDeMercado(l.j, c.data, l.contrato).toLocaleString(locale()),
+        })}
+      </p>
+      <div className="mt-1 flex flex-wrap gap-1">
+        <button
+          type="button"
+          className="rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho"
+          onClick={() => mudar((x) => porAVenda(x, l.j.id, !aVenda))}
+        >
+          {aVenda ? t("Tirar da venda") : t("Pôr à venda")}
+        </button>
+        <button
+          type="button"
+          className="rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-[#ff8a7a] hover:text-[#ff8a7a]"
+          title={t("Rescisão: metade dos salários que faltam do contrato")}
+          onClick={() => {
+            if (
+              window.confirm(
+                t("Dispensar {jogador}? A rescisão custa {valor}.", {
+                  jogador: l.j.nome,
+                  valor: custo.toLocaleString(locale()),
+                }),
+              )
+            )
+              mudar((x) => dispensarJogador(x, montado.mundo, l.j.id));
+          }}
+        >
+          {t("Dispensar ({valor})", { valor: custo.toLocaleString(locale()) })}
+        </button>
+      </div>
     </div>
   );
 }

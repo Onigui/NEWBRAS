@@ -439,6 +439,14 @@ export class EvolucaoDoMundo {
     return jogadorNaData(g, quando < g.inicio ? g.inicio : quando);
   }
 
+  /** O jogador já pendurou as chuteiras na data? */
+  aposentado(id: string, data: string): boolean {
+    const g = this.porId.get(id);
+    if (!g) return false;
+    this.estender(fimDoAno(data));
+    return !!g.fim && g.fim <= this.dataDoClube(g.clube, data);
+  }
+
   /** O que aconteceu nos elencos do mundo na data. */
   eventos(data: string): readonly EventoElenco[] {
     this.estender(fimDoAno(data));

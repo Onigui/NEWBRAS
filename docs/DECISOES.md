@@ -512,3 +512,31 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **A CPU também revela:** os garotos da base do banco nos outros clubes sobem aos 18 anos quando são ícones ou têm potencial de pelo menos o nível do clube + 2 (586 no mundo inicial); os outros saem da base. O júnior que entra no lugar do aposentado também representa a revelação da CPU.
 - **Ícones:** os 22 ídolos que recomeçam na base (Zidane, Ronaldo, Bale e outros) sobem ao profissional dos seus clubes aos 18. Por exemplo, Zidane chega ao profissional do Rondoniense em 2028, com força 66 e potencial 96. Se o clube for o do técnico, quem decide a promoção é ele.
 - **Fica para depois:** investimento na estrutura da base (com as finanças, na Fase 14) e campeonatos de base.
+
+## Mercado do técnico (etapa 13a, 26/11/2026)
+
+- **A Fase 13 em etapas:**
+  - 13a: mercado do técnico (comprar, vender, dispensar, livres, janelas).
+  - 13b: mercado aquecido entre os clubes da CPU (diagnóstico do elenco, objetivo, orçamento e negociação), com dispensas da CPU alimentando os livres.
+  - 13c: pré-contrato nos últimos 6 meses, empréstimos e leilões.
+- **Transferências na carreira:** cada mudança de clube vira um registro (compra, venda, dispensa, fim de contrato, livre contratado). O mundo da data lê os registros para montar os elencos: quem saiu some, quem chegou entra com a evolução dele e quem ficou sem clube é livre. O jogador transferido que se aposenta abre o júnior no clube de origem (simplificação).
+- **Valor de mercado:**
+  - Cresce uns 4 vezes a cada 10 pontos de força; força 90 no auge vale 100 milhões.
+  - O jovem com margem de crescer vale até 2,5 vezes; o valor cai com a idade a partir dos 28 (30 anos ×0,7; 32 ×0,5).
+  - O contrato no fim derruba o valor (menos de 1 ano ×0,75; menos de 6 meses ×0,5). Estrela vale ×1,15.
+  - Exemplos: Haaland, 160 milhões; Olise, 150; Kane, aos 32, 66.
+- **Caixa:** começa com 10% do valor do elenco (147 milhões no Real Madrid). Compras saem e vendas entram. Salários e receitas vêm com as finanças, na Fase 14 (por enquanto a escala de salários é mais baixa que a dos valores).
+- **Janelas reais:** compra só com a janela do país do comprador aberta. Fora dela, só jogadores livres, que podem ser contratados a qualquer hora. Um país sem janelas no banco usa as da Europa.
+- **Comprar:**
+  - O clube pede pelo valor: ×1,6 pelos 3 melhores do elenco, ×1,3 pelos titulares e ×1,05 pelo resto (clube rico, ×1,15 a mais).
+  - Oferta de pelo menos 85% do pedido vira contraproposta.
+  - O clube não vende com 18 ou menos no elenco. O jogador recusa descer mais de 8 níveis, a não ser que caiba no clube novo.
+  - Contrato de 3 anos (2 depois dos 31, 1 depois dos 34), pelo salário que ele pede.
+- **Vender:**
+  - Na janela, o jogador à venda recebe propostas da CPU (12% por dia), de clubes de nível perto da força dele, com 80% a 110% do valor.
+  - Os 5 melhores recebem propostas sem estar à venda, de vez em quando, com 110% a 150% do valor.
+  - A proposta vale 7 dias.
+- **Dispensar:** a rescisão custa metade dos salários que faltam. O jogador fica livre, como quem termina o contrato.
+- **Interface:**
+  - Aba Mercado (tecla 9): caixa e janela, propostas recebidas, busca no mundo inteiro (nome, posição, força, idade, valor, só livres), proposta com resposta na hora, à venda e transferências do clube.
+  - Ficha do jogador: valor, pôr à venda e dispensar.

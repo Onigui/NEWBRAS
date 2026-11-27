@@ -8,6 +8,7 @@ import { convocar } from "../selecoes/convocacao";
 import { somarDias } from "../carreira/datas";
 import { EvolucaoDoMundo } from "./evolucao";
 import { jogadorDaBaseNaData, type JogadorDaBase } from "./base";
+import type { Transferencia } from "../mercado/mercado";
 
 /** Marca do mundo da data: guarda o mundo do banco por trás dele. */
 const BASE = Symbol("mundo do banco");
@@ -49,6 +50,8 @@ export interface CarreiraParaMundo {
   jogadores?: Readonly<Record<string, { ajuste?: number }>>;
   /** Quem o técnico subiu da base (entra no elenco, evoluindo desde a promoção). */
   promovidos?: readonly JogadorDaBase[];
+  /** Mudanças de clube (compras, vendas, dispensas, livres). */
+  transferencias?: readonly Transferencia[];
 }
 
 /** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
@@ -73,6 +76,7 @@ function comAjuste(j: Jogador, ajuste: number): Jogador {
 }
 
 const doClubeCache = new WeakMap<readonly Jogador[], { assinatura: string; lista: Jogador[] }>();
+const transferidosCache = new WeakMap<readonly Jogador[], { chave: string; lista: Jogador[] }>();
 
 /**
  * O mundo como está na data da carreira: o elenco evoluído, sem quem saiu do clube do técnico e
@@ -88,7 +92,19 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   const ajustes = new Map<string, number>();
   for (const [id, e] of Object.entries(c.jogadores ?? {})) if (e.ajuste) ajustes.set(id, e.ajuste);
   const promovidos = c.promovidos ?? [];
-  if (!evolui && !saidas.size && !ajustes.size && !promovidos.length) return base;
+  const transferencias = c.transferencias ?? [];
+  if (!evolui && !saidas.size && !ajustes.size && !promovidos.length && !transferencias.length)
+    return base;
+  // Transferências: a última de cada jogador diz onde ele está (sem clube: livre).
+  const ultima = new Map<string, Transferencia>();
+  for (const t of transferencias) if (t.data <= data) ultima.set(t.jogador, t);
+  const entradas = new Map<string, string[]>();
+  for (const t of ultima.values())
+    if (t.para) {
+      const l = entradas.get(t.para);
+      if (l) l.push(t.jogador);
+      else entradas.set(t.para, [t.jogador]);
+    }
   // Os promovidos evoluem pela temporada do clube, como o resto do mundo.
   const dataDoClube = evolucao && c.clube ? evolucao.dataDoClube(c.clube, data) : data;
   const promovidosHoje = new Map(
@@ -133,17 +149,41 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     }
     return lista;
   };
-  const elencoDoClube = (id: string) =>
+  const jogadorBruto = (id: string) =>
+    promovidosHoje.get(id) ?? (evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id));
+  const aposentado = (id: string) => !!evolucao && evolui && evolucao.aposentado(id, data);
+  const elencoNatural = (id: string) =>
     evolucao && evolui ? evolucao.elenco(id, data) : base.elenco(id);
+  const elencoDoClube = (id: string): readonly Jogador[] => {
+    const natural = elencoNatural(id);
+    const chegaram = entradas.get(id);
+    if (!ultima.size || (!chegaram && !natural.some((j) => ultima.has(j.id)))) return natural;
+    const chave = `${transferencias.length}|${data}`;
+    const guardado = transferidosCache.get(natural);
+    if (guardado?.chave === chave) return guardado.lista;
+    const lista = [
+      ...natural.filter((j) => !ultima.has(j.id)),
+      ...(chegaram ?? [])
+        .filter((x) => !aposentado(x))
+        .map((x) => jogadorBruto(x))
+        .filter((j): j is Jogador => !!j)
+        .map((j) => (j.clube === id && !j.base ? j : { ...j, clube: id, base: false })),
+    ];
+    transferidosCache.set(natural, { chave, lista });
+    return lista;
+  };
   const view: MundoNaData = {
     ...base,
     [BASE]: base,
     ...(evolucao ? { evolucao } : {}),
     data,
     jogador: (id) => {
-      const j =
-        promovidosHoje.get(id) ??
-        (evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id));
+      let j = jogadorBruto(id);
+      const t = ultima.get(id);
+      if (j && t && j.clube !== t.para) {
+        const { clube: _, ...resto } = j;
+        j = t.para ? { ...resto, clube: t.para, base: false } : (resto as Jogador);
+      }
       return j && ajustes.has(id) ? comAjuste(j, ajustes.get(id)!) : j;
     },
     elenco: (id) =>
