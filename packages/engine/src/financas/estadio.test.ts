@@ -6,6 +6,8 @@ import {
   aceitarNome,
   bilheteriaDoJogo,
   capacidadeAtual,
+  construirArena,
+  orcamentoDaArena,
   definirMensalidade,
   definirPrecos,
   diaDoEstadio,
@@ -16,6 +18,7 @@ import {
   responderEvento,
   tetoDosPrecos,
 } from "./estadio";
+import { cacheDoAmistoso, convitesDoMes, responderConvite } from "./amistosos";
 
 const PAIS = {
   codigo: "BRA",
@@ -248,5 +251,72 @@ describe("sócios, obras, nome e eventos", () => {
     expect(c.caixa).toBe(2_000_000);
     c = diaDoEstadio(c, m, "2027-03-01").carreira;
     expect(c.financas?.at(-1)?.valores.naming).toBe(1_000_000);
+  });
+});
+
+describe("arena nova, aluguel e amistosos", () => {
+  it("arena no lugar: estádio alugado durante a obra; entregue, maior e moderna", () => {
+    const m = mundo();
+    let c: Carreira = { ...nova(m), caixa: 1e10 };
+    const { custo } = orcamentoDaArena(m, "nosso", 60_000, true);
+    expect(orcamentoDaArena(m, "nosso", 60_000, false).custo).toBeGreaterThan(custo);
+    const r = construirArena(c, m, {
+      capacidade: 60_000,
+      noLugar: true,
+      financiar: custo,
+      meses: 120,
+      nome: "Arena Nova",
+    });
+    expect(r.resultado).toBe("ok");
+    c = r.carreira;
+    // Financiou 80%; pagou 20% do caixa.
+    expect(c.emprestimosBancarios?.[0]).toMatchObject({
+      valor: Math.round((custo * 0.8) / 1e6) * 1e6,
+      taxa: 0.006,
+      meses: 120,
+    });
+    expect(publicoDoJogo(c, m, jogo("a")).alugado).toBe(true);
+    const antes = publicoDoJogo({ ...c, estadio: {} }, m, jogo("a"));
+    const fim = c.estadio!.arena!.fim;
+    let [ano, mes] = c.data.split("-").map(Number) as [number, number];
+    for (let i = 0; i < 48; i++) {
+      mes++;
+      if (mes > 12) {
+        mes = 1;
+        ano++;
+      }
+      const data = `${ano}-${String(mes).padStart(2, "0")}-01`;
+      c = diaDoEstadio({ ...c, data }, m, data).carreira;
+      if (data > fim) break;
+    }
+    expect(c.estadio).toMatchObject({ capacidade: 60_000, nome: "Arena Nova", moderna: true });
+    expect(c.estadio?.arena).toBeUndefined();
+    const depois = publicoDoJogo(c, m, jogo("b"));
+    expect(depois.alugado).toBe(false);
+    expect(depois.renda).toBeGreaterThan(antes.renda);
+  });
+
+  it("cachê: o maior cobra para jogar; convite de excursão vira amistoso em campo neutro", () => {
+    const m = mundo();
+    const c = nova(m);
+    expect(cacheDoAmistoso(c, m, { adversario: "pobre", mando: "fora" })).toBeGreaterThan(0);
+    expect(cacheDoAmistoso(c, m, { adversario: "rico", mando: "casa" })).toBeLessThan(0);
+    expect(cacheDoAmistoso(c, m, { adversario: "pobre", mando: "casa" })).toBe(0);
+    m.clube("rico")!.nivel = 78;
+    let convite;
+    let quando = "";
+    for (let i = 1; i <= 12 && !convite; i++) {
+      quando = `2028-${String(i).padStart(2, "0")}-01`;
+      convite = convitesDoMes({ ...c, data: quando }, m, quando).convites[0];
+    }
+    expect(convite?.adversario).toBe("rico");
+    const r = responderConvite(
+      { ...c, data: quando, convitesAmistosos: [convite!] },
+      m,
+      convite!.id,
+      true,
+    );
+    const marcado = r.agenda.find((x) => x.data === convite!.data);
+    expect(marcado).toMatchObject({ tipo: "amistoso", neutro: true, cache: convite!.cache });
   });
 });

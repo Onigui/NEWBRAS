@@ -5,7 +5,9 @@
 import { useMemo, useState } from "react";
 import {
   agendaCompleta,
+  cacheDoAmistoso,
   dataCurta,
+  responderConvite,
   nomeDoCompromisso,
   desmarcarAmistoso,
   marcarAmistoso,
@@ -17,7 +19,7 @@ import { Escudo } from "../components/Escudo";
 import { procurar } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import type { MundoMontado } from "./useCarreira";
-import { t } from "@newbras/textos";
+import { locale, t } from "@newbras/textos";
 
 export function Jogos({
   c,
@@ -70,7 +72,23 @@ export function Jogos({
                   <span className="flex flex-1 items-center gap-1">
                     {fora && <Escudo clube={fora} tamanho={18} />}
                     {fora?.nomeCurto}
+                    {x.neutro && x.tipo === "amistoso" && (
+                      <span className="text-xs text-suave">{t("(neutro)")}</span>
+                    )}
                   </span>
+                  {x.tipo === "amistoso" &&
+                    (() => {
+                      const v = cacheDoAmistoso(c, mundo, x);
+                      return v ? (
+                        <span
+                          className={`text-xs ${v > 0 ? "text-[#7ed37a]" : "text-[#ff8a7a]"}`}
+                          title={t("Cachê do amistoso")}
+                        >
+                          {v > 0 ? "+" : ""}
+                          {v.toLocaleString(locale())}
+                        </span>
+                      ) : null;
+                    })()}
                   {!r && x.tipo === "amistoso" && x.data > c.data && (
                     <button
                       type="button"
@@ -95,9 +113,43 @@ export function Jogos({
           })}
         </ul>
       </div>
-      <div className="rounded border border-placar-borda p-3">
-        <h2 className="mb-2 font-placar text-2xl font-bold">{t("Marcar amistoso")}</h2>
-        <MarcarAmistoso c={c} montado={montado} mudar={mudar} dataInicial={somarDias(c.data, 7)} />
+      <div className="flex flex-col gap-4">
+        {(c.convitesAmistosos ?? []).filter((x) => x.ate >= c.data).length > 0 && (
+          <div className="rounded border border-placar-borda p-3 text-sm">
+            <h2 className="mb-2 font-placar text-2xl font-bold">{t("Convites de excursão")}</h2>
+            {(c.convitesAmistosos ?? [])
+              .filter((x) => x.ate >= c.data)
+              .map((x) => (
+                <div key={x.id} className="mb-2">
+                  <p>
+                    {t("{clube} em {data}, campo neutro, cachê de {cache} (responda até {ate}).", {
+                      clube: mundo.clube(x.adversario)?.nomeCurto ?? x.adversario,
+                      data: dataCurta(x.data),
+                      cache: x.cache.toLocaleString(locale()),
+                      ate: dataCurta(x.ate),
+                    })}
+                  </p>
+                  <div className="mt-1 flex gap-1">
+                    <Botao onClick={() => mudar((y) => responderConvite(y, mundo, x.id, true))}>
+                      {t("Aceitar")}
+                    </Botao>
+                    <Botao onClick={() => mudar((y) => responderConvite(y, mundo, x.id, false))}>
+                      {t("Recusar")}
+                    </Botao>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+        <div className="rounded border border-placar-borda p-3">
+          <h2 className="mb-2 font-placar text-2xl font-bold">{t("Marcar amistoso")}</h2>
+          <MarcarAmistoso
+            c={c}
+            montado={montado}
+            mudar={mudar}
+            dataInicial={somarDias(c.data, 7)}
+          />
+        </div>
       </div>
     </div>
   );
@@ -187,6 +239,21 @@ export function MarcarAmistoso({
           </span>
         </p>
       )}
+      {adversario &&
+        (() => {
+          const v = cacheDoAmistoso(c, mundo, { adversario, mando });
+          return v ? (
+            <p className={v > 0 ? "text-[#7ed37a]" : "text-[#ffc38a]"}>
+              {v > 0
+                ? t("Cachê: o clube recebe {valor} para jogar.", {
+                    valor: v.toLocaleString(locale()),
+                  })
+                : t("Cachê: o adversário é bem maior e cobra {valor} para vir.", {
+                    valor: (-v).toLocaleString(locale()),
+                  })}
+            </p>
+          ) : null;
+        })()}
       {problemas.length > 0 && (
         <p className="text-[#ff8a7e]">{problemas.map((p) => t(p)).join("; ")}.</p>
       )}

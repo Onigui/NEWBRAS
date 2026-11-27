@@ -47,13 +47,33 @@ export interface OfertaDeNome {
 
 export interface OfertaDeEvento {
   id: string;
-  tipo: "show" | "festival" | "jogo-beneficente";
+  tipo: "show" | "festival" | "jogo-beneficente" | "aluguel";
+  /** No aluguel: o clube que aluga o estádio. */
+  clube?: string;
   renda: number;
   data: string;
   ate: string;
 }
 
+/** Arena nova em construção (etapa 14d). */
+export interface ArenaEmObra {
+  nome: string;
+  capacidade: number;
+  custo: number;
+  inicio: string;
+  fim: string;
+  meses: number;
+  pago: number;
+  /** No lugar do estádio velho: mais barata, mas o time joga em estádio alugado durante a obra. */
+  noLugar: boolean;
+}
+
 export interface EstadoDoEstadio {
+  /** Nome próprio do estádio (a arena nova). */
+  nome?: string;
+  /** Arena moderna: enche mais e aceita ingresso mais caro. */
+  moderna?: boolean;
+  arena?: ArenaEmObra;
   /** Capacidade depois das obras (sem o campo, a do banco). */
   capacidade?: number;
   precos?: Record<Setor, number>;
@@ -82,10 +102,17 @@ export function capacidadeAtual(c: Carreira, mundo: Mundo): number {
   return e.obra ? Math.round(base * 0.9) : base;
 }
 
+/** Jogando em estádio alugado por causa da arena nova construída no lugar do velho. */
+export function emEstadioAlugado(c: Carreira): boolean {
+  return !!estadioDe(c).arena?.noLugar;
+}
+
 /** Nome do estádio (com o patrocinador, se houver). */
 export function nomeDoEstadio(c: Carreira, mundo: Mundo): string {
   const e = estadioDe(c);
-  return e.naming ? `${e.naming.marca} Arena` : (mundo.clube(c.clube)?.estadio.nome ?? "");
+  return e.naming
+    ? `${e.naming.marca} Arena`
+    : (e.nome ?? mundo.clube(c.clube)?.estadio.nome ?? "");
 }
 
 /** Peso do jogo no preço e no público: mata-mata e final valem mais; amistoso, menos. */
@@ -103,7 +130,7 @@ function pesoDoJogo(mundo: Mundo, c: Carreira, x?: Compromisso): number {
 
 /** Preço justo de cada setor: o que a torcida aceita pagar agora. */
 export function precosJustos(c: Carreira, mundo: Mundo, x?: Compromisso): Record<Setor, number> {
-  const medio = precoDoIngresso(mundo, c.clube);
+  const medio = precoDoIngresso(mundo, c.clube) * (estadioDe(c).moderna ? 1.15 : 1);
   const fase = 0.85 + 0.3 * ((c.moral ?? 50) / 100);
   const peso = pesoDoJogo(mundo, c, x);
   return Object.fromEntries(
@@ -150,7 +177,11 @@ export function tetoDosPrecos(c: Carreira, mundo: Mundo): Record<Setor, number> 
 /** Ocupação de base (reputação e moral) do estádio, antes do preço. */
 function ocupacaoBase(c: Carreira, mundo: Mundo, peso: number): number {
   const clube = mundo.clube(c.clube);
-  const base = 0.225 + 0.125 * (clube?.reputacao ?? 3) + ((c.moral ?? 50) - 50) / 250;
+  const base =
+    0.225 +
+    0.125 * (clube?.reputacao ?? 3) +
+    ((c.moral ?? 50) - 50) / 250 +
+    (estadioDe(c).moderna ? 0.05 : 0);
   const comPeso = peso >= 1 ? base + (peso - 1) * 0.5 : base * peso;
   return Math.min(1, Math.max(0.1, comPeso));
 }
@@ -186,8 +217,8 @@ export function publicoDoJogo(
 ): PublicoDoJogo {
   const exigida = capacidadeExigida(mundo, x);
   let capacidade = capacidadeAtual(c, mundo);
-  const alugado = exigida > 0 && capacidade < exigida;
-  if (alugado) capacidade = exigida;
+  const alugado = emEstadioAlugado(c) || (exigida > 0 && capacidade < exigida);
+  if (alugado) capacidade = Math.max(exigida, capacidade);
   const peso = pesoDoJogo(mundo, c, x);
   const justos = precosJustos(c, mundo, x);
   const ocupacao = ocupacaoBase(c, mundo, peso);
@@ -241,7 +272,7 @@ export function bilheteriaDoJogo(
       data: x.data,
       tipo: "carreira",
       ...marcar(
-        "O estádio não tem a capacidade exigida pela competição: o jogo foi num estádio alugado e a renda caiu 40%.",
+        "O jogo foi num estádio alugado (obra da arena ou capacidade abaixo da exigida pela competição): a renda caiu 40%.",
       ),
     });
   if (x.tipo === "oficial") {
@@ -487,6 +518,35 @@ export function diaDoEstadio(
       });
     } else e = { ...e, obra: { ...o, pago } };
   }
+  // Arena nova: parcela do mês (a parte sem financiamento) e entrega.
+  if (e.arena) {
+    const o = e.arena;
+    const parcela = Math.min(
+      o.custo - o.pago,
+      arredondar((o.custo - o.pago) / Math.max(1, o.meses), 100_000),
+    );
+    let pago = o.pago;
+    if (parcela > 0) {
+      valores.obras = (valores.obras ?? 0) - parcela;
+      pago += parcela;
+    }
+    if (data >= o.fim) {
+      if (o.custo - pago > 0) valores.obras = (valores.obras ?? 0) - (o.custo - pago);
+      const { arena: _, ...resto } = e;
+      e = { ...resto, capacidade: o.capacidade, nome: o.nome, moderna: true };
+      noticias.push({
+        data,
+        tipo: "carreira",
+        ...marcar(
+          "A {nome} foi inaugurada: {capacidade} lugares, arena moderna. A torcida lota e aceita pagar mais.",
+          {
+            nome: o.nome,
+            capacidade: o.capacidade,
+          },
+        ),
+      });
+    } else e = { ...e, arena: { ...o, pago, meses: Math.max(1, o.meses - 1) } };
+  }
   // Sócios: mensalidade e adesões indo ao esperado aos poucos.
   const mensalidade = e.mensalidade ?? mensalidadeJusta(r, mundo);
   const esperado = sociosEsperados(r, mundo, mensalidade);
@@ -525,29 +585,158 @@ export function diaDoEstadio(
     });
   }
   // Eventos: uma oferta de vez em quando, para daqui a 2 a 6 semanas.
-  if (rng.chance(0.25)) {
+  if (rng.chance(0.25) && !emEstadioAlugado(r)) {
     const tipo = rng.weighted<OfertaDeEvento["tipo"]>(
-      ["show", "festival", "jogo-beneficente"],
-      (x) => (x === "show" ? 3 : x === "festival" ? 2 : 1),
+      ["show", "festival", "jogo-beneficente", "aluguel"],
+      (x) => (x === "show" ? 3 : x === "festival" ? 2 : x === "aluguel" ? 2 : 1),
     );
+    // Aluguel: um clube do mesmo país com estádio bem menor quer mandar um jogo grande aqui.
+    const meu = mundo.clube(r.clube);
+    const inquilinos =
+      tipo === "aluguel"
+        ? (mundo.clubes ?? []).filter(
+            (x) =>
+              x.id !== r.clube &&
+              !x.filialDe &&
+              x.pais === meu?.pais &&
+              x.estadio.capacidade < capacidadeAtual(r, mundo) * 0.5,
+          )
+        : [];
+    const inquilino = inquilinos.length ? inquilinos[rng.int(0, inquilinos.length - 1)] : undefined;
     const cheio = capacidadeAtual(r, mundo) * precoDoIngresso(mundo, r.clube);
-    const fator = tipo === "show" ? 0.5 : tipo === "festival" ? 0.8 : 0.15;
+    const fator =
+      tipo === "show" ? 0.5 : tipo === "festival" ? 0.8 : tipo === "aluguel" ? 0.2 : 0.15;
     const quando = somarDias(data, rng.int(14, 42));
-    e = {
-      ...e,
-      eventos: [
-        ...(e.eventos ?? []),
-        {
-          id: `evento:${data}`,
-          tipo,
-          renda: arredondar(cheio * fator * rng.float(0.7, 1.2), 10_000),
-          data: quando,
-          ate: somarDias(data, 10),
-        },
-      ],
-    };
+    if (tipo !== "aluguel" || inquilino)
+      e = {
+        ...e,
+        eventos: [
+          ...(e.eventos ?? []),
+          {
+            id: `evento:${data}`,
+            tipo,
+            ...(inquilino ? { clube: inquilino.id } : {}),
+            renda: arredondar(cheio * fator * rng.float(0.7, 1.2), 10_000),
+            data: quando,
+            ate: somarDias(data, 10),
+          },
+        ],
+      };
   }
   r = { ...r, estadio: e };
   if (Object.keys(valores).length) r = lancar(r, mundo, data, valores);
   return { carreira: r, noticias };
+}
+
+// ------------------------------------------------------------------------------ Arena nova
+
+export const CAPACIDADES_DA_ARENA = [30_000, 45_000, 60_000, 80_000] as const;
+export const PRAZOS_DO_FINANCIAMENTO = [60, 120] as const;
+const TAXA_DO_FINANCIAMENTO = 0.006;
+
+/**
+ * Custo e prazo da arena nova: o lugar custa 1,6 vez o da ampliação; ao lado do estádio velho,
+ * mais 25% (o time segue jogando em casa). De 24 a 36 meses.
+ */
+export function orcamentoDaArena(
+  mundo: Mundo,
+  clube: string,
+  capacidade: number,
+  noLugar: boolean,
+): { custo: number; meses: number } {
+  const porLugar = orcamentoDaObra(mundo, clube, 10_000).custo / 10_000;
+  const custo = arredondar(capacidade * porLugar * 1.6 * (noLugar ? 1 : 1.25), 1_000_000);
+  return { custo, meses: 24 + Math.round((capacidade / 80_000) * 12) };
+}
+
+/** Financiamento da arena: até 80% do custo, a 0,6% ao mês, em 60 ou 120 meses. */
+export function limiteDoFinanciamento(custo: number): number {
+  return arredondar(custo * 0.8, 1_000_000);
+}
+
+/**
+ * Começa a arena nova. A entrada (o que não for financiado, no mínimo 20%) sai do caixa; o
+ * financiamento entra como empréstimo de longo prazo e paga a obra mês a mês.
+ */
+export function construirArena(
+  c: Carreira,
+  mundo: Mundo,
+  pedido: { capacidade: number; noLugar: boolean; financiar: number; meses: number; nome?: string },
+): { carreira: Carreira; resultado: "ok" | "em-obra" | "caixa" | "invalido" } {
+  const e = estadioDe(c);
+  if (!(CAPACIDADES_DA_ARENA as readonly number[]).includes(pedido.capacidade))
+    return { carreira: c, resultado: "invalido" };
+  if (!(PRAZOS_DO_FINANCIAMENTO as readonly number[]).includes(pedido.meses))
+    return { carreira: c, resultado: "invalido" };
+  if (e.obra || e.arena) return { carreira: c, resultado: "em-obra" };
+  const { custo, meses } = orcamentoDaArena(mundo, c.clube, pedido.capacidade, pedido.noLugar);
+  const financiar = Math.max(
+    0,
+    Math.min(arredondar(pedido.financiar, 1_000_000), limiteDoFinanciamento(custo)),
+  );
+  // Entrada de 20% (ou menos, se quase tudo for financiado); o resto sem financiamento vai em
+  // parcelas mensais até a entrega.
+  const aPagarDoCaixa = Math.min(custo - financiar, arredondar(custo * 0.2, 1_000_000));
+  if (caixaDe(c, mundo) < aPagarDoCaixa) return { carreira: c, resultado: "caixa" };
+  const clube = mundo.clube(c.clube);
+  const nome = pedido.nome?.trim() || `Arena ${clube?.nomeCurto ?? ""}`.trim();
+  const fim = somarDias(c.data, meses * 30);
+  // O financiamento entra e já paga a obra junto com a entrada.
+  let r = lancar(c, mundo, c.data, { obras: -aPagarDoCaixa });
+  if (financiar > 0) {
+    const parcela = Math.round(
+      (financiar * TAXA_DO_FINANCIAMENTO) / (1 - (1 + TAXA_DO_FINANCIAMENTO) ** -pedido.meses),
+    );
+    r = {
+      ...r,
+      emprestimosBancarios: [
+        ...(r.emprestimosBancarios ?? []),
+        {
+          id: `arena:${c.data}`,
+          valor: financiar,
+          saldo: financiar,
+          taxa: TAXA_DO_FINANCIAMENTO,
+          parcela,
+          meses: pedido.meses,
+          restantes: pedido.meses,
+          inicio: c.data,
+          atrasos: 0,
+        },
+      ],
+    };
+  }
+  r = {
+    ...r,
+    estadio: {
+      ...estadioDe(r),
+      arena: {
+        nome,
+        capacidade: pedido.capacidade,
+        custo,
+        inicio: c.data,
+        fim,
+        meses,
+        // O financiado conta como pago (o banco paga a construtora).
+        pago: aPagarDoCaixa + financiar,
+        noLugar: pedido.noLugar,
+      },
+    },
+    noticias: [
+      {
+        data: c.data,
+        tipo: "carreira" as const,
+        ...(pedido.noLugar
+          ? marcar(
+              "Começou a construção da {nome} ({capacidade} lugares, {custo}) no lugar do estádio velho: até {fim}, o time joga em estádio alugado.",
+              { nome, capacidade: pedido.capacidade, custo, fim },
+            )
+          : marcar(
+              "Começou a construção da {nome} ({capacidade} lugares, {custo}) ao lado do estádio velho: pronta em {fim}.",
+              { nome, capacidade: pedido.capacidade, custo, fim },
+            )),
+      },
+      ...r.noticias,
+    ].slice(0, 200),
+  };
+  return { carreira: r, resultado: "ok" };
 }

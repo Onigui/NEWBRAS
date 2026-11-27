@@ -8,6 +8,7 @@ import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import type { Transferencia } from "../mercado/comum";
 import { crisesDaCpu, pagarAtrasados, salariosEParcelas } from "./crise";
 import { diaDoEstadio } from "./estadio";
+import { convitesDoMes } from "./amistosos";
 import {
   folhaSalarial,
   lancar,
@@ -30,6 +31,10 @@ export function diaDasFinancas(
   r = pagos.carreira;
   noticias.push(...pagos.noticias);
   if (!data.endsWith("-01")) return { carreira: r, noticias };
+  const convites = convitesDoMes(r, mundo, data);
+  if (convites.convites.length || r.convitesAmistosos?.length)
+    r = { ...r, convitesAmistosos: convites.convites };
+  noticias.push(...convites.noticias);
 
   // O mês do técnico: o fixo primeiro, depois salários (prioridade) e parcelas.
   const valores = orcamentoMensal(r, mundo);
