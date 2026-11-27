@@ -46,13 +46,22 @@ import { Plantao } from "./Plantao";
 import { Plantel } from "./Plantel";
 import { Selecoes } from "./Selecoes";
 import { Base } from "./Base";
+import { Mercado } from "./Mercado";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
 import { t, locale } from "@newbras/textos";
 
 type Aba =
-  "inicio" | "plantel" | "escalacao" | "calendario" | "jogos" | "competicoes" | "selecoes" | "base";
+  | "inicio"
+  | "plantel"
+  | "escalacao"
+  | "calendario"
+  | "jogos"
+  | "competicoes"
+  | "selecoes"
+  | "base"
+  | "mercado";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "inicio", nome: t("Início"), tecla: "1" },
   { id: "plantel", nome: t("Plantel"), tecla: "2" },
@@ -62,6 +71,7 @@ const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "competicoes", nome: t("Competições"), tecla: "6" },
   { id: "selecoes", nome: t("Seleções"), tecla: "7" },
   { id: "base", nome: t("Base"), tecla: "8" },
+  { id: "mercado", nome: t("Mercado"), tecla: "9" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -159,7 +169,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   }, [c, jogadores]);
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
 
-  // F2 salva na hora; 1 a 8 trocam de aba (fora de campos de texto).
+  // F2 salva na hora; 1 a 9 trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
   const tecla = useCallback(
     (e: KeyboardEvent) => {
@@ -347,6 +357,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             {aba === "plantel" && <Plantel c={c} montado={montado} mudar={mudar} />}
             {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
             {aba === "base" && <Base c={c} montado={montado} mudar={mudar} />}
+            {aba === "mercado" && <Mercado c={c} montado={montado} mudar={mudar} />}
             {aba === "escalacao" && (
               <div className="flex flex-col gap-3">
                 <Tatica c={c} mudar={mudar} />

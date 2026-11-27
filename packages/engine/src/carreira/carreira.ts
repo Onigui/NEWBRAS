@@ -63,6 +63,12 @@ import { evolucaoDe, mundoNaData } from "../elenco/mundo";
 import { elencoSemLesionados, riscoDeLesao } from "../elenco/lesoes";
 import { diaDaBase, type EstadoDaBase, type JogadorDaBase } from "../elenco/base";
 import {
+  diaDoMercado,
+  fimDeContrato,
+  type PropostaRecebida,
+  type Transferencia,
+} from "../mercado/mercado";
+import {
   depoisDoJogo,
   diaDoElenco,
   lesionado,
@@ -200,6 +206,14 @@ export interface Carreira {
   base?: EstadoDaBase;
   /** Quem subiu da base ao profissional (evoluem pela curva desde a promoção). */
   promovidos?: JogadorDaBase[];
+  /** Caixa para contratações (sem o campo, 10% do valor do elenco no começo). */
+  caixa?: number;
+  /** Mudanças de clube: compras, vendas, dispensas, fim de contrato e livres contratados. */
+  transferencias?: Transferencia[];
+  /** Jogadores do técnico à venda. */
+  aVenda?: string[];
+  /** Propostas da CPU por jogadores do técnico. */
+  propostas?: PropostaRecebida[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -650,12 +664,14 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   // Lesões, moral e contratos do dia; a base (olheiros, peneira e dispensas).
   const dia = diaDoElenco(c, mundoAmanha, data, elenco.jogadores);
   const base = diaDaBase(c, mundoAmanha, data, virou);
+  const mercado = diaDoMercado(c, mundoAmanha, data);
   for (const n of [
     ...convocados.noticias,
     ...(apresentacao ? [apresentacao] : []),
     ...elenco.noticias,
     ...dia.noticias,
     ...base.noticias,
+    ...mercado.noticias,
   ]) {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -666,11 +682,13 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     competicoes,
     jogadores: dia.jogadores,
     ...(base.base ? { base: base.base } : {}),
-    ...(dia.saidas.length ? { saidas: [...(c.saidas ?? []), ...dia.saidas] } : {}),
+    ...(mercado.propostas !== c.propostas ? { propostas: mercado.propostas ?? [] } : {}),
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };
-  return { carreira, novidades, parouPor: jogo ? "jogo" : "dia" };
+  // Quem terminou o contrato fica livre (no mercado).
+  const final = dia.saidas.length ? fimDeContrato(carreira, dia.saidas, data) : carreira;
+  return { carreira: final, novidades, parouPor: jogo ? "jogo" : "dia" };
 }
 
 /** Avança até o próximo dia de jogo (ou até o limite de dias). */
