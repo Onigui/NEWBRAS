@@ -764,3 +764,18 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
 - **Na tela:** tudo fica no painel do estádio da aba Finanças. O extrato ganhou as linhas de sócios, nome do estádio, eventos e obras.
 - **Correção da 14a:** a premiação de título continental pagava como copa nacional (4% em vez de 12%), porque comparava o escopo "continental", que não existe (o certo é "confederacao").
 - **Fica para depois:** arena nova (estádio novo com financiamento) e aluguel do estádio a outros clubes.
+
+## Arena nova, aluguel e o dinheiro dos amistosos (etapa 14d, 27/11/2026)
+
+- **Arena nova (painel do estádio):**
+  - Capacidade de 30, 45, 60 ou 80 mil lugares. O lugar custa 1,6 vez o da ampliação. O prazo vai de 24 a 36 meses. Exemplo: Flamengo, 45 mil lugares por uns 370 milhões em 31 meses, ao lado do estádio velho.
+  - **Ao lado** do estádio velho: 25% mais cara, mas o time segue jogando em casa.
+  - **No lugar** do estádio velho: mais barata, mas até a entrega o time joga em estádio alugado, com renda 40% menor.
+  - **Financiamento próprio:** até 80% do custo, a 0,6% ao mês, em 60 ou 120 meses. Entra como empréstimo de longo prazo, com parcelas, atrasos e quitação como os do banco. A entrada é de 20% do custo (menos, se quase tudo for financiado), e o resto sem financiamento vai em parcelas mensais da obra.
+  - Na inauguração: capacidade nova, nome escolhido pelo técnico (ou "Arena" mais o nome do clube) e arena moderna, que enche 5 pontos a mais e aceita ingresso 15% mais caro. Um nome vendido a patrocinador continua valendo por cima.
+- **Aluguel do estádio:** entre as propostas de eventos, um clube do mesmo país com estádio bem menor (menos da metade) pode querer mandar um jogo grande no estádio do técnico. Paga 20% de uma casa cheia. Durante a obra da arena no lugar não há eventos nem aluguel.
+- **O dinheiro dos amistosos** (os amistosos já eram marcados pelo técnico desde a Fase 7):
+  - **Cachê:** o clube bem maior (3 pontos de nível ou mais) cobra para jogar, de 0,1% a 0,6% da receita anual dele, conforme a diferença. O técnico recebe quando visita um clube menor e paga quando recebe um clube bem maior em casa; a bilheteria do jogo em casa continua dele. A tela de marcar amistoso mostra o cachê antes de confirmar, e a agenda mostra o de cada amistoso.
+  - **Convites de excursão:** de vez em quando (30% por mês, até 2 abertos), um clube de outro país, de nível parecido, convida para um amistoso em campo neutro dali a 2 a 6 semanas, com cachê de 0,3% a 0,8% da receita anual. Aceitando pela aba Jogos, o jogo entra na agenda; sem bilheteria, só o cachê.
+  - O extrato ganhou a linha "Cachês de amistosos".
+- **Fase 14 concluída.** Salários e receitas reais, crise e banco, conversas e diretoria, estádio completo e amistosos. A perda de pontos da CPU fica para depois.

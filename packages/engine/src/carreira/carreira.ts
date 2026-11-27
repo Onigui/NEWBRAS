@@ -77,6 +77,7 @@ import {
 import { diaDosNegocios } from "../mercado/negocios";
 import { premiacoes, type MesFinanceiro } from "../financas/financas";
 import { bilheteriaDoJogo, type EstadoDoEstadio } from "../financas/estadio";
+import { cacheDoJogo, type ConviteDeAmistoso } from "../financas/amistosos";
 import { diaDasFinancas } from "../financas/mes";
 import type { CriseDoClube, DividaDaCpu, EmprestimoBancario } from "../financas/crise";
 import {
@@ -171,6 +172,8 @@ export interface Compromisso {
   competicao?: string;
   indice?: number;
   neutro?: boolean;
+  /** Amistoso de excursão: cachê combinado (positivo, o técnico recebe). */
+  cache?: number;
 }
 
 export interface EscalacaoSalva {
@@ -264,6 +267,8 @@ export interface Carreira {
   garotosCpu?: JogadorDaBase[];
   /** Estádio do técnico: preços, sócios, obras, nome e eventos (etapa 14c). */
   estadio?: EstadoDoEstadio;
+  /** Convites de excursão (amistosos em campo neutro, com cachê). */
+  convitesAmistosos?: ConviteDeAmistoso[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -843,7 +848,13 @@ export function problemasDoAmistoso(
 export function marcarAmistoso(
   c: Carreira,
   mundo: Mundo,
-  pedido: { data: string; adversario: string; mando: "casa" | "fora" },
+  pedido: {
+    data: string;
+    adversario: string;
+    mando: "casa" | "fora";
+    neutro?: boolean;
+    cache?: number;
+  },
 ): Carreira {
   if (problemasDoAmistoso(c, mundo, pedido).length) return c;
   const numero = Math.max(0, ...c.agenda.map((x) => Number(x.id.split("-").at(-1)) || 0)) + 1;
@@ -859,9 +870,11 @@ export function marcarAmistoso(
       data: c.data,
       tipo: "jogo",
       ...marcar(
-        pedido.mando === "casa"
-          ? "Amistoso marcado: {adversario} em {data} (em casa)."
-          : "Amistoso marcado: {adversario} em {data} (fora).",
+        pedido.neutro
+          ? "Amistoso marcado: {adversario} em {data} (campo neutro)."
+          : pedido.mando === "casa"
+            ? "Amistoso marcado: {adversario} em {data} (em casa)."
+            : "Amistoso marcado: {adversario} em {data} (fora).",
         { adversario: adv?.nomeCurto ?? pedido.adversario, data: dataCurta(pedido.data) },
       ),
     }),
@@ -1053,7 +1066,7 @@ export function registrarJogo(
   // Depois do placar e dos cartões: lesões e a moral de cada jogador; em casa, a bilheteria; e as
   // conversas (promessas, diretoria e o vestiário).
   const renda = bilheteriaDoJogo(
-    depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r),
+    cacheDoJogo(depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r), mundo, x),
     mundo,
     x,
   );

@@ -47,6 +47,7 @@ const NOME: Record<CategoriaFinanceira, string> = {
   naming: t("Nome do estádio"),
   eventos: t("Eventos"),
   obras: t("Obras"),
+  amistosos: t("Cachês de amistosos"),
 };
 const RECEITAS: CategoriaFinanceira[] = [
   "tv",
@@ -57,6 +58,7 @@ const RECEITAS: CategoriaFinanceira[] = [
   "socios",
   "naming",
   "eventos",
+  "amistosos",
   "credito",
 ];
 const DESPESAS: CategoriaFinanceira[] = [

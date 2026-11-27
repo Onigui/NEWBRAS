@@ -60,7 +60,8 @@ export type CategoriaFinanceira =
   | "socios"
   | "naming"
   | "eventos"
-  | "obras";
+  | "obras"
+  | "amistosos";
 
 /** Receitas e despesas do clube do técnico num mês (receita positiva, despesa negativa). */
 export interface MesFinanceiro {

@@ -6,7 +6,13 @@ import { useState } from "react";
 import {
   aceitarNome,
   AMPLIACOES,
+  CAPACIDADES_DA_ARENA,
   capacidadeAtual,
+  construirArena,
+  limiteDoFinanciamento,
+  orcamentoDaArena,
+  parcelaDoEmprestimo,
+  PRAZOS_DO_FINANCIAMENTO,
   dataCurta,
   definirMensalidade,
   definirPrecos,
@@ -44,6 +50,7 @@ const NOME_DO_EVENTO = {
   show: t("Show"),
   festival: t("Festival"),
   "jogo-beneficente": t("Jogo beneficente"),
+  aluguel: t("Aluguel"),
 } as const;
 
 export function PainelDoEstadio({
@@ -67,6 +74,15 @@ export function PainelDoEstadio({
   const [novaMensalidade, setNovaMensalidade] = useState(mensalidade);
   const [aviso, setAviso] = useState("");
   const capacidade = capacidadeAtual(c, mundo);
+  const [arena, setArena] = useState({
+    capacidade: 45_000 as number,
+    noLugar: false,
+    financiar: 0,
+    meses: 120 as number,
+    nome: "",
+  });
+  const orcArena = orcamentoDaArena(mundo, c.clube, arena.capacidade, arena.noLugar);
+  const limiteArena = limiteDoFinanciamento(orcArena.custo);
 
   return (
     <section className="flex flex-col gap-4">
@@ -257,6 +273,133 @@ export function PainelDoEstadio({
             </p>
           </div>
 
+          <div>
+            <h3 className="mb-1 font-bold">{t("Arena nova")}</h3>
+            {e.arena ? (
+              <p className="text-sm">
+                {t(
+                  "{nome} em construção: {capacidade} lugares, pronta em {fim} ({pago} de {custo} pagos).",
+                  {
+                    nome: e.arena.nome,
+                    capacidade: dinheiro(e.arena.capacidade),
+                    fim: dataCurta(e.arena.fim),
+                    pago: dinheiro(e.arena.pago),
+                    custo: dinheiro(e.arena.custo),
+                  },
+                )}
+                {e.arena.noLugar && (
+                  <span className="text-[#ffc38a]">
+                    {" "}
+                    {t("Até lá, o time joga em estádio alugado (renda 40% menor).")}
+                  </span>
+                )}
+              </p>
+            ) : e.obra ? (
+              <p className="text-xs text-suave">
+                {t("Termine a ampliação antes de pensar numa arena nova.")}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    className={`${estiloCampo} w-36!`}
+                    value={arena.capacidade}
+                    onChange={(ev) => setArena({ ...arena, capacidade: Number(ev.target.value) })}
+                  >
+                    {CAPACIDADES_DA_ARENA.map((x) => (
+                      <option key={x} value={x}>
+                        {t("{n} lugares", { n: dinheiro(x) })}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="radio"
+                      checked={!arena.noLugar}
+                      onChange={() => setArena({ ...arena, noLugar: false })}
+                    />
+                    {t("Ao lado (mais cara, segue jogando em casa)")}
+                  </label>
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="radio"
+                      checked={arena.noLugar}
+                      onChange={() => setArena({ ...arena, noLugar: true })}
+                    />
+                    {t("No lugar (estádio alugado durante a obra)")}
+                  </label>
+                </div>
+                <p className="text-xs text-suave">
+                  {t(
+                    "Custo de {custo}, {meses} meses de obra. Financiamento de até {limite} a 0,6% ao mês.",
+                    {
+                      custo: dinheiro(orcArena.custo),
+                      meses: orcArena.meses,
+                      limite: dinheiro(limiteArena),
+                    },
+                  )}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={limiteArena}
+                    className={`${estiloCampo} w-36!`}
+                    value={arena.financiar}
+                    onChange={(ev) => setArena({ ...arena, financiar: Number(ev.target.value) })}
+                  />
+                  <select
+                    className={`${estiloCampo} w-32!`}
+                    value={arena.meses}
+                    onChange={(ev) => setArena({ ...arena, meses: Number(ev.target.value) })}
+                  >
+                    {PRAZOS_DO_FINANCIAMENTO.map((p) => (
+                      <option key={p} value={p}>
+                        {t("{n} meses", { n: p })}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={`${estiloCampo} w-44!`}
+                    placeholder={t("Nome da arena")}
+                    value={arena.nome}
+                    onChange={(ev) => setArena({ ...arena, nome: ev.target.value })}
+                  />
+                </div>
+                {arena.financiar > 0 && (
+                  <p className="text-xs text-suave">
+                    {t("Parcela do financiamento: {parcela} por mês.", {
+                      parcela: dinheiro(
+                        parcelaDoEmprestimo(
+                          Math.min(arena.financiar, limiteArena),
+                          0.006,
+                          arena.meses,
+                        ),
+                      ),
+                    })}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className={`${botao} self-start`}
+                  onClick={() => {
+                    const r = construirArena(c, mundo, arena);
+                    setAviso(
+                      r.resultado === "caixa"
+                        ? t(
+                            "Não há caixa para a entrada da arena (20% do custo, menos o financiado).",
+                          )
+                        : "",
+                    );
+                    mudar(() => r.carreira);
+                  }}
+                >
+                  {t("Construir a arena")}
+                </button>
+              </div>
+            )}
+          </div>
+
           {e.ofertaDeNome && (
             <div className="rounded border border-placar-borda p-2 text-sm">
               <p>
@@ -293,12 +436,22 @@ export function PainelDoEstadio({
           {(e.eventos ?? []).map((ev) => (
             <div key={ev.id} className="rounded border border-placar-borda p-2 text-sm">
               <p>
-                {t("{evento} no estádio em {data}: {renda} para o clube. Responda até {ate}.", {
-                  evento: NOME_DO_EVENTO[ev.tipo],
-                  data: dataCurta(ev.data),
-                  renda: dinheiro(ev.renda),
-                  ate: dataCurta(ev.ate),
-                })}
+                {ev.tipo === "aluguel"
+                  ? t(
+                      "O {clube} quer alugar o estádio para um jogo grande em {data}: {renda} para o clube. Responda até {ate}.",
+                      {
+                        clube: mundo.clube(ev.clube ?? "")?.nomeCurto ?? "",
+                        data: dataCurta(ev.data),
+                        renda: dinheiro(ev.renda),
+                        ate: dataCurta(ev.ate),
+                      },
+                    )
+                  : t("{evento} no estádio em {data}: {renda} para o clube. Responda até {ate}.", {
+                      evento: NOME_DO_EVENTO[ev.tipo],
+                      data: dataCurta(ev.data),
+                      renda: dinheiro(ev.renda),
+                      ate: dataCurta(ev.ate),
+                    })}
               </p>
               <div className="mt-1 flex gap-1">
                 <button
