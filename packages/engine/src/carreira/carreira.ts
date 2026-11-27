@@ -77,6 +77,13 @@ import {
 import { diaDosNegocios } from "../mercado/negocios";
 import { bilheteria, diaDasFinancas, premiacoes, type MesFinanceiro } from "../financas/financas";
 import {
+  conversasDepoisDoJogo,
+  diaDaDiretoria,
+  type Conversa,
+  type Diretoria,
+  type Promessa,
+} from "./conversas";
+import {
   depoisDoJogo,
   diaDoElenco,
   lesionado,
@@ -236,6 +243,14 @@ export interface Carreira {
   financas?: MesFinanceiro[];
   /** Caixa de cada clube da CPU (os que ainda não mexeram usam o inicial sorteado). */
   caixasCpu?: Record<string, number>;
+  /** Conversas de jogadores e da diretoria esperando resposta. */
+  conversas?: Conversa[];
+  /** Última conversa de cada jogador (ele não volta a procurar o técnico tão cedo). */
+  conversasRecentes?: Record<string, string>;
+  /** Promessas do técnico a jogadores. */
+  promessas?: Promessa[];
+  /** Confiança e metas da diretoria. */
+  diretoria?: Diretoria;
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -752,7 +767,11 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   for (const n of negocios.noticias) novidades.unshift(n);
   // Finanças: premiações, o fechamento do mês e o caixa da CPU.
   const premios = premiacoes(negocios.carreira, mundoAmanha, data, [...premiadas.values()]);
-  const financas = diaDasFinancas(premios.carreira, mundoAmanha, data);
+  const financasDoDia = diaDasFinancas(premios.carreira, mundoAmanha, data);
+  // Diretoria e conversas: metas, prazos, avaliação mensal, cobranças.
+  const diretoria = diaDaDiretoria(financasDoDia.carreira, mundoAmanha, data);
+  for (const n of diretoria.noticias) novidades.unshift(n);
+  const financas = { carreira: diretoria.carreira, noticias: financasDoDia.noticias };
   const extras = [...premios.noticias, ...financas.noticias];
   for (const n of extras) novidades.unshift(n);
   const comFinancas = extras.length
@@ -764,7 +783,7 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   return {
     carreira: comFinancas,
     novidades,
-    parouPor: jogo ? "jogo" : negocios.decisao ? "decisao" : "dia",
+    parouPor: jogo ? "jogo" : negocios.decisao || diretoria.decisao ? "decisao" : "dia",
   };
 }
 
@@ -1018,8 +1037,10 @@ export function registrarJogo(
 ): Carreira {
   const x = agendaCompleta(c).find((y) => y.id === compromissoId);
   if (!x || x.resultado) return c;
-  // Depois do placar e dos cartões: lesões e a moral de cada jogador; em casa, a bilheteria.
-  return bilheteria(depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r), mundo, x);
+  // Depois do placar e dos cartões: lesões e a moral de cada jogador; em casa, a bilheteria; e as
+  // conversas (promessas, diretoria e o vestiário).
+  const depois = bilheteria(depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r), mundo, x);
+  return conversasDepoisDoJogo(c, depois, mundo, x, r).carreira;
 }
 
 function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoPartida): Carreira {
