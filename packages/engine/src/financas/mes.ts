@@ -7,6 +7,7 @@ import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import type { Transferencia } from "../mercado/comum";
 import { crisesDaCpu, pagarAtrasados, salariosEParcelas } from "./crise";
+import { diaDoEstadio } from "./estadio";
 import {
   folhaSalarial,
   lancar,
@@ -22,6 +23,9 @@ export function diaDasFinancas(
 ): { carreira: Carreira; noticias: Noticia[] } {
   let r = transferenciasNoCaixa(c, mundo, data);
   const noticias: Noticia[] = [];
+  const estadio = diaDoEstadio(r, mundo, data);
+  r = estadio.carreira;
+  noticias.push(...estadio.noticias);
   const pagos = pagarAtrasados(r, mundo, data);
   r = pagos.carreira;
   noticias.push(...pagos.noticias);

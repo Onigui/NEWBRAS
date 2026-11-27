@@ -737,3 +737,30 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - Os garotos são do país do clube, na posição que mais falta, com potencial pelo nível do clube. Crescem pela idade, como os da base do técnico, e param aos 36. Vivem no salvamento em `garotosCpu` e podem ser comprados e vendidos como qualquer jogador.
   - O clube do técnico já podia fazer o mesmo: promover a base pela aba Base e dispensar ou vender quem pesa na folha. A rescisão na Justiça do clube do técnico continua sem deixar o elenco abaixo de 18.
   - **Teste de 4 temporadas só com a CPU:** elencos de 20 a 31 (antes chegavam a 9). De 28 a 120 rescisões por ano viram jogadores livres que o mercado recoloca. O vermelho continua estável em 8% a 10%.
+
+## Estádio (etapa 14c, 27/11/2026)
+
+- **Ingressos por setor:**
+  - Três setores com parte fixa da capacidade: popular (50%), central (38%) e camarote (12%).
+  - O preço justo de cada setor parte do ingresso médio (0,6 vez no popular, 1 no central, 3 no camarote). Ele sobe com a fase do time (a moral) e com o peso do jogo: amistoso vale metade; jogo continental ou mundial, 20% a mais; fase final de copa, 30% a mais.
+  - Os preços começam no justo, e o técnico escolhe os seus com a previsão de público e renda na tela.
+- **As travas pedidas pelo dono:**
+  - Acima do justo, o público cai com elasticidade 2,2 (o dobro do preço leva uns 22% do público). Abaixo, sobe até 60% a mais, limitado aos lugares. A renda máxima fica no preço justo, então não há dinheiro infinito.
+  - O preço sobe no máximo 20% por mês, sobre o do começo do mês. Baixar é livre.
+  - Cobrar mais de 40% acima do justo em três jogos oficiais seguidos gera protesto, que se repete enquanto durar: a moral do time e a confiança da diretoria caem 2, e 5% dos sócios cancelam. Um jogo com preço normal alivia.
+- **Sócio-torcedor:**
+  - O número de sócios vem da capacidade e da reputação (de 8% a 24% da capacidade), da moral do time e da mensalidade escolhida. A mensalidade justa vale duas entradas no popular, e acima dela os sócios somem com a mesma elasticidade.
+  - A mensalidade também sobe no máximo 20% de cada vez. O número de sócios anda 30% por mês em direção ao esperado.
+  - Os sócios pagam todo dia 1 e entram de graça: 70% vão ao jogo e ocupam lugares do popular e do central, no máximo 60% do estádio. Exemplo: Flamengo com uns 19 mil sócios a 44 por mês.
+- **Obras de ampliação:**
+  - Mais 5, 10 ou 20 mil lugares, até 100 mil. O lugar custa 4 mil, ajustado pelo preço do ingresso do país.
+  - O prazo vai de 6 a 12 meses. A entrada é de 30%, e o resto vai em parcelas mensais até a entrega.
+  - Durante a obra, 10% do estádio fica fechado. A manutenção acompanha a capacidade nova.
+- **Exigência por competição:** jogo continental exige 20 mil lugares; o Mundial, 30 mil. Sem isso, o jogo vai para um estádio alugado e a renda cai 40%.
+- **Nome do estádio:**
+  - De vez em quando (15% por mês, sem contrato em vigor), uma marca fictícia (nunca uma marca real) oferece de 2% a 5% da receita anual por ano, conforme a reputação, por 3 a 5 anos.
+  - Aceitando, o estádio passa a se chamar "Marca Arena" e a parcela entra todo mês. No fim do contrato, volta o nome original.
+- **Eventos:** de vez em quando (25% por mês) chega uma proposta de show, festival ou jogo beneficente, para dali a 2 a 6 semanas, com renda pela capacidade e pelo preço. Aceitando, a renda entra no dia do evento.
+- **Na tela:** tudo fica no painel do estádio da aba Finanças. O extrato ganhou as linhas de sócios, nome do estádio, eventos e obras.
+- **Correção da 14a:** a premiação de título continental pagava como copa nacional (4% em vez de 12%), porque comparava o escopo "continental", que não existe (o certo é "confederacao").
+- **Fica para depois:** arena nova (estádio novo com financiamento) e aluguel do estádio a outros clubes.

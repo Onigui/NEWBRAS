@@ -75,7 +75,8 @@ import {
   type Transferencia,
 } from "../mercado/mercado";
 import { diaDosNegocios } from "../mercado/negocios";
-import { bilheteria, premiacoes, type MesFinanceiro } from "../financas/financas";
+import { premiacoes, type MesFinanceiro } from "../financas/financas";
+import { bilheteriaDoJogo, type EstadoDoEstadio } from "../financas/estadio";
 import { diaDasFinancas } from "../financas/mes";
 import type { CriseDoClube, DividaDaCpu, EmprestimoBancario } from "../financas/crise";
 import {
@@ -261,6 +262,8 @@ export interface Carreira {
   dividasCpu?: Record<string, DividaDaCpu>;
   /** Garotos que os clubes da CPU subiram da base (crise ou elenco curto). */
   garotosCpu?: JogadorDaBase[];
+  /** Estádio do técnico: preços, sócios, obras, nome e eventos (etapa 14c). */
+  estadio?: EstadoDoEstadio;
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -1049,7 +1052,17 @@ export function registrarJogo(
   if (!x || x.resultado) return c;
   // Depois do placar e dos cartões: lesões e a moral de cada jogador; em casa, a bilheteria; e as
   // conversas (promessas, diretoria e o vestiário).
-  const depois = bilheteria(depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r), mundo, x);
+  const renda = bilheteriaDoJogo(
+    depoisDoJogo(c, lancarJogo(c, mundo, x, r), mundo, x, r),
+    mundo,
+    x,
+  );
+  const depois = renda.noticias.length
+    ? {
+        ...renda.carreira,
+        noticias: [...renda.noticias, ...renda.carreira.noticias].slice(0, MAX_NOTICIAS),
+      }
+    : renda.carreira;
   return conversasDepoisDoJogo(c, depois, mundo, x, r).carreira;
 }
 
