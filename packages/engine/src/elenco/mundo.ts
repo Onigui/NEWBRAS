@@ -165,11 +165,16 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     evolucao && evolui ? evolucao.elenco(id, data) : base.elenco(id);
   const elencoDoClube = (id: string): readonly Jogador[] => {
     const natural = elencoNatural(id);
-    const chegaram = entradas.get(id);
-    if (!ultima.size || (!chegaram && !natural.some((j) => ultima.has(j.id)))) return natural;
-    const chave = `${transferencias.length}|${data}`;
+    if (!ultima.size) return natural;
+    // Guardado pelo elenco natural e pelo tamanho da lista de transferências.
+    const chave = `${transferencias.length}`;
     const guardado = transferidosCache.get(natural);
     if (guardado?.chave === chave) return guardado.lista;
+    const chegaram = entradas.get(id);
+    if (!chegaram && !natural.some((j) => ultima.has(j.id))) {
+      transferidosCache.set(natural, { chave, lista: natural as Jogador[] });
+      return natural;
+    }
     const lista = [
       ...natural.filter((j) => !ultima.has(j.id)),
       ...(chegaram ?? [])

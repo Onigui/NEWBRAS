@@ -62,6 +62,7 @@ import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./seleca
 import { evolucaoDe, mundoNaData } from "../elenco/mundo";
 import { elencoSemLesionados, riscoDeLesao } from "../elenco/lesoes";
 import { diaDaBase, receberRenascido, type EstadoDaBase, type JogadorDaBase } from "../elenco/base";
+import { compactarTransferencias, mercadoDaCpu } from "../mercado/cpu";
 import {
   diaDoMercado,
   fimDeContrato,
@@ -681,6 +682,7 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
         };
     }
   const mercado = diaDoMercado(c, mundoAmanha, data);
+  const cpu = mercadoDaCpu(c, mundoAmanha, data);
   for (const n of [
     ...convocados.noticias,
     ...(apresentacao ? [apresentacao] : []),
@@ -688,6 +690,7 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     ...dia.noticias,
     ...base.noticias,
     ...mercado.noticias,
+    ...cpu.noticias,
   ]) {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -699,12 +702,26 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     jogadores: dia.jogadores,
     ...(base.base ? { base: base.base } : {}),
     ...(mercado.propostas !== c.propostas ? { propostas: mercado.propostas ?? [] } : {}),
+    ...(cpu.transferencias.length || data.endsWith("-07-01")
+      ? {
+          transferencias: compactarSeFor(
+            [...(c.transferencias ?? []), ...cpu.transferencias],
+            c.clube,
+            data,
+          ),
+        }
+      : {}),
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };
   // Quem terminou o contrato fica livre (no mercado).
   const final = dia.saidas.length ? fimDeContrato(carreira, dia.saidas, data) : carreira;
   return { carreira: final, novidades, parouPor: jogo ? "jogo" : "dia" };
+}
+
+/** No 1º de julho, a lista de transferências encolhe (fica a última de cada jogador). */
+function compactarSeFor(lista: Transferencia[], clube: string, data: string): Transferencia[] {
+  return data.endsWith("-07-01") ? compactarTransferencias(lista, clube, data) : lista;
 }
 
 /** Avança até o próximo dia de jogo (ou até o limite de dias). */

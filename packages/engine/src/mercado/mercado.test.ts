@@ -108,7 +108,7 @@ describe("mercado do técnico", () => {
     const m = mundo();
     let c = { ...nova(m), data: "2027-02-01" };
     const alvo = m.elenco("medio").find((j) => j.forca === 75)!;
-    const pedido = pedidoDoClube(m, alvo, c.data);
+    const pedido = pedidoDoClube(c, m, alvo);
     expect(pedido).toBeGreaterThan(0);
     const caixa = caixaDe(c, m);
     expect(caixa).toBeGreaterThan(pedido);
