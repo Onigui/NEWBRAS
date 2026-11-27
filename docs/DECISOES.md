@@ -599,3 +599,35 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Cerca de 1.200 a 1.600 transferências por ano, com 5 a 45 livres por vez.
   - A lista guardada passa de 11.800 transferências, e o salvamento vai de 5,3 para 8,5 MB.
   - A simulação leva uns 57 segundos por temporada. Fica a anotação para otimizar (simulação num worker e o resto) no polimento da Fase 16.
+
+## Pré-contrato, empréstimos, trocas e leilões (etapa 13c, 27/11/2026)
+
+- **Contrato da CPU que renova sozinho:** quando o contrato do banco acaba, o clube renova por 2 a 4 anos (sempre o mesmo número para o mesmo jogador, sem sorteio), e assim por diante. Sem isso, a partir de 2027 o mundo inteiro ficaria com contrato vencido (o valor caía a 30%) e o pré-contrato não teria sentido. Só o pré-contrato tira o jogador na hora da renovação.
+- **Pré-contrato:**
+  - Com jogador de outro clube nos últimos 6 meses do contrato dele, a qualquer hora (sem janela) e sem pagar nada ao clube. Ele chega no dia seguinte ao fim do contrato, com 3 anos de contrato novo e o salário combinado.
+  - O reserva assina pelo salário que pede. O titular do clube dele quer 25% a mais, a não ser que vá para um clube maior (3 pontos de nível ou mais). O jogador também não desce muito de nível, como na compra.
+  - A CPU faz o mesmo com o técnico: nos últimos 6 meses, um clube interessado pode assinar pré-contrato com um jogador que não renovou. Aí ele não renova mais e sai de graça no fim do contrato. Quem está contente (moral 45 ou mais) só aceita clube do mesmo tamanho ou maior. O aviso dos 6 meses ("renove") é a hora de agir.
+- **Empréstimos nos dois sentidos:**
+  - **Pegar emprestado:** o dono cede reservas e jovens titulares (até 23 anos, se não estiver brigando pelo título), nunca o craque, e não empresta com o elenco curto. O técnico vê as condições e fecha:
+    - prazo: até o fim da temporada do clube ou até o fim da próxima;
+    - taxa: de 4% a 12% do valor por temporada, mais alta quando o dono precisa de dinheiro;
+    - parte do salário paga pelo técnico: de 60% a 100% (o dono rico ou apertado quer tudo);
+    - opção de compra: o valor com 25% de folga (no prodígio, 30% a mais, e só se o dono precisar de dinheiro). O técnico escolhe levar ou não, e exerce com a janela aberta.
+  - O emprestado não renova contrato, não vai à venda, não é dispensado e volta ao dono no dia seguinte ao fim do empréstimo.
+  - **Emprestar:** o técnico oferece o jogador pela ficha. Na janela, clubes onde ele jogaria (nível de 8 pontos abaixo a 3 acima da força dele) mandam propostas com taxa, parte do salário, prazo e às vezes opção de compra. O passe e o contrato continuam do técnico. No fim, o clube exerce a opção (60% de chance) se o jogador se firmou lá; senão ele volta.
+  - **A CPU empresta os garotos:** clubes de nível 70 ou mais cedem, na janela, jovens de até 21 anos que não jogam (força 8 abaixo do nível do clube, com margem de crescer) a clubes do nível deles, até o fim da temporada. Dá uns 100 empréstimos por ano.
+- **Trocas:**
+  - Até 3 jogadores do técnico pelo alvo, com diferença em dinheiro para qualquer lado (o clube só paga a diferença com dinheiro que tem). Precisa das janelas dos dois clubes abertas e de vaga nos dois elencos.
+  - O clube decide pela mesma regra da venda (situação, peso do jogador, intransferível), contando o que recebe pelo valor que tem para ele: quem serve ao nível do clube vale 100%, quem fica um pouco abaixo 70%, o fraco 35%, e o de 32 anos ou mais vale 30% a menos. Quem chega conta no tamanho do elenco e nos goleiros.
+  - A tela mostra quanto o clube vê na oferta, quanto pede e quanto falta em dinheiro. O alvo e cada jogador oferecido precisam aceitar o clube novo.
+- **Leilões:**
+  - O técnico leiloa um jogador com a janela aberta, com o lance mínimo que escolher. O leilão fica aberto 4 dias e o maior lance válido leva.
+  - Clubes da CPU em crise (precisam muito de dinheiro) leiloam um titular, com mínimo de 60% do valor; até 4 leilões da CPU abertos por vez. O técnico dá lances na aba Mercado (5% acima do maior, no mínimo).
+  - Cada clube da CPU vai até um teto fixo por leilão (de 1 a 1,4 vez o valor) e dentro do orçamento. Quando cobrem o lance do técnico, vira notícia.
+  - No fechamento, o lance do técnico só vale com janela aberta, caixa e vaga no elenco; senão passa para o seguinte. O clube da CPU que ficou com o elenco curto desiste.
+- **Fora do mercado comum:** emprestados, com pré-contrato e em leilão não são comprados nem dispensados pela CPU nem comprados pelo técnico.
+- **Teste de 10 temporadas só com a CPU** (o técnico automático agora renova antes dos 6 meses finais, como pede o aviso):
+  - Elencos entre 18 e 31 em janeiro (17 no começo de julho, depois das aposentadorias e antes da janela; quem passa de 30 dispensa na janela seguinte), média 25,8, e nenhum clube sem goleiro.
+  - Uns 100 empréstimos e 50 a 70 leilões por ano no mundo, com 70 a 110 empréstimos em andamento por vez; o total passa a 1.500 a 1.900 transferências por ano.
+  - Os 11 melhores dos 20 clubes mais fortes vão de 86,6 a 89,5 e se estabilizam.
+  - O salvamento termina com 8,7 a 9,3 MB, e a simulação leva uns 55 segundos por temporada.

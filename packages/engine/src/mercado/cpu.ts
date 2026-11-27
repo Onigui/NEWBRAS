@@ -10,7 +10,7 @@ import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
-import { aceitaOClube, livresDe, type Transferencia } from "./mercado";
+import { aceitaOClube, livresDe, presosEmNegocio, type Transferencia } from "./comum";
 import { respostaDeVenda, situacaoDoClube, type SituacaoDoClube } from "./situacao";
 import { janelaAberta, valorDeMercado } from "./valor";
 
@@ -64,7 +64,8 @@ export function mercadoDaCpu(
   };
   const transferencias: Transferencia[] = [];
   const noticias: Noticia[] = [];
-  const movidos = new Set<string>();
+  // Emprestados, com pré-contrato e em leilão ficam fora do mercado comum.
+  const movidos = presosEmNegocio(c);
   const tamanho = new Map<string, number>();
   const tamanhoDe = (clube: string) => tamanho.get(clube) ?? mundo.elenco(clube).length;
   // Elenco inchado (lendas que subiram, garotos da base): na janela, dispensa os que passam de 30,
@@ -73,7 +74,8 @@ export function mercadoDaCpu(
     if (!aberta(x.pais)) continue;
     const elenco = mundo.elenco(x.id);
     if (elenco.length <= ELENCO_MAXIMO) continue;
-    const saem = [...elenco]
+    const saem = elenco
+      .filter((j) => !movidos.has(j.id))
       .sort(
         (a, b) => a.forca - b.forca || idadeEm(b.nascimento, data) - idadeEm(a.nascimento, data),
       )

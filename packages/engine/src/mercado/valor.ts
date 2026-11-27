@@ -29,14 +29,41 @@ function fatorDaIdade(idade: number, margem: number): number {
   return tabela[idade] ?? Math.max(0.12, 0.5 - (idade - 32) * 0.1);
 }
 
+/** Número de 0 a 1 fixo para o texto (sem sorteio: o mesmo jogador, o mesmo número). */
+function fracaoDe(texto: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * O contrato do jogador da CPU na data (etapa 13c): quando o do banco acaba, o clube renova por 2
+ * a 4 anos (sempre igual para o mesmo jogador), e assim por diante. Sem isso, todo o mundo ficaria
+ * com contrato vencido a partir de 2027. Só o pré-contrato tira o jogador na hora da renovação.
+ */
+export function contratoVigente(
+  contrato: Contrato | undefined,
+  id: string,
+  data: string,
+): Contrato | undefined {
+  if (!contrato || contrato.fim >= data) return contrato;
+  let fim = contrato.fim;
+  for (let ciclo = 0; fim < data && ciclo < 40; ciclo++) {
+    const anos = 2 + Math.floor(fracaoDe(`${id}:${ciclo}`) * 3);
+    fim = `${Number(fim.slice(0, 4)) + anos}${fim.slice(4)}`;
+  }
+  return { ...contrato, fim };
+}
+
 /** Valor de mercado do jogador na data. */
 export function valorDeMercado(j: Jogador, data: string, contrato = j.contrato): number {
   const idade = idadeEm(j.nascimento, data);
   let v = VALOR_FORCA_90 * FATOR_POR_PONTO ** (j.forca - 90);
   v *= fatorDaIdade(idade, Math.max(0, j.potencial - j.forca));
   if (j.estrela) v *= 1.15;
-  if (contrato) {
-    const faltam = diasEntre(data, contrato.fim);
+  const vigente = contratoVigente(contrato, j.id, data);
+  if (vigente) {
+    const faltam = diasEntre(data, vigente.fim);
     if (faltam < 0) v *= 0.3;
     else if (faltam < 180) v *= 0.5;
     else if (faltam < 365) v *= 0.75;

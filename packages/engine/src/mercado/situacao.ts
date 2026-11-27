@@ -146,6 +146,8 @@ export function respostaDeVenda(
   j: Jogador,
   oferta: number,
   data: string,
+  /** Quem chega ao clube na troca (conta no tamanho do elenco e nos goleiros). */
+  chegam: readonly Jogador[] = [],
 ): RespostaDeVenda {
   const clube = j.clube ? mundo.clube(j.clube) : undefined;
   const elenco = clube ? mundo.elenco(clube.id) : [];
@@ -158,8 +160,9 @@ export function respostaDeVenda(
   const pedido =
     Math.round((valor * peso * (prodigio ? 1.3 : 1) * rico * desconto) / 100_000) * 100_000;
   // Elenco curto, ou o goleiro que deixaria o clube com menos de 2.
-  const goleiros = elenco.filter((x) => x.posicao === "G").length;
-  if (elenco.length <= ELENCO_MINIMO_PARA_VENDER || (j.posicao === "G" && goleiros <= 2))
+  const goleiros = [...elenco, ...chegam].filter((x) => x.posicao === "G").length;
+  const tamanho = elenco.length + chegam.length;
+  if (tamanho <= ELENCO_MINIMO_PARA_VENDER || (j.posicao === "G" && goleiros <= 2))
     return { tipo: "recusa", pedido, motivo: "elenco-curto" };
   const chave = importancia === "craque" || (prodigio && importancia !== "reserva");
   const intocavel = chave && situacao.brigandoPorTitulo && situacao.precisaDeDinheiro < 0.3;

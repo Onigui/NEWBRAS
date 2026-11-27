@@ -21,7 +21,11 @@ import {
   convocadosDoClube,
   custoDaDispensa,
   dispensarJogador,
+  emprestimoDe,
+  exercerOpcao,
+  leiloar,
   porAVenda,
+  porParaEmprestimo,
   valorDeMercado,
   diasEntre,
   faixaDaMoral,
@@ -40,6 +44,7 @@ import {
   type EstadoJogador,
 } from "@newbras/engine";
 import { Folego } from "../components/EditorEscalacao";
+import { estiloCampo } from "../editor/ui";
 import { corDaNotaNaVaga } from "../components/EditorFormacao";
 import { HUMOR, IconeHumor } from "../partida/Resumo";
 import type { MundoMontado } from "./useCarreira";
@@ -488,7 +493,11 @@ function Renovacao({
             ? t("Insatisfeito, ele não quer conversar sobre renovação agora.")
             : p.recusa === "contrato-longo"
               ? t("A renovação abre quando faltarem 2 anos de contrato.")
-              : t("Ele pensa em parar e não quer renovar.")}
+              : p.recusa === "emprestado"
+                ? t("Emprestado: o contrato é com o clube dono do passe.")
+                : p.recusa === "pre-contrato"
+                  ? t("Já assinou pré-contrato com outro clube e sai no fim do contrato.")
+                  : t("Ele pensa em parar e não quer renovar.")}
         </p>
       ) : (
         <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -514,7 +523,10 @@ function Renovacao({
   );
 }
 
-/** Valor de mercado, pôr à venda e dispensar (com o custo da rescisão). */
+/**
+ * Valor de mercado, pôr à venda, oferecer por empréstimo, leiloar e dispensar (com o custo da
+ * rescisão). O emprestado ao clube só mostra o empréstimo e a opção de compra.
+ */
 function AcoesDeMercado({
   l,
   c,
@@ -526,24 +538,86 @@ function AcoesDeMercado({
   montado: MundoMontado;
   mudar: (f: (c: Carreira) => Carreira) => void;
 }) {
+  const { mundo } = montado;
+  const [minimo, setMinimo] = useState<number | null>(null);
+  const [aviso, setAviso] = useState("");
+  const botao =
+    "rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho";
+  const valor = valorDeMercado(l.j, c.data, l.contrato);
+  const emprestimo = emprestimoDe(c, l.j.id);
+  if (emprestimo?.para === c.clube)
+    return (
+      <div className="text-sm">
+        <p className="mb-1 text-xs font-bold text-suave">{t("Mercado")}</p>
+        <p>
+          {t("Emprestado pelo {clube} até {fim}.", {
+            clube: mundo.clube(emprestimo.de)?.nomeCurto ?? emprestimo.de,
+            fim: dataCurta(emprestimo.fim),
+          })}
+        </p>
+        {emprestimo.opcao ? (
+          <>
+            <button
+              type="button"
+              className={`${botao} mt-1`}
+              onClick={() => {
+                const r = exercerOpcao(c, mundo, l.j.id);
+                setAviso(
+                  r.resultado === "caixa"
+                    ? t("Não há dinheiro em caixa para a opção.")
+                    : r.resultado === "janela-fechada"
+                      ? t("A opção só pode ser exercida com a janela aberta.")
+                      : "",
+                );
+                mudar(() => r.carreira);
+              }}
+            >
+              {t("Comprar pela opção ({valor})", {
+                valor: emprestimo.opcao.toLocaleString(locale()),
+              })}
+            </button>
+            {aviso && <p className="text-xs text-[#ffc38a]">{aviso}</p>}
+          </>
+        ) : (
+          <p className="text-xs text-suave">{t("Sem opção de compra.")}</p>
+        )}
+      </div>
+    );
   const aVenda = (c.aVenda ?? []).includes(l.j.id);
-  const custo = custoDaDispensa(c, montado.mundo, l.j.id);
+  const aEmprestimo = (c.aEmprestimo ?? []).includes(l.j.id);
+  const emLeilao = (c.leiloes ?? []).some((x) => x.jogador === l.j.id);
+  const custo = custoDaDispensa(c, mundo, l.j.id);
   return (
     <div className="text-sm">
       <p className="mb-1 text-xs font-bold text-suave">{t("Mercado")}</p>
-      <p>
-        {t("Valor de mercado: {valor}.", {
-          valor: valorDeMercado(l.j, c.data, l.contrato).toLocaleString(locale()),
-        })}
-      </p>
+      <p>{t("Valor de mercado: {valor}.", { valor: valor.toLocaleString(locale()) })}</p>
+      {emLeilao && (
+        <p className="text-xs text-canarinho">{t("Em leilão (veja na aba Mercado).")}</p>
+      )}
       <div className="mt-1 flex flex-wrap gap-1">
         <button
           type="button"
-          className="rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho"
+          className={botao}
           onClick={() => mudar((x) => porAVenda(x, l.j.id, !aVenda))}
         >
           {aVenda ? t("Tirar da venda") : t("Pôr à venda")}
         </button>
+        <button
+          type="button"
+          className={botao}
+          onClick={() => mudar((x) => porParaEmprestimo(x, l.j.id, !aEmprestimo))}
+        >
+          {aEmprestimo ? t("Tirar do empréstimo") : t("Oferecer por empréstimo")}
+        </button>
+        {!emLeilao && (
+          <button
+            type="button"
+            className={botao}
+            onClick={() => setMinimo(minimo === null ? Math.round(valor * 0.8) : null)}
+          >
+            {t("Leiloar")}
+          </button>
+        )}
         <button
           type="button"
           className="rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-[#ff8a7a] hover:text-[#ff8a7a]"
@@ -557,12 +631,42 @@ function AcoesDeMercado({
                 }),
               )
             )
-              mudar((x) => dispensarJogador(x, montado.mundo, l.j.id));
+              mudar((x) => dispensarJogador(x, mundo, l.j.id));
           }}
         >
           {t("Dispensar ({valor})", { valor: custo.toLocaleString(locale()) })}
         </button>
       </div>
+      {minimo !== null && !emLeilao && (
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <span className="text-xs text-suave">{t("Lance mínimo:")}</span>
+          <input
+            type="number"
+            className={`${estiloCampo} w-32!`}
+            value={minimo}
+            onChange={(e) => setMinimo(Number(e.target.value))}
+          />
+          <button
+            type="button"
+            className={botao}
+            onClick={() => {
+              const r = leiloar(c, mundo, l.j.id, minimo);
+              setAviso(
+                r.resultado === "janela-fechada"
+                  ? t("Leilão só com a janela de transferências aberta.")
+                  : r.resultado === "ok"
+                    ? ""
+                    : t("Não dá para leiloar esse jogador agora."),
+              );
+              if (r.resultado === "ok") setMinimo(null);
+              mudar(() => r.carreira);
+            }}
+          >
+            {t("Abrir leilão de {n} dias", { n: 4 })}
+          </button>
+        </div>
+      )}
+      {aviso && <p className="text-xs text-[#ffc38a]">{aviso}</p>}
     </div>
   );
 }

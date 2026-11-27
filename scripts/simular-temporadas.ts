@@ -48,9 +48,13 @@ const resumo = () => {
     .slice(0, 20);
   const mediaTop = top.reduce((a, b) => a + b, 0) / top.length;
   const transf = c.transferencias ?? [];
-  const daTemporada = transf.filter((t) => t.data.slice(0, 4) === ano).length;
+  const doAno = transf.filter((t) => t.data.slice(0, 4) === ano);
+  const daTemporada = doAno.length;
+  const tipos = ["emprestimo", "leilao", "troca", "pre-contrato"]
+    .map((x) => `${x} ${doAno.filter((t) => t.tipo === x).length}`)
+    .join(", ");
   linhas.push(
-    `${c.data} | elencos ${Math.min(...n)}-${Math.max(...n)} (média ${(n.reduce((a, b) => a + b, 0) / n.length).toFixed(1)}) | sem goleiro ${semGoleiro} | top 20 (11 melhores) ${mediaTop.toFixed(1)} | livres ${livresDe(c).length} | transferências guardadas ${transf.length} (${daTemporada} no ano) | salvamento ${(JSON.stringify(c).length / 1e6).toFixed(1)} MB | ${((Date.now() - inicio) / 1000).toFixed(0)} s`,
+    `${c.data} | elencos ${Math.min(...n)}-${Math.max(...n)} (média ${(n.reduce((a, b) => a + b, 0) / n.length).toFixed(1)}) | sem goleiro ${semGoleiro} | top 20 (11 melhores) ${mediaTop.toFixed(1)} | livres ${livresDe(c).length} | transferências guardadas ${transf.length} (${daTemporada} no ano) | ${tipos} | empréstimos ativos ${c.emprestimos?.length ?? 0} | salvamento ${(JSON.stringify(c).length / 1e6).toFixed(1)} MB | ${((Date.now() - inicio) / 1000).toFixed(0)} s`,
   );
   console.log(linhas.at(-1));
 };
@@ -62,11 +66,11 @@ while (c.data < fim) {
     c = registrarJogo(c, m, x.id, simularPartida(partidaDoCompromisso(c, m, x)));
   }
   c = avancarDia(c, base).carreira;
-  // O técnico automático renova quem está com o contrato no fim (se o jogador aceitar).
+  // O técnico automático renova antes dos 6 meses finais (se o jogador aceitar), como pede o aviso.
   const hoje = mundoNaData(base, c, c.data);
   for (const j of hoje.elenco(c.clube)) {
     const contrato = contratoDe(c, hoje, j.id);
-    if (!contrato || diasEntre(c.data, contrato.fim) !== 60) continue;
+    if (!contrato || diasEntre(c.data, contrato.fim) !== 200) continue;
     const p = propostaDeRenovacao(c, hoje, j.id);
     if (!p.recusa && p.meses.length) c = renovarContrato(c, hoje, j.id, p.meses.at(-1)!);
   }
