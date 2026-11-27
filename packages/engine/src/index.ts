@@ -9,7 +9,7 @@ export * from "./competicoes";
 export { convocar, TAMANHO_DA_CONVOCACAO, VAGAS_DA_CONVOCACAO } from "./selecoes/convocacao";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.26.0";
+export const ENGINE_VERSION = "0.27.0";
 export {
   CHANCE_DE_AMISTOSO,
   diasDosAmistosos,
@@ -52,3 +52,26 @@ export {
   type CausaDaLesao,
   type LesionadosDaCpu,
 } from "./elenco/lesoes";
+export {
+  BASE_MAXIMA,
+  baseDe,
+  contratarOlheiro,
+  contratarProspecto,
+  demitirOlheiro,
+  descartarRelatorio,
+  dispensarDaBase,
+  enviarOlheiro,
+  faixaDoOlheiro,
+  IDADE_DISPENSA,
+  IDADE_MINIMA_PROMOCAO,
+  jogadorDaBaseNaData,
+  MESES_DE_MISSAO,
+  OLHEIROS_MAXIMO,
+  olheirosDisponiveis,
+  podePromover,
+  promover,
+  type EstadoDaBase,
+  type JogadorDaBase,
+  type Olheiro,
+  type Relatorio,
+} from "./elenco/base";
