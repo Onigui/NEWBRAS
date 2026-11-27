@@ -26,6 +26,7 @@ import {
   nomeDoCompromisso,
   suspensosNaCompeticao,
   foraPelaSelecao,
+  indisponiveisNoJogo,
   mundoNaData,
   type Carreira as CarreiraT,
   type Compromisso,
@@ -175,6 +176,28 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   }, [c, jogadores]);
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
 
+  // Lesionados, suspensos e convocados escalados para o jogo de hoje: o jogo não começa assim.
+  const foraDeHoje = useMemo(() => {
+    const x = compromissoDoDia(c) ?? proximoCompromisso(c);
+    return x ? indisponiveisNoJogo(c, mundo, x.competicao, x.data) : new Set<string>();
+  }, [c, mundo]);
+  const titularesFora = escalacao.titulares.filter((id) => id && foraDeHoje.has(id));
+  const reservasFora = escalacao.reservas.filter((id) => foraDeHoje.has(id));
+  const nomeDoJogador = (id: string) => jogadores.find((j) => j.id === id)?.nome ?? id;
+  const tirarIndisponiveis = () => {
+    const e = escalacaoDoTecnico(c, jogadores, foraDeHoje);
+    const vagas = (e.vagas ?? FORMACOES[e.formacao === "personalizada" ? "4-4-2" : e.formacao]).map(
+      (v) => ({ ...v }),
+    );
+    mudarEscalacao({
+      formacao: e.formacao,
+      vagas,
+      titulares: [...e.titulares],
+      reservas: [...e.reservas],
+      papeis: vagas.map((_, i) => e.papeis?.[i] ?? null),
+    });
+  };
+
   // F2 salva na hora; 1 a 9 e 0 trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
   const tecla = useCallback(
@@ -292,6 +315,12 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
               <Botao onClick={() => setDia("hub")}>{t("Voltar")}</Botao>
               <Botao
                 variante="primario"
+                disabled={titularesFora.length + reservasFora.length > 0}
+                title={
+                  titularesFora.length + reservasFora.length > 0
+                    ? t("Tire os jogadores que não podem jogar antes de começar.")
+                    : undefined
+                }
                 onClick={() => {
                   setJogo({
                     opcoes: partidaDoCompromisso(c, mundo, hoje),
@@ -306,12 +335,42 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
               </Botao>
             </div>
           </div>
+          {titularesFora.length + reservasFora.length > 0 && (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-md border border-[#ff8a7a]/50 bg-[#ff8a7a]/10 px-3 py-2 text-sm"
+            >
+              <p className="font-bold text-[#ffb3a8]">
+                {t("O jogo não pode começar com quem não tem condição de jogar.")}
+              </p>
+              <ul className="flex flex-col gap-0.5">
+                {[...titularesFora, ...reservasFora].map((id) => (
+                  <li key={id}>
+                    {t("{jogador} ({motivo}) está {onde}.", {
+                      jogador: nomeDoJogador(id),
+                      motivo: avisos.get(id) ?? t("indisponível"),
+                      onde: titularesFora.includes(id) ? t("entre os titulares") : t("no banco"),
+                    })}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-suave">
+                {t(
+                  "Troque cada um na escalação abaixo ou deixe o jogo escolher os melhores disponíveis para essas vagas.",
+                )}
+              </p>
+              <div>
+                <Botao onClick={tirarIndisponiveis}>{t("Trocar pelos melhores disponíveis")}</Botao>
+              </div>
+            </div>
+          )}
           <Tatica c={c} mudar={mudar} />
           <EditorEscalacao
             jogadores={jogadores}
             valor={escalacao}
             onMudar={mudarEscalacao}
             avisos={avisos}
+            indisponiveis={foraDeHoje}
             guardadas={c.formacoesSalvas}
             onGuardar={(f) =>
               mudar((x) => ({
@@ -376,6 +435,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                   valor={escalacao}
                   onMudar={mudarEscalacao}
                   avisos={avisos}
+                  indisponiveis={foraDeHoje}
                   guardadas={c.formacoesSalvas}
                   onGuardar={(f) =>
                     mudar((x) => ({

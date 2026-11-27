@@ -47,8 +47,9 @@ export function escalacaoSugerida(
   jogadores: readonly JogadorPartida[],
   formacao: Formacao | "personalizada",
   vagas: readonly Vaga[],
+  indisponiveis?: ReadonlySet<string>,
 ): EscalacaoEditavel {
-  const e = escalacaoAutomatica(jogadores, vagas);
+  const e = escalacaoAutomatica(jogadores, vagas, indisponiveis ? { indisponiveis } : {});
   return {
     formacao,
     vagas: vagas.map((v) => ({ ...v })),
@@ -64,6 +65,8 @@ interface Props {
   onMudar: (e: EscalacaoEditavel) => void;
   /** Aviso de "melhor poupar" por jogador (cansado, humor ruim). */
   avisos?: ReadonlyMap<string, string>;
+  /** Quem não pode jogar (lesionados, suspensos, convocados): a escalação automática pula. */
+  indisponiveis?: ReadonlySet<string>;
   guardadas?: readonly FormacaoGuardada[];
   onGuardar?: (f: FormacaoGuardada) => void;
 }
@@ -73,6 +76,7 @@ export function EditorEscalacao({
   valor,
   onMudar,
   avisos,
+  indisponiveis,
   guardadas = [],
   onGuardar,
 }: Props) {
@@ -190,7 +194,7 @@ export function EditorEscalacao({
         <Botao
           onClick={() => {
             setSelecionada(null);
-            onMudar(escalacaoSugerida(jogadores, valor.formacao, valor.vagas));
+            onMudar(escalacaoSugerida(jogadores, valor.formacao, valor.vagas, indisponiveis));
           }}
           title={t("Os melhores para cada vaga, já descontando cansaço e humor")}
         >
@@ -205,6 +209,11 @@ export function EditorEscalacao({
         selecionada={selecionada}
         onSelecionar={setSelecionada}
         onMudar={(vagas) => onMudar({ ...valor, formacao: "personalizada", vagas })}
+        onTrocarVagas={(a, b, vagas) => {
+          const titulares = [...valor.titulares];
+          [titulares[a], titulares[b]] = [titulares[b] ?? "", titulares[a] ?? ""];
+          onMudar({ ...valor, vagas, titulares });
+        }}
       />
 
       {selecionada !== null && valor.vagas[selecionada] && (

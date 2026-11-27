@@ -81,3 +81,32 @@ describe("partida ao vivo", () => {
     expect(normal.c.resultado?.placar).toEqual(pulada.resultado?.placar);
   });
 });
+
+describe("lesão no time do técnico", () => {
+  it("o jogo para com o aviso e o lesionado espera a decisão em campo", () => {
+    const base = time("H");
+    const fragil = base.escalacao.titulares[7]!;
+    const humano: TimePartida = {
+      ...base,
+      cpu: false,
+      jogadores: base.jogadores.map((j) => (j.id === fragil ? { ...j, risco: 400 } : j)),
+    };
+    const c = new ControleAoVivo({ semente: "sacrificio", casa: humano, fora: time("B") });
+    let agora = 0;
+    let parou = false;
+    for (let i = 0; i < 400_000 && !c.partida.terminada; i++) {
+      agora += 16;
+      if (c.passo(agora, 16, "rapida") === "pausa") {
+        if (c.aviso?.includes("machucou")) {
+          parou = true;
+          break;
+        }
+        c.continuar();
+      }
+    }
+    expect(parou).toBe(true);
+    expect(c.partida.machucadosEmCampo("casa")).toEqual([fragil]);
+    c.pular();
+    expect(c.partida.terminada).toBe(true);
+  });
+});

@@ -485,3 +485,28 @@ describe("partida", () => {
     expect((Date.now() - inicio) / 30).toBeLessThan(150);
   });
 });
+
+describe("decisão do técnico na lesão", () => {
+  it("ao vivo o lesionado fica em campo até o técnico decidir; ao pular, o motor troca", () => {
+    const base = timeDeTeste("H", 72, { cpu: false });
+    const fragil = base.escalacao.titulares[7]!;
+    const casa = {
+      ...base,
+      jogadores: base.jogadores.map((j) => (j.id === fragil ? { ...j, risco: 400 } : j)),
+    };
+    const p = new Partida({ semente: "sacrificio", casa, fora: timeDeTeste("C", 72) });
+    p.decidirNaHora("casa", true);
+    let minutos = 0;
+    while (!p.machucadosEmCampo("casa").length && !p.terminada && minutos < 200) {
+      p.avancar(60);
+      minutos++;
+    }
+    expect(p.machucadosEmCampo("casa")).toEqual([fragil]);
+    expect(p.emCampo("casa")).toContain(fragil);
+    expect(p.eventos.some((e) => e.tipo === "substituicao" && e.jogador === fragil)).toBe(false);
+    // O técnico desiste de decidir (pular para o fim): o motor troca o lesionado.
+    p.decidirNaHora("casa", false);
+    expect(p.emCampo("casa")).not.toContain(fragil);
+    expect(p.eventos.some((e) => e.tipo === "substituicao" && e.jogador === fragil)).toBe(true);
+  });
+});

@@ -418,6 +418,11 @@ function EscolhaTime({
               reservas: [...reservas],
             })
           }
+          onTrocarVagas={(a, b, vagas) => {
+            const novos = [...titulares];
+            [novos[a], novos[b]] = [novos[b] ?? "", novos[a] ?? ""];
+            onMudar({ ...escolha, vagas, titulares: novos, reservas: [...reservas] });
+          }}
         />
       )}
       {time && selecionada !== null && escolha.vagas[selecionada] && (

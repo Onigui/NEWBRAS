@@ -809,3 +809,20 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - O painel no topo mostra os convites (aceitar ou recusar) e, na demissão, a escolha obrigatória.
   - A aba Início ganhou o quadro do técnico: reputação, faixa, até que nível chegam os convites e as passagens.
 - **Teste numa carreira real:** Arsenal com a confiança forçada a 5. Veio a demissão e dois convites (Botev Vratsa e Sporting San Miguelito); o tempo ficou parado até a escolha. Depois veio a troca para o Botev e 90 dias de jogos sem erro, com o Arsenal seguindo na CPU com o elenco inteiro.
+
+## Correções pedidas pelo dono: troca de funções e jogadores indisponíveis (27/11/2026)
+
+- **Trocar dois jogadores de lugar:**
+  - Soltar um jogador em cima de outro no campo troca os dois de vaga, e cada um assume a posição e a função da vaga do outro. Vale no pré-jogo, no amistoso e no meio da partida, sem gastar substituição.
+  - Durante o arraste, o jogador que vai ser trocado ganha um anel tracejado amarelo. Soltar longe de todos continua só mudando o lugar.
+- **Funções do meio central:** volante, meio-campista e meia agora se trocam entre si em qualquer vaga do meio central. Antes, quem estava na faixa do volante não podia virar meia, e quem estava na faixa do meia não podia virar volante. A CPU não muda: ela escolhe a melhor função da posição da vaga.
+- **Lesionado, suspenso ou convocado escalado:**
+  - O botão "Começar o jogo" fica bloqueado e um alerta lista quem não pode jogar, dizendo se está entre os titulares ou no banco.
+  - O alerta tem um botão que coloca os melhores disponíveis no lugar deles.
+  - A escalação automática da carreira também pula quem não pode jogar.
+  - Antes, o jogo começava normalmente e o motor trocava esses jogadores sozinho na hora.
+- **Lesão e expulsão no meio do jogo** (pedido feito durante esta correção):
+  - Na partida ao vivo, o motor não troca mais sozinho o lesionado do time do técnico. O jogo para com um aviso.
+  - O jogador continua em campo, no sacrifício, rendendo 60% (atributos e passada) e marcado com uma cruz vermelha no campo e na lista de trocas. Fica até o técnico substituí-lo ou decidir seguir com ele.
+  - Na expulsão de um jogador do técnico, o jogo também para, para ele reorganizar a formação, as instruções ou as trocas.
+  - "Pular para o fim" devolve a decisão ao motor: quem está machucado é trocado como antes. A simulação dos outros jogos e o time da CPU seguem como estavam.

@@ -409,18 +409,20 @@ export const FUNCOES_DA_POSICAO: Record<PosicaoCampo, readonly Funcao[]> = {
 
 /**
  * Posições que o técnico pode pedir a quem está numa vaga, além da própria: o centroavante
- * que joga de segundo atacante, o volante que vira terceiro zagueiro, o ponta que recua.
+ * que joga de segundo atacante, o volante que vira terceiro zagueiro, o ponta que recua. No meio
+ * central, volante, meio-campista e meia se trocam entre si em qualquer vaga, para o técnico
+ * poder inverter dois meias sem arrastar o desenho.
  */
 export const POSICOES_VIZINHAS: Record<PosicaoCampo, readonly PosicaoCampo[]> = {
   GOL: ["GOL"],
   ZAG: ["ZAG", "VOL"],
   LD: ["LD", "MD"],
   LE: ["LE", "ME"],
-  VOL: ["VOL", "MC", "ZAG"],
+  VOL: ["VOL", "MC", "MEI", "ZAG"],
   MC: ["MC", "VOL", "MEI"],
   MD: ["MD", "PD", "LD"],
   ME: ["ME", "PE", "LE"],
-  MEI: ["MEI", "MC", "SA"],
+  MEI: ["MEI", "MC", "VOL", "SA"],
   PD: ["PD", "MD"],
   PE: ["PE", "ME"],
   SA: ["SA", "CA", "MEI"],

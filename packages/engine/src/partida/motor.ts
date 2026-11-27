@@ -113,7 +113,15 @@ interface Time {
   forma: number;
   /** Time que já goleia relaxa um pouco. */
   acomodacao: number;
+  /**
+   * O técnico decide na hora (partida ao vivo): o lesionado fica em campo, no sacrifício, até ele
+   * escolher a troca. Fora disso (simulação, pular para o fim), o motor troca sozinho.
+   */
+  decideNaHora?: boolean;
 }
+
+/** Quanto rende quem joga machucado (atributos e passada). */
+const NO_SACRIFICIO = 0.6;
 
 function estatisticasVazias(): EstatisticasTime {
   return {
@@ -380,6 +388,24 @@ export class Partida {
     return true;
   }
 
+  /**
+   * Liga ou desliga a decisão na hora do técnico. Ligada, a lesão de um jogador do time não troca
+   * ninguém sozinha. Ao desligar (pular para o fim), quem joga machucado é trocado como antes.
+   */
+  decidirNaHora(lado: LadoCampo, sim: boolean): void {
+    const time = this.times[lado];
+    time.decideNaHora = sim;
+    if (sim) return;
+    for (const a of [...this.emCampoDe(lado)]) if (a.est.lesionado) this.tirarLesionado(time, a);
+  }
+
+  /** Quem está em campo jogando machucado (esperando a decisão do técnico). */
+  machucadosEmCampo(lado: LadoCampo): readonly string[] {
+    return this.emCampoDe(lado)
+      .filter((a) => a.est.lesionado)
+      .map((a) => a.j.id);
+  }
+
   /** Reservas que ainda podem entrar. */
   reservas(lado: LadoCampo): readonly string[] {
     return this.times[lado].atletas.filter((a) => !a.usado).map((a) => a.j.id);
@@ -611,7 +637,8 @@ export class Partida {
     const condicao = fisico ? 0.7 + 0.3 * (a.condicao / 100) : 0.9 + 0.1 * (a.condicao / 100);
     const time = this.times[a.lado];
     const ajuste = (time.dados.ajuste ?? 1) * time.forma * time.acomodacao * a.forma;
-    const valor = limitar(base * a.fator * condicao * ajuste, 1, 100);
+    const machucado = a.est.lesionado ? NO_SACRIFICIO : 1;
+    const valor = limitar(base * a.fator * condicao * ajuste * machucado, 1, 100);
     a.efetivos[nome] = valor;
     return valor;
   }
@@ -1719,6 +1746,7 @@ export class Partida {
 
   /** Machuca o atleta; com quem fez a falta, a lesão foi de pancada. */
   private lesionar(a: Atleta, infrator?: Atleta): void {
+    if (a.est.lesionado) return;
     a.est.lesionado = true;
     this.registrar("lesao", {
       time: a.lado,
@@ -1726,6 +1754,16 @@ export class Partida {
       ...(infrator ? { outro: infrator.j.id } : {}),
     });
     const time = this.times[a.lado];
+    if (time.decideNaHora) {
+      // Fica em campo, rendendo menos (atributos e passada), até o técnico decidir.
+      this.renovar(a);
+      return;
+    }
+    this.tirarLesionado(time, a);
+  }
+
+  /** Troca o lesionado pelo melhor do banco para a vaga ou, sem troca, o tira de campo. */
+  private tirarLesionado(time: Time, a: Atleta): void {
     const reserva = this.reservaPara(time, a);
     if (reserva && this.podeTrocar(time)) this.trocar(time, a, reserva);
     else {

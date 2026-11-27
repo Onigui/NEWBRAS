@@ -366,6 +366,7 @@ function Comando({
   onMudou: () => void;
 }) {
   const emCampo = partida.emCampo(lado);
+  const machucados = new Set(partida.machucadosEmCampo(lado));
   const condicoes = partida.condicoes(lado);
   const humores = partida.humor(lado);
   const reservas = partida.reservas(lado);
@@ -425,7 +426,9 @@ function Comando({
               id ? (
                 <option key={id} value={id}>
                   {t("{nome} (fôlego {condicoes}%{has}, humor {nome2})", {
-                    nome: nome(id),
+                    nome: machucados.has(id)
+                      ? t("{nome}, machucado", { nome: nome(id) })
+                      : nome(id),
                     condicoes: condicoes[i],
                     has: notas.has(id) ? t(", nota {get}", { get: notas.get(id)?.toFixed(1) }) : "",
                     nome2: HUMOR[humores.get(id) ?? "normal"].nome.toLowerCase(),
@@ -544,11 +547,16 @@ function Comando({
           vagas={vagas}
           ocupantes={ocupantes}
           papeis={escolhidos}
+          machucados={machucados}
           selecionada={selecionada}
           onSelecionar={setSelecionada}
           onMudar={(novas) => {
             setFormacao("personalizada");
             if (partida.mudarFormacao(lado, novas)) onMudou();
+          }}
+          onTrocarVagas={(a, b, antes) => {
+            partida.mudarFormacao(lado, antes);
+            if (partida.trocarVagas(lado, a, b)) onMudou();
           }}
         />
         {selecionada !== null && vagas[selecionada] && (
