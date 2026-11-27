@@ -105,7 +105,9 @@ export function Base({
                         ? t("olheiro ({pais})", { pais: mundo.pais(j.nacionalidade)?.nome ?? "" })
                         : b.origem === "peneira"
                           ? t("peneira")
-                          : t("já estava")}
+                          : b.origem === "renascido"
+                            ? t("lenda renascida (potencial {pot})", { pot: b.potencialReal })
+                            : t("já estava")}
                     </td>
                     <td className="flex gap-1 py-1">
                       <button

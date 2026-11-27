@@ -114,11 +114,20 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   const daBase = evolucao?.daBase;
   const assinatura = `${[...saidas].join(",")}|${[...ajustes].join(",")}|${[...promovidosHoje.values()].map((j) => j.id + j.forca).join(",")}`;
   const doClube = (lista: readonly Jogador[]): readonly Jogador[] => {
-    if (!saidas.size && !ajustes.size && !promovidos.length && !daBase?.size) return lista;
+    if (
+      !saidas.size &&
+      !ajustes.size &&
+      !promovidos.length &&
+      !daBase?.size &&
+      !evolucao?.renascidos.size
+    )
+      return lista;
     const guardado = doClubeCache.get(lista);
     if (guardado?.assinatura === assinatura) return guardado.lista;
     const r = [
-      ...lista.filter((j) => !daBase?.has(j.id) && !promovidosHoje.has(j.id)),
+      ...lista.filter(
+        (j) => !daBase?.has(j.id) && !evolucao?.renascidos.has(j.id) && !promovidosHoje.has(j.id),
+      ),
       ...promovidosHoje.values(),
     ]
       .filter((j) => !saidas.has(j.id))

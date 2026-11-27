@@ -61,7 +61,7 @@ import { dataCurta, somarDias } from "./datas";
 import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
 import { evolucaoDe, mundoNaData } from "../elenco/mundo";
 import { elencoSemLesionados, riscoDeLesao } from "../elenco/lesoes";
-import { diaDaBase, type EstadoDaBase, type JogadorDaBase } from "../elenco/base";
+import { diaDaBase, receberRenascido, type EstadoDaBase, type JogadorDaBase } from "../elenco/base";
 import {
   diaDoMercado,
   fimDeContrato,
@@ -663,7 +663,23 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   );
   // Lesões, moral e contratos do dia; a base (olheiros, peneira e dispensas).
   const dia = diaDoElenco(c, mundoAmanha, data, elenco.jogadores);
-  const base = diaDaBase(c, mundoAmanha, data, virou);
+  let base = diaDaBase(c, mundoAmanha, data, virou);
+  // Sorte grande: uma lenda renascida caiu na base do clube.
+  if (evolucao?.ativo(data))
+    for (const e of evolucao.eventos(data)) {
+      if (e.tipo !== "renascimento" || e.clube !== c.clube) continue;
+      const j = evolucao.jogador(e.id, data);
+      if (j)
+        base = {
+          ...base,
+          base: receberRenascido(
+            { ...c, ...(base.base ? { base: base.base } : {}) },
+            mundoAmanha,
+            j,
+            data,
+          ),
+        };
+    }
   const mercado = diaDoMercado(c, mundoAmanha, data);
   for (const n of [
     ...convocados.noticias,

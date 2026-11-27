@@ -12,7 +12,7 @@ import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import { estadoDe } from "../carreira/carreira";
 import { somarDias } from "../carreira/datas";
-import { idadeEm } from "../evolucao";
+import { fracaoDoPotencial, idadeEm } from "../evolucao";
 import { gerarJogador, salarioBase } from "../gerador/jogador";
 import { gerarNome } from "../gerador/nomes";
 import { Rng } from "../rng";
@@ -40,7 +40,7 @@ export interface JogadorDaBase {
   potencialReal: number;
   /** Quando entrou na base (ou foi promovido, para os promovidos). */
   entrada: string;
-  origem: "banco" | "olheiro" | "peneira";
+  origem: "banco" | "olheiro" | "peneira" | "renascido";
 }
 
 export interface Olheiro {
@@ -431,4 +431,44 @@ export function diaDaBase(
       : {}),
   };
   return { base, noticias };
+}
+
+/**
+ * Lenda renascida que caiu na base do clube do técnico (sorte grande): entra na base na data, com a
+ * idade e a força do renascimento e o potencial do auge. Entra mesmo com a base cheia.
+ */
+export function receberRenascido(
+  c: Carreira,
+  mundo: Mundo,
+  j: Jogador,
+  data: string,
+): EstadoDaBase {
+  const base = baseDe(c, mundo);
+  if (base.jogadores.some((b) => b.j.id === j.id)) return base;
+  const pico = Math.max(j.potencial, j.forcaAuge ?? 0);
+  const forca = Math.max(
+    30,
+    Math.round(pico * fracaoDoPotencial(idadeEm(j.nascimento, data), j.posicao)),
+  );
+  const fator = forca / Math.max(1, j.forca);
+  const chegada: Jogador = {
+    ...j,
+    forca,
+    potencial: pico,
+    base: true,
+    clube: c.clube,
+    atributos: Object.fromEntries(
+      Object.entries(j.atributos ?? {}).map(([a, v]) => [
+        a,
+        Math.max(1, Math.min(100, Math.round((v as number) * fator))),
+      ]),
+    ) as Jogador["atributos"],
+  };
+  return {
+    ...base,
+    jogadores: [
+      ...base.jogadores,
+      { j: chegada, potencialReal: pico, entrada: data, origem: "renascido" },
+    ],
+  };
 }

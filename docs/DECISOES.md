@@ -430,7 +430,7 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Lendas que renascem:**
   - Quem chegou a força 80 ou é estrela renasce com 16 a 18 anos, com o mesmo nome, as mesmas características e o perfil reduzido.
   - O potencial é a força do auge (o Messi volta podendo chegar a 97).
-  - Renasce na base de um clube sorteado; os de nível mais alto têm mais chance. Sobe ao profissional aos 18, numa vaga nova do clube.
+  - Renasce na base de qualquer clube do mundo, com chance igual para todos, menos o clube de onde saiu (regra do dono em 27/11/2026, abaixo). Sobe ao profissional aos 18, numa vaga nova do clube.
 - **Notícias:**
   - Do clube: aposentadorias, quem sobe dos juniores ou da base e quem mais evoluiu e mais caiu na temporada nova.
   - Do mundo: até 6 lendas famosas por dia (força de auge 86 ou mais), com o clube onde renasceram.
@@ -540,3 +540,33 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Interface:**
   - Aba Mercado (tecla 9): caixa e janela, propostas recebidas, busca no mundo inteiro (nome, posição, força, idade, valor, só livres), proposta com resposta na hora, à venda e transferências do clube.
   - Ficha do jogador: valor, pôr à venda e dispensar.
+
+## Pedidos do dono em 27/11/2026: renascimento, trocas, empréstimos e a crise do clube mal administrado
+
+- **Renascimento (feito nesta data):**
+  - A lenda renasce na base de qualquer clube do mundo, sorteado com chance igual para todos, e nunca no clube de onde saiu. Antes, os clubes de nível alto tinham mais chance. A graça é um time fraco ter a sorte de ganhar um prodígio.
+  - Se o sorteado for o clube do técnico, ela chega à aba Base, com a idade e a força do renascimento e o potencial do auge, mesmo com a base cheia. A promoção é decisão do técnico (teste: Modrić renasce aos 18 na base do Ipswich).
+- **Trocas e empréstimos (entram na etapa 13c, com o pré-contrato e os leilões):**
+  - Troca de um jogador por outro, com ou sem diferença em dinheiro para qualquer lado. Os dois clubes e os dois jogadores precisam aceitar.
+  - Empréstimo nos dois sentidos: ceder ao clube da CPU e pegar emprestado.
+  - Condições do empréstimo: prazo (até o fim da temporada ou de 6 a 18 meses), quem paga o salário (ou a divisão), taxa de empréstimo e opção de compra com valor fixo.
+  - O emprestado volta no fim do prazo. A CPU também empresta jovens para dar minutos.
+- **A crise do clube mal administrado (Fase 14, finanças e estádio), com o efeito cascata pedido:**
+  - **Receitas:**
+    - Bilheteria pelo público real: cai com a fase ruim, com o preço alto e com o estádio velho, e sobe com as vitórias e os títulos.
+    - Sócio-torcedor, que também foge na crise.
+    - Premiações de campeonato e copa.
+    - Cotas de TV pela divisão.
+    - Patrocínio pela reputação: com o clube em baixa, os contratos encolhem ou vêm piores.
+    - Vendas de jogadores.
+  - **Despesas:** salários todo mês, manutenção do estádio, obras, olheiros e estrutura da base, juros.
+  - **No vermelho:**
+    - O caixa negativo vira dívida.
+    - Sem dinheiro no dia do pagamento, os salários atrasam: a moral desaba, os jogadores pedem para sair e recusam renovar, e os melhores vão embora de graça.
+    - Aí vêm menos vitórias, menos público e menos dinheiro, e a bola de neve segue.
+    - Punições da liga em dívida grave: proibição de contratar e perda de pontos onde a vida real faz isso.
+  - **A saída: empréstimo bancário.**
+    - O técnico vê quanto precisa e decide quanto mais pegar para investir (elenco, estádio, base).
+    - Escolhe o prazo; a parcela mensal vem com juros. O limite e a taxa dependem do tamanho do clube e da dívida que já tem, e o juro sobe com o risco.
+    - Pagando em dia e voltando a ter resultado, o clube se recupera. Atrasando, a dívida cresce e o crédito acaba, até afundar de vez.
+  - **CPU:** os clubes da CPU passam pelo mesmo ciclo, de forma simplificada, para o mundo ter ascensões e quedas.
