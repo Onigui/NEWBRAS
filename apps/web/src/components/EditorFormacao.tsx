@@ -71,7 +71,17 @@ interface Props {
   selecionada?: number | null;
   onSelecionar?: (vaga: number | null) => void;
   onMudar: (vagas: Vaga[]) => void;
+  /**
+   * Soltar um jogador em cima de outro troca os dois de vaga (cada um assume a posição e a função
+   * da vaga do outro). Recebe as duas vagas e o desenho de antes do arraste, para restaurar.
+   */
+  onTrocarVagas?: (a: number, b: number, vagas: Vaga[]) => void;
+  /** Jogadores em campo machucados (cruz vermelha ao lado), na partida ao vivo. */
+  machucados?: ReadonlySet<string>;
 }
+
+/** Distância (em metros) para o jogador solto contar como em cima de outro. */
+const RAIO_DA_TROCA = 4;
 
 export function EditorFormacao({
   vagas,
@@ -80,10 +90,20 @@ export function EditorFormacao({
   selecionada = null,
   onSelecionar,
   onMudar,
+  onTrocarVagas,
+  machucados,
 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
   const [arrastando, setArrastando] = useState<number | null>(null);
-  const inicio = useRef<{ x: number; y: number; moveu: boolean } | null>(null);
+  const inicio = useRef<{
+    x: number;
+    y: number;
+    moveu: boolean;
+    /** O desenho antes do arraste. */
+    vagas: Vaga[];
+  } | null>(null);
+  /** Vaga sob o jogador arrastado (troca ao soltar). */
+  const [alvo, setAlvo] = useState<number | null>(null);
   const problemas = validarFormacao(vagas);
 
   const paraCampo = (e: React.PointerEvent): { x: number; y: number } | null => {
@@ -100,10 +120,33 @@ export function EditorFormacao({
     onMudar(formacaoPersonalizada(pontos));
   };
 
+  /** Outra vaga (do desenho de antes do arraste) perto do ponto, se houver troca. */
+  const vagaSob = (i: number, x: number, y: number): number | null => {
+    const antes = inicio.current?.vagas;
+    if (!onTrocarVagas || !antes || i === 0) return null;
+    let melhor: number | null = null;
+    let menor = RAIO_DA_TROCA;
+    antes.forEach((v, k) => {
+      if (k === i || k === 0) return;
+      const d = Math.hypot(v.x - x, v.y - y);
+      if (d < menor) {
+        menor = d;
+        melhor = k;
+      }
+    });
+    return melhor;
+  };
+
   const soltar = () => {
-    if (arrastando !== null && inicio.current && !inicio.current.moveu)
+    const ini = inicio.current;
+    if (arrastando !== null && ini && !ini.moveu)
       onSelecionar?.(selecionada === arrastando ? null : arrastando);
+    else if (arrastando !== null && ini && alvo !== null && onTrocarVagas) {
+      onTrocarVagas(arrastando, alvo, ini.vagas);
+      if (selecionada === arrastando) onSelecionar?.(alvo);
+    }
     setArrastando(null);
+    setAlvo(null);
     inicio.current = null;
   };
 
@@ -120,11 +163,13 @@ export function EditorFormacao({
           const ini = inicio.current;
           if (ini && !ini.moveu && Math.hypot(p.x - ini.x, p.y - ini.y) < 1.2) return;
           if (ini) ini.moveu = true;
+          setAlvo(vagaSob(arrastando, p.x, p.y));
           mover(arrastando, p.x, p.y);
         }}
         onPointerUp={soltar}
         onPointerLeave={() => {
           setArrastando(null);
+          setAlvo(null);
           inicio.current = null;
         }}
         role="group"
@@ -153,7 +198,9 @@ export function EditorFormacao({
               onPointerDown={(e) => {
                 (e.target as Element).setPointerCapture?.(e.pointerId);
                 const p = paraCampo(e);
-                inicio.current = p ? { ...p, moveu: false } : null;
+                inicio.current = p
+                  ? { ...p, moveu: false, vagas: vagas.map((x) => ({ ...x })) }
+                  : null;
                 setArrastando(i);
               }}
               tabIndex={0}
@@ -188,6 +235,15 @@ export function EditorFormacao({
               }}
             >
               {ativo && <circle r={4} fill="none" stroke="#ffffff" strokeWidth={0.45} />}
+              {alvo === i && (
+                <circle
+                  r={4.6}
+                  fill="none"
+                  stroke="#f4c430"
+                  strokeWidth={0.6}
+                  strokeDasharray="1.2 0.8"
+                />
+              )}
               <circle
                 r={2.8}
                 fill={COR[familia]}
@@ -203,6 +259,13 @@ export function EditorFormacao({
               >
                 {sigla}
               </text>
+              {j && machucados?.has(j.id) && (
+                <g transform="translate(-3.6 -3.6)">
+                  <title>{t("Machucado")}</title>
+                  <circle r={1.5} fill="#ffffff" />
+                  <path d="M-0.9 0H0.9M0 -0.9V0.9" stroke="#e53935" strokeWidth={0.6} />
+                </g>
+              )}
               {info && j && (
                 <g transform="translate(3.4 -3.6)">
                   <rect
@@ -243,7 +306,7 @@ export function EditorFormacao({
       </svg>
       <p className="text-xs text-suave">
         {t(
-          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar; clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa, até 62 m é meio-campo, depois é ataque. Campo útil de {xMin} a {xMax} m.",
+          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar (solte em cima de outro jogador para trocar os dois de vaga, com posição e função); clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa, até 62 m é meio-campo, depois é ataque. Campo útil de {xMin} a {xMax} m.",
           {
             desenhoDaFormacao: desenhoDaFormacao(vagas),
             xMin: LIMITES_VAGA.xMin,

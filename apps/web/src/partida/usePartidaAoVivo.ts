@@ -6,7 +6,7 @@
  * de perigo andam mais devagar e os gols seguram a tela por alguns segundos.
  */
 import { useEffect, useState } from "react";
-import type { Evento, OpcoesPartida, Quadro, ResultadoPartida } from "@newbras/engine";
+import type { Evento, LadoCampo, OpcoesPartida, Quadro, ResultadoPartida } from "@newbras/engine";
 import { Partida } from "@newbras/engine";
 import { t } from "@newbras/textos";
 
@@ -43,6 +43,8 @@ export type Instantaneo = Quadro & { dono: number | null };
  * Estado mutável da partida ao vivo, fora do React: o laço de animação avança o motor aqui e o
  * componente só relê. Separado do hook para poder ser testado sem navegador.
  */
+const LADOS: readonly LadoCampo[] = ["casa", "fora"];
+
 export class ControleAoVivo {
   readonly partida: Partida;
   anterior: Instantaneo;
@@ -61,9 +63,17 @@ export class ControleAoVivo {
   agora = 0;
   private seguraAte = 0;
   private acumulado = 0;
+  /** Times do humano: lesão e expulsão param o jogo para ele decidir. */
+  private readonly humanos: ReadonlySet<LadoCampo>;
+  private readonly nomes: ReadonlyMap<string, string>;
 
   constructor(opcoes: OpcoesPartida) {
     this.partida = new Partida(opcoes);
+    this.humanos = new Set(LADOS.filter((l) => !opcoes[l].cpu));
+    this.nomes = new Map(
+      LADOS.flatMap((l) => opcoes[l].jogadores.map((j) => [j.id, j.nome] as const)),
+    );
+    for (const l of this.humanos) this.partida.decidirNaHora(l, true);
     this.atual = this.partida.instantaneo();
     this.anterior = this.atual;
     this.eventos = [...this.partida.eventos];
@@ -91,6 +101,29 @@ export class ControleAoVivo {
       this.atual = p.instantaneo();
       if (novos.length) {
         this.eventos = [...this.eventos, ...novos];
+        // Lesão ou expulsão no time do técnico: o jogo para e ele decide o que fazer.
+        const decisao = novos.find(
+          (ev) =>
+            (ev.tipo === "lesao" || ev.tipo === "cartao-vermelho") &&
+            ev.time !== undefined &&
+            this.humanos.has(ev.time),
+        );
+        if (decisao) {
+          const nome = this.nomes.get(decisao.jogador ?? "") ?? "";
+          this.destaque = decisao;
+          this.aviso =
+            decisao.tipo === "lesao"
+              ? t(
+                  "{jogador} se machucou e está em campo no sacrifício, rendendo bem menos. Substitua (em Substituições ou clicando na vaga dele) ou continue com ele.",
+                  { jogador: nome },
+                )
+              : t(
+                  "{jogador} foi expulso e o time está com um a menos. Reorganize a formação, mude as instruções ou faça uma troca, e continue.",
+                  { jogador: nome },
+                );
+          this.acumulado = 0;
+          return "pausa";
+        }
         const importante = novos.find((ev) => SEGURAR[ev.tipo]);
         if (importante) {
           this.destaque = importante;
@@ -163,6 +196,8 @@ export class ControleAoVivo {
 
   /** Joga o resto de uma vez. */
   pular(): void {
+    // Sem ninguém decidindo, o motor volta a trocar o lesionado sozinho.
+    for (const l of this.humanos) this.partida.decidirNaHora(l, false);
     this.partida.simular();
     this.terminar();
   }

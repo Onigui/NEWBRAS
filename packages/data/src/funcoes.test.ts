@@ -51,6 +51,12 @@ describe("posições e funções", () => {
     expect(papelValido("CA", { posicao: "ZAG", funcao: "zagueiro" })).toBe(false);
   });
 
+  it("no meio central, volante, meio-campista e meia se trocam em qualquer vaga", () => {
+    for (const vaga of ["VOL", "MC", "MEI"] as const)
+      for (const posicao of ["VOL", "MC", "MEI"] as const)
+        expect(papelValido(vaga, { posicao, funcao: FUNCOES_DA_POSICAO[posicao][0]! })).toBe(true);
+  });
+
   it("a melhor função do jogador na posição dele dá a força; fora dela, bem menos", () => {
     const atacante = jogador("A", "C", 90);
     const naturais = posicoesNaturais(atacante);

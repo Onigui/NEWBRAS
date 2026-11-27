@@ -89,7 +89,10 @@ export interface TimePartida {
   jogadores: readonly JogadorPartida[];
   escalacao: Escalacao;
   tatica?: Tatica;
-  /** A CPU troca cansados e lesionados sozinha. O time do humano só troca lesionado sem opção. */
+  /**
+   * A CPU troca cansados e lesionados sozinha. O time do humano só troca lesionado sozinho quando
+   * ninguém decide na hora (simulação ou pular para o fim); ao vivo, quem decide é o técnico.
+   */
   cpu?: boolean;
   /** Multiplicador geral de rendimento, para ajustes de fora (padrão 1). */
   ajuste?: number;
