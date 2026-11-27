@@ -531,6 +531,7 @@ export function diaDaDiretoria(
       else if (p.posicao > d.metas.posicao + 3) delta -= 4;
     }
     if ((r.caixa ?? 0) < 0) delta -= 3;
+    if ((r.crise?.mesesAtrasados ?? 0) > 0) delta -= 5;
     if (delta) d = { ...d, confianca: limitar(d.confianca + delta) };
   }
 

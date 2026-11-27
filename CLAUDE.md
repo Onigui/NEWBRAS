@@ -9,6 +9,7 @@ Manager de futebol que recria o Brasfoot e depois evolui. Leia `docs/PESQUISA.md
 - Textos da interface, comentários e documentação em português do Brasil.
 - Todo texto que o jogador vê passa por `t("...")` de `@newbras/textos` (a chave é o próprio texto em português; partes variáveis entre chaves: `t("{n} dias", { n })`). O que o motor guarda (notícias, avisos) usa `marcar()` ou `chave()` e é traduzido ao mostrar. Mudou um texto? Rode `pnpm --filter @newbras/textos extrair` para atualizar os catálogos (o teste confere).
 - Cada fase termina com `pnpm check` passando, `docs/ROADMAP.md` atualizado e o documento do cronograma atualizado. A sessão envia o trabalho num branch `claude/...`, abre o PR e faz o merge depois da CI (permissão do dono). Ao fechar uma fase, acrescenta `fase-N <commit do merge>` em `docs/tags-das-fases.txt`; a CI cria a tag no GitHub.
+- Pedido do dono que já está planejado para outra fase: não antecipar. Anote em `docs/DECISOES.md` (no item da fase em que ele cabe), junte com o que já estava planejado para chegar à melhor versão e faça na fase prevista. Só entra antes o que o dono pedir explicitamente para antes, ou o que corrige um problema do que já existe.
 - Formato dos dados: `docs/DADOS.md`. Esquemas em `packages/data/src/schemas`.
 
 ## Motor (`packages/engine`)

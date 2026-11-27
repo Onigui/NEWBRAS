@@ -16,6 +16,7 @@ import { idadeEm } from "../evolucao";
 import { salarioBase } from "../gerador/jogador";
 import { Rng } from "../rng";
 import { diaDasSondagens } from "./sondagens";
+import { proibidoDeContratar } from "../financas/crise";
 import {
   aceitaOClube,
   caixaDe,
@@ -74,7 +75,7 @@ export type ResultadoPreContrato =
   | { tipo: "recusa-jogador"; motivo: "salario" | "quer-ficar" | "clube-menor"; pedido?: number }
   | {
       tipo: "impossivel";
-      motivo: "contrato-longo" | "em-negocio" | "elenco-cheio" | "mesmo-clube";
+      motivo: "contrato-longo" | "em-negocio" | "elenco-cheio" | "mesmo-clube" | "proibido";
     };
 
 /** O fim do contrato do jogador de outro clube, se faltar o bastante pouco para o pré-contrato. */
@@ -113,6 +114,7 @@ export function proporPreContrato(
   if (!j?.clube || !nosso || j.clube === c.clube)
     return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
   if (presosEmNegocio(c).has(id)) return fim({ tipo: "impossivel", motivo: "em-negocio" });
+  if (proibidoDeContratar(c, mundo)) return fim({ tipo: "impossivel", motivo: "proibido" });
   const termina = fimParaPreContrato(j, c.data);
   if (!termina) return fim({ tipo: "impossivel", motivo: "contrato-longo" });
   if (mundo.elenco(c.clube).length + chegandoPorPreContrato(c) >= ELENCO_MAXIMO)
@@ -173,7 +175,8 @@ export type CondicoesDeEmprestimo =
         | "em-negocio"
         | "janela-fechada"
         | "elenco-cheio"
-        | "mesmo-clube";
+        | "mesmo-clube"
+        | "proibido";
     };
 
 /**
@@ -193,6 +196,7 @@ export function condicoesDoEmprestimo(
     ({ tipo: "recusa", motivo }) as const;
   if (!j?.clube || !nosso || j.clube === c.clube) return recusa("mesmo-clube");
   if (presosEmNegocio(c).has(id)) return recusa("em-negocio");
+  if (proibidoDeContratar(c, mundo)) return recusa("proibido");
   if (!janelaAberta(mundo.pais(nosso.pais), c.data)) return recusa("janela-fechada");
   if (mundo.elenco(c.clube).length >= ELENCO_MAXIMO) return recusa("elenco-cheio");
   const elenco = mundo.elenco(j.clube);
@@ -383,7 +387,7 @@ export function exercerOpcao(
   const nosso = mundo.clube(c.clube);
   if (!e || e.para !== c.clube || !e.opcao || !j || !nosso)
     return { carreira: c, resultado: "sem-opcao" };
-  if (!janelaAberta(mundo.pais(nosso.pais), c.data))
+  if (!janelaAberta(mundo.pais(nosso.pais), c.data) || proibidoDeContratar(c, mundo))
     return { carreira: c, resultado: "janela-fechada" };
   const caixa = caixaDe(c, mundo);
   if (e.opcao > caixa) return { carreira: c, resultado: "caixa" };
@@ -428,7 +432,8 @@ export type ResultadoTroca =
   | { tipo: "recusa-jogador"; jogador: string }
   | {
       tipo: "impossivel";
-      motivo: "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" | "em-negocio";
+      motivo:
+        "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" | "em-negocio" | "proibido";
     };
 
 /** Quanto o clube da CPU dá por um jogador que recebe na troca: o que serve ao nível dele vale mais. */
@@ -469,6 +474,7 @@ export function avaliarTroca(
   const presos = presosEmNegocio(c);
   if (presos.has(alvo) || vao.some((x) => emprestadoAoClube(c, x.id)))
     return fim({ tipo: "impossivel", motivo: "em-negocio" });
+  if (proibidoDeContratar(c, mundo)) return fim({ tipo: "impossivel", motivo: "proibido" });
   if (
     !janelaAberta(mundo.pais(nosso.pais), c.data) ||
     !janelaAberta(mundo.pais(outro.pais), c.data)
@@ -632,7 +638,13 @@ export type ResultadoLance =
   | {
       tipo: "impossivel";
       motivo:
-        "baixo" | "caixa" | "janela-fechada" | "elenco-cheio" | "encerrado" | "recusa-jogador";
+        | "baixo"
+        | "caixa"
+        | "janela-fechada"
+        | "elenco-cheio"
+        | "encerrado"
+        | "recusa-jogador"
+        | "proibido";
       minimo?: number;
     };
 
@@ -649,6 +661,7 @@ export function darLance(
   const fim = (resultado: ResultadoLance) => ({ carreira: c, resultado });
   if (!l || !nosso || !j || l.fim < c.data || l.vendedor === c.clube)
     return fim({ tipo: "impossivel", motivo: "encerrado" });
+  if (proibidoDeContratar(c, mundo)) return fim({ tipo: "impossivel", motivo: "proibido" });
   const minimo = lanceMinimo(l);
   if (valor < minimo) return fim({ tipo: "impossivel", motivo: "baixo", minimo });
   if (valor > caixaDe(c, mundo)) return fim({ tipo: "impossivel", motivo: "caixa" });
@@ -936,6 +949,7 @@ function diaDosLeiloes(
       if (x.clube === r.clube) {
         const ok =
           !!nosso &&
+          !proibidoDeContratar(r, mundo) &&
           abertaNoPais(nosso.pais) &&
           x.valor <= caixaDe(r, mundo) &&
           mundo.elenco(r.clube).length < ELENCO_MAXIMO;

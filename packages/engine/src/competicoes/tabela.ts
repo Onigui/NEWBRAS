@@ -86,8 +86,15 @@ export function ordenarTabela(
   criterios: readonly Criterio[],
   pontos: { vitoria: number; empate: number } = { vitoria: 3, empate: 1 },
   semente = "tabela",
+  /** Pontos tirados por punição, por clube. */
+  descontos?: Readonly<Record<string, number>>,
 ): LinhaTabela[] {
   const linhas = calcularLinhas(clubes, jogos, pontos);
+  if (descontos)
+    for (const [clube, n] of Object.entries(descontos)) {
+      const l = linhas.get(clube);
+      if (l) linhas.set(clube, { ...l, pontos: l.pontos - n });
+    }
   const sorteio = new Map(
     new Rng(`${semente}:sorteio`).shuffle([...clubes].sort()).map((c, i) => [c, i]),
   );

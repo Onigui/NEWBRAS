@@ -640,7 +640,7 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 ## Finanças de verdade (etapa 14a, 27/11/2026)
 
 - **Escala real dos salários:** 2 milhões por mês na força 90, uns 4,2 vezes menos a cada 10 pontos (476 mil na 80, 113 mil na 70, 27 mil na 60, 6 mil na 50). Antes a escala era uns 6 vezes mais baixa que a dos valores de mercado. A mudança vale para os contratos do banco, as renovações, o pré-contrato e a rescisão.
-- **Receita anual pelo nível econômico e pelo país:** o nível econômico é metade o nível do clube (tamanho, torcida, história) e metade a força média dos 11 melhores do elenco, então time que melhora ganha mais (prêmios, público, patrocínio) e o que se desmancha perde. A receita é de 750 milhões no nível econômico 90, uns 3 vezes menos a cada 10 pontos, vezes a economia do país: Premier League 1,3; Arábia Saudita 1,2; Espanha e Alemanha 1,1; Itália 1; França e EUA 0,9; Portugal, Holanda, México e Turquia 0,8; Brasil 0,65; Argentina 0,55; o resto 0,65. A folha fica perto de metade da receita em todos os níveis (mais folgada na Inglaterra e na Arábia, mais apertada na Argentina).
+- **Receita anual pelo nível econômico e pelo país:** o nível econômico é metade o nível do clube (tamanho, torcida, história) e metade a força média dos 11 melhores do elenco, então time que melhora ganha mais (prêmios, público, patrocínio) e o que se desmancha perde. A receita é de 750 milhões no nível econômico 90, uns 3 vezes menos a cada 10 pontos, vezes a economia do país: Premier League 1,3; Arábia Saudita 1,2; Espanha e Alemanha 1,1; Itália 1; França e EUA 0,9; Portugal, Holanda, México e Turquia 0,8; Brasil 0,75 (era 0,65 na 14a; com a receita pelo elenco, o Flamengo ficava abaixo da realidade); Argentina 0,55; o resto 0,65. A folha fica perto de metade da receita em todos os níveis (mais folgada na Inglaterra e na Arábia, mais apertada na Argentina).
 - **Clube do técnico, todo dia 1:**
   - Entram cotas de TV (30% da receita anual, divididos por 12), patrocínio (22%) e comercial (6%).
   - Saem salários (os contratos do elenco; o emprestado a outro clube custa só a parte que o técnico paga), estrutura e funcionários (20%), manutenção do estádio (meio jogo de casa cheia) e olheiros.
@@ -684,3 +684,42 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - **Cobranças:** abaixo de 40, a diretoria cobra reação (com a posição e a meta); abaixo de 25, dá um ultimato. A partir de 80, elogia. Cada aviso vem no máximo uma vez a cada 30 dias.
   - A demissão fica para a Fase 15, junto com os convites de outros clubes.
 - **Na tela:** as conversas ficam num painel no topo da carreira, com as respostas e uma dica do efeito de cada uma. O avanço até o próximo jogo para quando a diretoria fala. A aba Início ganhou o quadro da diretoria, com a barra de confiança, a meta, a posição atual e as promessas em andamento.
+
+## Pedidos do dono em 27/11/2026 (tarde): ingressos sem abuso e o ritmo das fases
+
+- **Regra de trabalho:** quando o dono pede algo que já está planejado para outra fase, não é para antecipar. O pedido é anotado no item da fase, somado ao que já estava planejado, e feito na fase prevista. As conversas com os jogadores e a diretoria já tinham sido feitas antes do tempo; elas ficam como estão, e a ampliação vai para a Fase 15 (abaixo). A regra está no `CLAUDE.md`.
+- **Ingressos sem dinheiro infinito (etapa do estádio, 14c):** hoje o preço do ingresso é fixo, calculado pelo jogo, então ainda não há como abusar. Quando o técnico puder mexer no preço (setores e sócio-torcedor), entram as travas:
+  - **Preço justo:** cada clube tem um preço que a torcida aceita, pelo nível, pela economia do país, pela reputação, pela fase do time (vitórias, posição) e pela importância do jogo (clássico e final valem mais; amistoso, menos).
+  - **A torcida recusa o preço alto:** acima do justo, o público cai cada vez mais rápido (elástico), então a renda tem um máximo perto do preço justo e cai depois dele. Cobrar o dobro esvazia o estádio e rende menos.
+  - **Abuso tem custo:** preço muito acima do justo por várias rodadas gera protesto. A moral do time em casa cai (menos apoio), a reputação com a torcida baixa, o sócio-torcedor cancela e a diretoria reclama.
+  - **Reajuste com limite:** o preço sobe no máximo uns 20% por mês (o clube não dobra o ingresso de uma rodada para outra), e o sócio-torcedor paga um valor fixo por temporada, com desconto.
+  - **Preço baixo:** enche o estádio e anima a torcida (mais moral em casa), com renda menor. A escolha passa a ser estratégia, não uma fonte de dinheiro sem fim.
+- **Conversas ampliadas (Fase 15, com a carreira):** pedido de aumento de salário, reclamação da posição em campo, conflitos no vestiário, líderes do elenco, jogador pedindo para ser capitão, imprensa (entrevistas antes e depois dos jogos, com respostas que mexem na moral e na torcida) e a demissão e os convites de outros clubes, que já estavam planejados.
+
+## Crise do clube mal administrado e empréstimo bancário (etapa 14b, 27/11/2026)
+
+- **Salários com prioridade:** todo dia 1, depois das receitas e despesas fixas, o clube paga os salários; depois, as parcelas do banco. Sem caixa para a folha inteira, os salários do mês atrasam (nada é pago e a dívida com o elenco acumula).
+- **O efeito cascata, mês a mês com salário atrasado:**
+  - A moral de todo o elenco cai 8 pontos. Insatisfeitos pedem para sair (as conversas), rendem menos e o público cai junto com a moral do time.
+  - Ninguém renova contrato enquanto houver atraso.
+  - Os patrocinadores desconfiam: o patrocínio cai 15% enquanto houver atraso ou caixa negativo.
+  - A diretoria perde 5 pontos de confiança por mês (além dos 3 do caixa negativo).
+  - Com 2 meses, a liga proíbe contratar (compras, livres, empréstimos, trocas, leilões, pré-contrato e opção de compra). A dívida grave (caixa negativo de mais de metade da receita anual) também proíbe.
+  - Com 3 meses, cada um dos 5 melhores do elenco tem 30% de chance por mês de rescindir na Justiça e sair de graça (nunca deixando o elenco abaixo de 18).
+  - A partir de 4 meses, a liga tira 3 pontos por mês, até 12 na temporada. A punição entra na tabela de verdade.
+  - Pagar todos os atrasados acaba com a crise. Isso acontece sozinho, no dia em que houver caixa, e a moral sobe 5.
+- **Empréstimo bancário (aba Finanças):**
+  - Limite de metade da receita anual, menos o que já se deve ao banco.
+  - Juros pelo risco: 0,8% ao mês para o clube saudável, subindo 2 pontos para cada receita anual de dívida (bancária mais caixa negativo), até uns 3,8%.
+  - Prazos de 12, 24, 36 ou 60 meses, com parcela fixa (tabela Price) e a simulação da parcela e do total antes de fechar. A parcela sai todo dia 1, depois dos salários.
+  - Parcela sem caixa atrasa, com multa de 2% e juros sobre o saldo. Com 3 atrasos, o crédito acaba. Crédito também é negado com caixa negativo maior que a receita de um ano.
+  - Dá para quitar antes, pagando o saldo. O extrato mostra o crédito que entrou e as parcelas.
+  - A recuperação vem de pagar em dia, vender, cortar a folha e voltar a ganhar (a receita acompanha a força do elenco e a moral do time). Atrasando, a dívida cresce até afundar de vez.
+- **Clubes da CPU, de forma simplificada:**
+  - Com o caixa negativo em mais de 30% da receita, o clube pega 35% da receita no banco, em 36 parcelas a 1,5% ao mês, e paga a parcela todo mês.
+  - Se afundar mais de 60% mesmo assim, atrasa salários e cada um dos 2 melhores tem 30% de chance por mês de rescindir e sair de graça, sem deixar o elenco abaixo de 20. Vira jogador livre no mercado, e o clube perde força, receita e folha, até se reequilibrar ou cair.
+  - A perda de pontos da CPU fica para depois.
+- **Teste de 4 temporadas só com a CPU:**
+  - De 75 a 290 clubes com dívida no banco ao mesmo tempo, e de 5 a 30 rescisões por ano.
+  - O vermelho estável em 9% a 12%.
+  - Elencos de 18 a 31. Na primeira versão, sem o piso, as rescisões deixavam elencos com 9 jogadores; daí o piso de 20.

@@ -75,7 +75,9 @@ import {
   type Transferencia,
 } from "../mercado/mercado";
 import { diaDosNegocios } from "../mercado/negocios";
-import { bilheteria, diaDasFinancas, premiacoes, type MesFinanceiro } from "../financas/financas";
+import { bilheteria, premiacoes, type MesFinanceiro } from "../financas/financas";
+import { diaDasFinancas } from "../financas/mes";
+import type { CriseDoClube, DividaDaCpu, EmprestimoBancario } from "../financas/crise";
 import {
   conversasDepoisDoJogo,
   diaDaDiretoria,
@@ -251,6 +253,12 @@ export interface Carreira {
   promessas?: Promessa[];
   /** Confiança e metas da diretoria. */
   diretoria?: Diretoria;
+  /** Salários atrasados e punições do clube do técnico (etapa 14b). */
+  crise?: CriseDoClube;
+  /** Empréstimos do técnico no banco. */
+  emprestimosBancarios?: EmprestimoBancario[];
+  /** Dívida bancária dos clubes da CPU em crise. */
+  dividasCpu?: Record<string, DividaDaCpu>;
 }
 
 /** O que a carreira precisa saber do mundo. */

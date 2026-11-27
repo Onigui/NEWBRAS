@@ -62,7 +62,9 @@ export function Sondagens({
                 <span className="text-xs text-suave">
                   {p.recusa === "insatisfeito"
                     ? t("Insatisfeito, ele não quer renovar: venda agora ou deixe sair.")
-                    : t("Ele não quer renovar.")}
+                    : p.recusa === "salarios-atrasados"
+                      ? t("Com salários atrasados, ele não renova: pague os atrasados primeiro.")
+                      : t("Ele não quer renovar.")}
                 </span>
               ) : (
                 <>
