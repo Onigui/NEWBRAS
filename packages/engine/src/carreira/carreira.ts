@@ -70,6 +70,7 @@ import {
   type Leilao,
   type PreContrato,
   type PropostaRecebida,
+  type Sondagem,
   type Transferencia,
 } from "../mercado/mercado";
 import { diaDosNegocios } from "../mercado/negocios";
@@ -227,6 +228,8 @@ export interface Carreira {
   preContratos?: PreContrato[];
   /** Leilões abertos (do técnico e de clubes da CPU). */
   leiloes?: Leilao[];
+  /** Jogadores do técnico sondados por clubes da CPU no fim do contrato. */
+  sondagens?: Sondagem[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -557,7 +560,8 @@ export interface Avanco {
   /** Notícias novas desse avanço (as mais novas primeiro). */
   novidades: Noticia[];
   /** Por que parou: dia de jogo, limite de dias. */
-  parouPor: "dia" | "jogo" | "limite";
+  /** "decisao": algo pede resposta do técnico (o avanço até o jogo para). */
+  parouPor: "dia" | "jogo" | "limite" | "decisao";
 }
 
 /** Avança um dia. Com jogo marcado para hoje, não avança: o jogo vem antes. */
@@ -731,7 +735,11 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   // Empréstimos que acabam, pré-contratos que chegam, leilões e os empréstimos da CPU.
   const negocios = diaDosNegocios(final, mundoAmanha, data);
   for (const n of negocios.noticias) novidades.unshift(n);
-  return { carreira: negocios.carreira, novidades, parouPor: jogo ? "jogo" : "dia" };
+  return {
+    carreira: negocios.carreira,
+    novidades,
+    parouPor: jogo ? "jogo" : negocios.decisao ? "decisao" : "dia",
+  };
 }
 
 /** No 1º de julho, a lista de transferências encolhe (fica a última de cada jogador). */
@@ -748,7 +756,8 @@ export function avancarAteJogo(c: Carreira, mundo: Mundo, limite = 120): Avanco 
     novidades.unshift(...r.novidades);
     if (r.carreira === atual) return { carreira: atual, novidades, parouPor: "jogo" };
     atual = r.carreira;
-    if (r.parouPor === "jogo") return { carreira: atual, novidades, parouPor: "jogo" };
+    if (r.parouPor === "jogo" || r.parouPor === "decisao")
+      return { carreira: atual, novidades, parouPor: r.parouPor };
   }
   return { carreira: atual, novidades, parouPor: "limite" };
 }

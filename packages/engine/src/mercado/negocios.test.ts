@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { gerarAtributos, type Clube, type Jogador, type Pais } from "@newbras/data";
 import { novaCarreira, type Carreira, type Mundo } from "../carreira/carreira";
 import { mundoNaData } from "../elenco/mundo";
-import { somarDias } from "../carreira/datas";
-import { propostaDeRenovacao } from "../elenco/vida";
+import { diasEntre, somarDias } from "../carreira/datas";
+import { propostaDeRenovacao, renovarContrato } from "../elenco/vida";
+import { liberarJogador, sondagensPendentes } from "./sondagens";
 import { aceitarProposta, caixaDe, diaDoMercado, proporCompra } from "./mercado";
 import {
   avaliarTroca,
@@ -323,5 +324,106 @@ describe("leilões", () => {
     c = ate(c, m, "2027-02-04");
     expect(mundoNaData(m, c, c.data).jogador(alvo.id)?.clube).toBe("nosso");
     expect(c.caixa).toBeLessThan(1e12);
+  });
+});
+
+describe("sondagem antes do pré-contrato", () => {
+  const comContratos = (m: Mundo, data: string, fim: string): Carreira => {
+    const c = nova(m);
+    return {
+      ...c,
+      data,
+      contratos: Object.fromEntries(m.elenco("nosso").map((j) => [j.id, { fim, salario: 50_000 }])),
+    };
+  };
+
+  it("a diretoria avisa, o jogador conversa e dá prazo; sem renovação, ele assina", () => {
+    const m = mundo();
+    let c: Carreira = {
+      ...comContratos(m, "2027-04-01", "2027-12-31"),
+      sondagens: [
+        {
+          jogador: "n0",
+          clube: "medio",
+          inicio: "2027-04-01",
+          conversa: "2027-04-08",
+          prazo: "2027-07-01",
+        },
+      ],
+    };
+    let decisao = false;
+    while (c.data < "2027-04-08") {
+      const d = somarDias(c.data, 1);
+      const r = diaDosNegocios({ ...c, data: d }, mundoNaData(m, c, d), d);
+      decisao ||= r.decisao;
+      c = r.carreira;
+    }
+    expect(decisao).toBe(true);
+    expect(sondagensPendentes(c).map((x) => x.jogador)).toEqual(["n0"]);
+    expect(c.noticias.some((n) => n.texto.includes("veio conversar"))).toBe(true);
+    c = ate(c, m, "2027-07-02");
+    expect(c.noticias.some((n) => n.texto.startsWith("Faltam 7 dias"))).toBe(true);
+    expect(c.preContratos?.find((p) => p.jogador === "n0")?.para).toBe("medio");
+    expect(c.sondagens?.some((x) => x.jogador === "n0")).toBe(false);
+    expect(propostaDeRenovacao(c, m, "n0").recusa).toBe("pre-contrato");
+  });
+
+  it("renovar encerra a sondagem; com a proposta na mão ele pede 15% a mais", () => {
+    const m = mundo();
+    const base = comContratos(m, "2027-04-10", "2027-12-31");
+    const sondado: Carreira = {
+      ...base,
+      sondagens: [
+        {
+          jogador: "n0",
+          clube: "medio",
+          inicio: "2027-04-01",
+          conversa: "2027-04-08",
+          prazo: "2027-07-01",
+        },
+      ],
+    };
+    const sem = propostaDeRenovacao(base, m, "n0");
+    const com = propostaDeRenovacao(sondado, m, "n0");
+    expect(com.salario).toBeGreaterThanOrEqual(Math.round((sem.salario * 1.15) / 100) * 100 - 100);
+    const r = renovarContrato(sondado, m, "n0", 24);
+    expect(r.sondagens).toEqual([]);
+    expect(r.noticias[0]?.texto).toContain("encerrou a conversa");
+    expect(ate(r, m, "2027-07-05").preContratos?.some((p) => p.jogador === "n0")).toBe(false);
+  });
+
+  it("liberado, ele assina quando entra nos 6 meses finais", () => {
+    const m = mundo();
+    let c: Carreira = {
+      ...comContratos(m, "2027-04-10", "2027-12-31"),
+      sondagens: [
+        {
+          jogador: "n0",
+          clube: "medio",
+          inicio: "2027-04-01",
+          conversa: "2027-04-08",
+          prazo: "2027-07-01",
+        },
+      ],
+    };
+    c = liberarJogador(c, m, "n0");
+    expect(sondagensPendentes(c)).toEqual([]);
+    c = ate(c, m, "2027-07-02");
+    expect(c.preContratos?.find((p) => p.jogador === "n0")?.para).toBe("medio");
+  });
+
+  it("todo pré-contrato da CPU vem depois do aviso, com pelo menos 4 semanas de prazo", () => {
+    const m = mundo();
+    const c = ate(comContratos(m, "2027-03-01", "2027-12-31"), m, "2027-12-20");
+    const assinados = (c.preContratos ?? []).filter((p) => p.de === "nosso");
+    expect(assinados.length).toBeGreaterThan(0);
+    for (const p of assinados) {
+      const nomeJ = m.jogador(p.jogador)!.nome;
+      const aviso = c.noticias.find(
+        (n) => n.texto.startsWith("A diretoria avisa") && n.params?.jogador === nomeJ,
+      );
+      expect(aviso).toBeDefined();
+      expect(diasEntre(aviso!.data, p.assinatura)).toBeGreaterThanOrEqual(28);
+    }
   });
 });

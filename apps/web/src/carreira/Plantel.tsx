@@ -26,6 +26,7 @@ import {
   leiloar,
   porAVenda,
   porParaEmprestimo,
+  sondagemDe,
   valorDeMercado,
   diasEntre,
   faixaDaMoral,
@@ -252,6 +253,20 @@ export function Plantel({
                       </span>
                     )}
                     {aviso && <span className="ml-1 text-xs text-[#ffc38a]">{t("poupar")}</span>}
+                    {(() => {
+                      const s = sondagemDe(c, l.j.id);
+                      return s ? (
+                        <span
+                          className="ml-1 rounded-sm bg-[#ffa64d]/20 px-1 text-xs text-[#ffc38a]"
+                          title={t("Sondado pelo {clube}; espera a renovação até {prazo}", {
+                            clube: mundo.clube(s.clube)?.nomeCurto ?? s.clube,
+                            prazo: dataCurta(s.prazo),
+                          })}
+                        >
+                          {t("sondado")}
+                        </span>
+                      ) : null;
+                    })()}
                   </td>
                   <td className="py-1 pr-2 text-suave">
                     {l.j.posicoesCampo?.slice(0, 2).join(", ") ?? NOME_POSICAO[l.j.posicao]}

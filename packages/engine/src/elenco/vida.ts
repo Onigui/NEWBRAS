@@ -160,8 +160,13 @@ export function propostaDeRenovacao(c: Carreira, mundo: Mundo, id: string): Prop
   if ((c.preContratos ?? []).some((p) => p.jogador === id && p.de === c.clube))
     return { salario: 0, meses: [], recusa: "pre-contrato" };
   // Pede pela força; estrela e jogador insatisfeito pedem mais; nunca menos que 5% de aumento.
+  // Com proposta de outro clube na mão (sondagem), pede 15% a mais.
+  const sondado = (c.sondagens ?? []).some((x) => x.jogador === id);
   const pedido =
-    salarioBase(j.forca) * (j.estrela ? 1.25 : 1) * (moral < 45 ? 1.2 : moral >= 75 ? 0.95 : 1);
+    salarioBase(j.forca) *
+    (j.estrela ? 1.25 : 1) *
+    (moral < 45 ? 1.2 : moral >= 75 ? 0.95 : 1) *
+    (sondado ? 1.15 : 1);
   const salario = Math.round(Math.max(pedido, atual * 1.05) / 100) * 100;
   const meses = idade >= 35 ? [6, 12] : idade >= 33 ? [6, 12, 24] : [6, 12, 24, 36];
   // Com mais de 2 anos de contrato pela frente, não há o que conversar.
@@ -192,11 +197,26 @@ export function renovarContrato(c: Carreira, mundo: Mundo, id: string, meses: nu
   const contrato: Contrato = { fim: somarMeses(inicio, meses), salario: p.salario };
   const e = estadoDe(c, id);
   const j = mundo.jogador(id);
+  // Renovar encerra a sondagem de outro clube.
+  const sondagem = (c.sondagens ?? []).find((x) => x.jogador === id);
   return {
     ...c,
     contratos: { ...c.contratos, [id]: contrato },
     jogadores: { ...c.jogadores, [id]: { ...e, moral: limitar(moralDe(e) + 8) } },
+    ...(sondagem ? { sondagens: (c.sondagens ?? []).filter((x) => x !== sondagem) } : {}),
     noticias: [
+      ...(sondagem
+        ? [
+            {
+              data: c.data,
+              tipo: "elenco" as const,
+              ...marcar("{jogador} fica: encerrou a conversa com o {clube}.", {
+                jogador: j?.nome ?? id,
+                clube: mundo.clube(sondagem.clube)?.nomeCurto ?? sondagem.clube,
+              }),
+            },
+          ]
+        : []),
       {
         data: c.data,
         tipo: "elenco" as const,
