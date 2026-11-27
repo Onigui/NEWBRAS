@@ -779,3 +779,33 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - **Convites de excursão:** de vez em quando (30% por mês, até 2 abertos), um clube de outro país, de nível parecido, convida para um amistoso em campo neutro dali a 2 a 6 semanas, com cachê de 0,3% a 0,8% da receita anual. Aceitando pela aba Jogos, o jogo entra na agenda; sem bilheteria, só o cachê.
   - O extrato ganhou a linha "Cachês de amistosos".
 - **Fase 14 concluída.** Salários e receitas reais, crise e banco, conversas e diretoria, estádio completo e amistosos. A perda de pontos da CPU fica para depois.
+
+## Carreira do técnico: reputação, demissão e convites (etapa 15a, 27/11/2026)
+
+- **Plano da Fase 15**, juntando o que estava planejado com os pedidos do dono:
+  - 15a: reputação, demissão e convites de clubes, com a troca de clube no meio da carreira (esta etapa).
+  - 15b: seleção, com convites para técnico de seleção, clube e seleção ao mesmo tempo, convocação escolhida à mão e os jogos da seleção.
+  - 15c: rankings de técnicos e clubes, prêmios da temporada e notícias.
+  - 15d: conversas ampliadas (aumento, posição em campo, vestiário, capitão) e imprensa.
+- **Reputação de 0 a 100:**
+  - Faixas: municipal (até 19), estadual (20), nacional (40), continental (60), mundial (80) e lenda (95).
+  - Começa pelo tamanho do clube assumido: nível menos 25, entre 10 e 75.
+  - Sobe com títulos (estadual 2, copa 5, liga 8, continental 12, mundial 15), meta cumprida (4) e vitória oficial (0,15).
+  - Cai com meta perdida (3), derrota oficial (0,1), demissão (6) e o esquecimento: todo 1º de janeiro, 1 ponto acima de 30.
+- **Demissão:**
+  - Acontece com a confiança da diretoria abaixo de 10 (o ultimato abaixo de 25 já avisava) ou com 6 meses de salários atrasados.
+  - O técnico recebe na hora de 2 a 4 convites de clubes menores, metade do próprio país quando dá, abaixo do nível do clube e do que a reputação alcança.
+  - O tempo não anda até ele escolher um. Um período sem clube, esperando convites melhores, fica para depois: hoje todo o jogo gira em torno do clube do técnico.
+- **Convites de quem vai bem:**
+  - Todo dia 1, com a confiança em 70 ou mais: 12% de chance, ou 30% nos 60 dias depois de um título ou meta cumprida.
+  - Vêm de clubes 2 pontos de nível acima ou mais, até o nível que a reputação alcança (45 mais metade da reputação), metade das vezes do próprio país. Valem por 14 dias, até 2 abertos.
+  - Aceitar troca de clube na hora (com confirmação); recusar não custa nada.
+- **Troca de clube no meio da carreira:**
+  - O clube antigo vira da CPU. Os garotos que o técnico promoveu ficam lá, como garotos da CPU. O caixa, menos a dívida no banco, vira o caixa da CPU dele. Empréstimos e leilões seguem como da CPU, e quem saiu no fim do contrato vira transferência.
+  - No clube novo, o técnico começa com o caixa do clube e zera diretoria, metas, estádio, finanças, conversas, promessas, vendas, propostas, contratos negociados e amistosos marcados.
+  - Os garotos que a CPU já tinha subido da base no clube novo ficam (herdados).
+  - A reputação e o histórico de passagens (jogos, vitórias, empates, derrotas, títulos e motivo da saída) acompanham o técnico.
+- **Na tela:**
+  - O painel no topo mostra os convites (aceitar ou recusar) e, na demissão, a escolha obrigatória.
+  - A aba Início ganhou o quadro do técnico: reputação, faixa, até que nível chegam os convites e as passagens.
+- **Teste numa carreira real:** Arsenal com a confiança forçada a 5. Veio a demissão e dois convites (Botev Vratsa e Sporting San Miguelito); o tempo ficou parado até a escolha. Depois veio a troca para o Botev e 90 dias de jogos sem erro, com o Arsenal seguindo na CPU com o elenco inteiro.

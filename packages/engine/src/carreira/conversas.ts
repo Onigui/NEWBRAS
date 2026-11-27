@@ -26,6 +26,7 @@ import { tabelaDoGrupo } from "../competicoes/competicao";
 import { moralDe } from "../elenco/vida";
 import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
+import { demitir, mexerNaReputacao } from "./tecnico";
 
 export type TipoConversa =
   "quer-sair" | "quer-jogar" | "cansado" | "diretoria-cobra" | "diretoria-ultimato";
@@ -496,6 +497,7 @@ export function diaDaDiretoria(
     if (posicao) {
       const meta = d.metas.posicao;
       const cumpriu = posicao <= meta;
+      r = mexerNaReputacao(r, mundo, cumpriu ? 4 : -3, cumpriu ? data : undefined);
       d = {
         ...d,
         confianca: limitar(d.confianca + (cumpriu ? 15 : -20)),
@@ -575,6 +577,14 @@ export function diaDaDiretoria(
     });
   }
   if (d !== diretoriaDe(c) || c.diretoria === undefined) r = { ...r, diretoria: d };
+  // Demissão: confiança no fundo (abaixo de 10) ou 6 meses de salários atrasados.
+  const salarios = (r.crise?.mesesAtrasados ?? 0) >= 6;
+  if (d.confianca < 10 || salarios) {
+    const demissao = demitir(r, mundo, data, salarios ? "salarios" : "confianca");
+    r = demissao.carreira;
+    noticias.push(...demissao.noticias);
+    decisao = true;
+  }
   if (noticias.length) r = comNoticias(r, noticias);
   return { carreira: r, noticias, decisao };
 }

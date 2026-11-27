@@ -55,6 +55,8 @@ export interface CarreiraParaMundo {
   transferencias?: readonly Transferencia[];
   /** Garotos que os clubes da CPU subiram da base (crise ou elenco curto). */
   garotosCpu?: readonly JogadorDaBase[];
+  /** Garotos da CPU que já estavam no clube quando o técnico chegou (ficam). */
+  herdados?: readonly string[];
 }
 
 /** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
@@ -144,7 +146,8 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   );
   // A CPU sobe os garotos da base do banco; no clube do técnico, quem decide é ele.
   const daBase = evolucao?.daBase;
-  const assinatura = `${[...saidas].join(",")}|${[...ajustes].join(",")}|${[...promovidosHoje.values()].map((j) => j.id + j.forca).join(",")}`;
+  const herdados = new Set(c.herdados ?? []);
+  const assinatura = `${herdados.size}|${[...saidas].join(",")}|${[...ajustes].join(",")}|${[...promovidosHoje.values()].map((j) => j.id + j.forca).join(",")}`;
   const doClube = (lista: readonly Jogador[]): readonly Jogador[] => {
     if (
       !saidas.size &&
@@ -158,7 +161,9 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     if (guardado?.assinatura === assinatura) return guardado.lista;
     const r = [
       ...lista.filter(
-        (j) => !daBase?.has(j.id) && !evolucao?.renascidos.has(j.id) && !promovidosHoje.has(j.id),
+        (j) =>
+          (herdados.has(j.id) || (!daBase?.has(j.id) && !evolucao?.renascidos.has(j.id))) &&
+          !promovidosHoje.has(j.id),
       ),
       ...promovidosHoje.values(),
     ]
