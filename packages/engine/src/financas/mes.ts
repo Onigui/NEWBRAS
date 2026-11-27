@@ -54,6 +54,7 @@ export function diaDasFinancas(
   // O mês da CPU, com a crise, o banco e as rescisões.
   const crises = crisesDaCpu(r, mundo, data, mesDaCpu(r, mundo));
   r = { ...r, caixasCpu: crises.caixas, dividasCpu: crises.dividas };
+  if (crises.garotos.length) r = { ...r, garotosCpu: [...(r.garotosCpu ?? []), ...crises.garotos] };
   if (crises.rescisoes.length) {
     const novas: Transferencia[] = crises.rescisoes.map((x) => ({
       jogador: x.jogador,

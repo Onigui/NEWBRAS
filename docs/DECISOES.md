@@ -723,3 +723,17 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - De 75 a 290 clubes com dívida no banco ao mesmo tempo, e de 5 a 30 rescisões por ano.
   - O vermelho estável em 9% a 12%.
   - Elencos de 18 a 31. Na primeira versão, sem o piso, as rescisões deixavam elencos com 9 jogadores; daí o piso de 20.
+
+## Pedidos do dono em 27/11/2026 (fim da tarde)
+
+- **Demissão e convites (anotado para a Fase 15, já estava planejado):** a confiança da diretoria, as metas e o ultimato que existem agora são a base. Na Fase 15:
+  - **Demissão:** quando tudo dá errado (confiança no fundo depois do ultimato, meta muito longe, crise financeira), o técnico é demitido. Ele vira técnico sem clube e espera convites, como no PES e no FIFA.
+  - **Convites:** técnico com temporadas muito boas (metas batidas, títulos, confiança alta, reputação subindo) recebe propostas de outros clubes e de seleções, de nível compatível com a reputação dele. Ele aceita (troca de clube no meio da carreira) ou recusa. O demitido recebe convites de clubes menores.
+  - Entra junto com o que já estava planejado na fase: reputação do técnico, rankings, prêmios, clube e seleção ao mesmo tempo, as conversas ampliadas e a imprensa.
+- **Aposta na base na crise (corrige a 14b, feito agora):** o mínimo de 20 jogadores nas rescisões da CPU era um remendo. Agora a CPU faz o que um clube quebrado faz de verdade:
+  - Na crise (caixa negativo de mais de 30% da receita, mesmo depois do banco), o clube corta a folha. Rescinde com o salário fora da realidade dele (mais de 6% da receita do mês), um por mês, e aposta na base, subindo garotos de 17 a 19 anos (fracos e baratos) até ter 22 jogadores, no máximo 3 por mês. A folha cai bem abaixo da de antes.
+  - Afundando (mais de 60% no vermelho), os melhores que sobraram ainda podem rescindir na Justiça (30% cada, os 2 seguintes por mês).
+  - Qualquer clube da CPU com menos de 18 jogadores sobe garotos da base até completar. Por isso a saída em massa (rescisões, vendas) não deixa mais ninguém desfalcado.
+  - Os garotos são do país do clube, na posição que mais falta, com potencial pelo nível do clube. Crescem pela idade, como os da base do técnico, e param aos 36. Vivem no salvamento em `garotosCpu` e podem ser comprados e vendidos como qualquer jogador.
+  - O clube do técnico já podia fazer o mesmo: promover a base pela aba Base e dispensar ou vender quem pesa na folha. A rescisão na Justiça do clube do técnico continua sem deixar o elenco abaixo de 18.
+  - **Teste de 4 temporadas só com a CPU:** elencos de 20 a 31 (antes chegavam a 9). De 28 a 120 rescisões por ano viram jogadores livres que o mercado recoloca. O vermelho continua estável em 8% a 10%.

@@ -16,6 +16,10 @@ import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import { estadoDe } from "../carreira/carreira";
 import { moralDe } from "../elenco/vida";
+import type { Posicao } from "@newbras/data";
+import type { JogadorDaBase } from "../elenco/base";
+import { completar } from "../elenco/evolucao";
+import { gerarJogador, salarioBase } from "../gerador/jogador";
 import { caixaDe, saiuDoClube, transferir } from "../mercado/comum";
 import { Rng } from "../rng";
 import { lancar, receitaAnual } from "./financas";
@@ -322,11 +326,71 @@ export interface DividaDaCpu {
   parcela: number;
 }
 
+/** Elenco mínimo: abaixo disso, a CPU sobe garotos da base. */
+const ELENCO_MINIMO = 18;
+/** Na crise, o clube aposta na base até ter este elenco (com garotos baratos). */
+const ELENCO_DA_CRISE = 22;
+/** Garotos promovidos por clube por mês, no máximo. */
+const GAROTOS_POR_MES = 3;
+
+/** Garoto da base de um clube da CPU, promovido ao profissional (com 17 a 19 anos). */
+function garotoDaCpu(
+  semente: string,
+  mundo: Mundo,
+  clube: string,
+  data: string,
+  i: number,
+  posicao: Posicao,
+): JogadorDaBase {
+  const info = mundo.clube(clube);
+  const pais = mundo.pais(info?.pais ?? "");
+  const id = `base-${clube}-${data}-${i}`;
+  const rng = new Rng(`${semente}:${id}`);
+  const j = completar(
+    gerarJogador(rng, {
+      id,
+      nacionalidade: pais?.codigo ?? "BRA",
+      grupoNomes: pais?.grupoNomes ?? "pt-br",
+      posicao,
+      nivel: Math.max(35, (info?.nivel ?? 60) - 6),
+      hoje: data,
+      clube,
+      idade: rng.int(17, 19),
+    }),
+  );
+  return {
+    j: { ...j, clube, base: false },
+    potencialReal: j.potencial,
+    entrada: data,
+    origem: "peneira",
+  };
+}
+
+/** A posição que mais falta no elenco (pela formação mínima de 2-6-5-3-3, nessa ordem). */
+function posicaoQueFalta(elenco: readonly { posicao: Posicao }[]): Posicao {
+  const minimo: Record<Posicao, number> = { G: 2, Z: 4, L: 3, M: 6, A: 3 };
+  let pior: Posicao = "M";
+  let falta = -Infinity;
+  for (const p of ["G", "Z", "L", "M", "A"] as const) {
+    const f = minimo[p] - elenco.filter((j) => j.posicao === p).length;
+    if (f > falta) {
+      falta = f;
+      pior = p;
+    }
+  }
+  return pior;
+}
+
 /**
- * O mês da CPU em crise: no vermelho fundo (mais de 30% da receita), o clube pega um empréstimo de
- * 35% da receita em 36 parcelas (1,5% ao mês) e paga a parcela todo mês; se afundar mais de 60%,
- * atrasa salários e os 2 melhores podem rescindir e sair de graça (30% cada), sem deixar o elenco
- * abaixo de 20.
+ * O mês da CPU em crise (etapa 14b; a aposta na base é pedido do dono, 27/11):
+ * - No vermelho fundo (mais de 30% da receita), o clube pega 35% da receita no banco, em 36
+ *   parcelas a 1,5% ao mês, e passa a pagar a parcela todo mês.
+ * - Na crise (caixa negativo de mais de 30% da receita), corta a folha: rescinde com o salário
+ *   fora da realidade do clube (mais de 6% da receita do mês), um por mês, e aposta na base,
+ *   subindo garotos baratos até ter 22 jogadores.
+ * - Afundando (mais de 60% da receita no vermelho), atrasa salários e os 2 melhores podem
+ *   rescindir na Justiça e sair de graça (30% cada).
+ * - Qualquer clube com menos de 18 jogadores sobe garotos da base para completar.
  */
 export function crisesDaCpu(
   c: Carreira,
@@ -337,9 +401,11 @@ export function crisesDaCpu(
   caixas: Record<string, number>;
   dividas: Record<string, DividaDaCpu>;
   rescisoes: { jogador: string; clube: string }[];
+  garotos: JogadorDaBase[];
 } {
   const dividas: Record<string, DividaDaCpu> = { ...c.dividasCpu };
   const rescisoes: { jogador: string; clube: string }[] = [];
+  const garotos: JogadorDaBase[] = [];
   const rng = new Rng(`${c.semente}:crise-cpu:${data}`);
   for (const [clube, caixa] of Object.entries(caixas)) {
     const receita = receitaAnual(mundo, clube);
@@ -356,18 +422,29 @@ export function crisesDaCpu(
       novo += valor;
       dividas[clube] = { saldo: valor, parcela: parcelaDoEmprestimo(valor, 0.015, 36) };
     }
-    // Afundando, atrasa salários e os melhores saem, sem deixar o elenco abaixo de 20.
-    const elenco = mundo.elenco(clube);
-    if (novo < -0.6 * receita && elenco.length > 20) {
-      const melhores = [...elenco].sort((a, b) => b.forca - a.forca).slice(0, 2);
-      let restam = elenco.length;
-      for (const j of melhores)
-        if (restam > 20 && rng.chance(0.3)) {
-          rescisoes.push({ jogador: j.id, clube });
-          restam--;
-        }
+    const elenco = [...mundo.elenco(clube)];
+    const saem = new Set<string>();
+    if (novo < -0.3 * receita) {
+      // Corta a folha: sai o salário fora da realidade do clube (mais de 6% da receita do mês),
+      // um por mês, em rescisão amigável.
+      const caros = [...elenco].sort((a, b) => b.forca - a.forca);
+      const pesado = caros.find((j) => salarioBase(j.forca) > (receita / 12) * 0.06);
+      if (pesado && elenco.length > ELENCO_MINIMO) saem.add(pesado.id);
+      // Afundando, os melhores que sobraram ainda podem ir à Justiça.
+      if (novo < -0.6 * receita)
+        for (const j of caros.slice(2, 4))
+          if (elenco.length - saem.size > ELENCO_MINIMO && rng.chance(0.3)) saem.add(j.id);
+    }
+    for (const id of saem) rescisoes.push({ jogador: id, clube });
+    const restam = elenco.filter((j) => !saem.has(j.id));
+    // Aposta na base: na crise, até 22 jogadores; sempre, até 18.
+    const alvo = novo < -0.3 * receita ? ELENCO_DA_CRISE : ELENCO_MINIMO;
+    for (let i = 0; restam.length < alvo && i < GAROTOS_POR_MES; i++) {
+      const g = garotoDaCpu(c.semente, mundo, clube, data, i, posicaoQueFalta(restam));
+      garotos.push(g);
+      restam.push(g.j);
     }
     caixas[clube] = Math.round(novo);
   }
-  return { caixas, dividas, rescisoes };
+  return { caixas, dividas, rescisoes, garotos };
 }

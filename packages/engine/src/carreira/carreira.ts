@@ -259,6 +259,8 @@ export interface Carreira {
   emprestimosBancarios?: EmprestimoBancario[];
   /** Dívida bancária dos clubes da CPU em crise. */
   dividasCpu?: Record<string, DividaDaCpu>;
+  /** Garotos que os clubes da CPU subiram da base (crise ou elenco curto). */
+  garotosCpu?: JogadorDaBase[];
 }
 
 /** O que a carreira precisa saber do mundo. */
