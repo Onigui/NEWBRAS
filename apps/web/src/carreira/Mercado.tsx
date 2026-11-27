@@ -45,7 +45,14 @@ function textoDoResultado(r: ResultadoProposta): string {
     case "recusa-clube":
       return r.motivo === "elenco-curto"
         ? t("O clube não vende: o elenco já está curto.")
-        : t("O clube recusou: a oferta ficou longe do que ele quer.");
+        : r.motivo === "intransferivel"
+          ? t(
+              "Intransferível: o clube briga pelo título, não precisa de dinheiro e não abre mão dele por menos de {pedido}.",
+              { pedido: dinheiro(r.pedido ?? 0) },
+            )
+          : t("O clube recusou: a oferta ficou longe do que ele quer (uns {pedido}).", {
+              pedido: dinheiro(r.pedido ?? 0),
+            });
     case "recusa-jogador":
       return t("O jogador não quer: o clube é de nível bem menor que o dele.");
     case "impossivel":
@@ -316,7 +323,7 @@ export function Mercado({
                             setOferta(valor);
                           }}
                           title={t("O clube pede uns {pedido}", {
-                            pedido: dinheiro(pedidoDoClube(mundo, j, c.data)),
+                            pedido: dinheiro(pedidoDoClube(c, mundo, j)),
                           })}
                         >
                           {t("Fazer proposta")}

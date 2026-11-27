@@ -16,6 +16,7 @@ import { idadeEm } from "../evolucao";
 import { salarioBase } from "../gerador/jogador";
 import { Rng } from "../rng";
 import { janelaAberta, salarioPedido, valorDeMercado } from "./valor";
+import { respostaDeVenda, situacaoDoClube } from "./situacao";
 
 export type TipoTransferencia = "compra" | "venda" | "livre" | "dispensa" | "fim-de-contrato";
 
@@ -41,9 +42,6 @@ export interface PropostaRecebida {
 
 /** O elenco profissional não passa disso, e o da CPU não vende abaixo disso. */
 const ELENCO_MAXIMO = 30;
-const ELENCO_MINIMO_CPU = 18;
-/** A oferta perto do pedido vira contraproposta. */
-const PERTO_DO_PEDIDO = 0.85;
 /** Proposta recebida vale tantos dias. */
 const DIAS_DA_PROPOSTA = 7;
 /** Chance, por dia de janela, de um jogador à venda receber proposta. */
@@ -113,19 +111,15 @@ function chegouAoClube(c: Carreira, id: string, contrato: Contrato): Carreira {
 export type ResultadoProposta =
   | { tipo: "aceita"; valor: number; salario: number }
   | { tipo: "contraproposta"; pedido: number }
-  | { tipo: "recusa-clube"; motivo: "pedido" | "elenco-curto" | "nao-vende" }
+  | { tipo: "recusa-clube"; motivo: "pedido" | "elenco-curto" | "intransferivel"; pedido?: number }
   | { tipo: "recusa-jogador"; motivo: "clube-menor" }
   | { tipo: "impossivel"; motivo: "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" };
 
-/** Quanto o clube pede: o valor, mais caro para os titulares e os craques do elenco. */
-export function pedidoDoClube(mundo: Mundo, j: Jogador, data: string): number {
-  const clube = j.clube ? mundo.clube(j.clube) : undefined;
-  if (!clube) return 0;
-  const elenco = [...mundo.elenco(clube.id)].sort((a, b) => b.forca - a.forca);
-  const posicao = elenco.findIndex((x) => x.id === j.id);
-  const fator = posicao < 0 ? 1 : posicao < 3 ? 1.6 : posicao < 11 ? 1.3 : 1.05;
-  const rico = clube.nivel >= 85 ? 1.15 : 1;
-  return Math.round((valorDeMercado(j, data) * fator * rico) / 100_000) * 100_000;
+/** Quanto o clube pede, pela situação dele (dinheiro, briga por título) e pelo peso do jogador. */
+export function pedidoDoClube(c: Carreira, mundo: Mundo, j: Jogador): number {
+  if (!j.clube) return 0;
+  const situacao = situacaoDoClube(c, mundo, j.clube, c.data);
+  return respostaDeVenda(mundo, situacao, j, 0, c.data).pedido;
 }
 
 /** O jogador aceita ir para o clube? Não desce muito de nível. */
@@ -160,16 +154,12 @@ export function proporCompra(
   if (mundo.elenco(c.clube).length >= ELENCO_MAXIMO)
     return fim({ tipo: "impossivel", motivo: "elenco-cheio" });
   if (valor > caixaDe(c, mundo)) return fim({ tipo: "impossivel", motivo: "caixa" });
-  if (mundo.elenco(j.clube).length <= ELENCO_MINIMO_CPU)
-    return fim({ tipo: "recusa-clube", motivo: "elenco-curto" });
-  const pedido = pedidoDoClube(mundo, j, c.data);
-  if (valor < pedido) {
-    return fim(
-      valor >= pedido * PERTO_DO_PEDIDO
-        ? { tipo: "contraproposta", pedido }
-        : { tipo: "recusa-clube", motivo: "pedido" },
-    );
-  }
+  const situacao = situacaoDoClube(c, mundo, j.clube, c.data);
+  const resposta = respostaDeVenda(mundo, situacao, j, valor, c.data);
+  if (resposta.tipo === "contraproposta")
+    return fim({ tipo: "contraproposta", pedido: resposta.pedido });
+  if (resposta.tipo === "recusa")
+    return fim({ tipo: "recusa-clube", motivo: resposta.motivo, pedido: resposta.pedido });
   if (!aceitaOClube(mundo, j, nosso)) return fim({ tipo: "recusa-jogador", motivo: "clube-menor" });
   const salario = salarioPedido(j, j.contrato, salarioBase);
   const de = j.clube;

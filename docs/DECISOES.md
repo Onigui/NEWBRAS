@@ -570,3 +570,32 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
     - Escolhe o prazo; a parcela mensal vem com juros. O limite e a taxa dependem do tamanho do clube e da dívida que já tem, e o juro sobe com o risco.
     - Pagando em dia e voltando a ter resultado, o clube se recupera. Atrasando, a dívida cresce e o crédito acaba, até afundar de vez.
   - **CPU:** os clubes da CPU passam pelo mesmo ciclo, de forma simplificada, para o mundo ter ascensões e quedas.
+
+## Mercado aquecido entre os clubes da CPU e o jogo duro na venda (etapa 13b, 27/11/2026)
+
+- **Jogo duro na venda (regra do dono em 27/11/2026):**
+  - Ninguém é intransferível só por ser bom. O clube decide pela própria situação e pelo peso do jogador, na mesma regra para o técnico e para a CPU.
+  - O pedido parte do valor de mercado: craque (os 3 melhores do elenco) ×1,6, titular (até o 11º) ×1,3, reserva ×1,05; prodígio (até 21 anos, potencial 85 ou mais) ×1,3 a mais; clube rico (nível 85 ou mais) ×1,15.
+  - Precisar de dinheiro baixa o pedido em até 35%: vender arruma as contas e reforça o time todo.
+  - Fora da briga, o clube faz jogo duro com estrela e prodígio (o pedido alto), mas vende quem chega ao pedido. Oferta de 85% ou mais vira contraproposta.
+  - **Intransferível só com os três fatores juntos:** o jogador é peça-chave (craque, ou prodígio titular), o clube briga pelo título (entre os 3 primeiros da 1ª divisão com 5 jogos ou mais; antes disso, a elite de nível 85 ou mais) e não precisa de dinheiro (menos de 30%). Mesmo assim, uma proposta absurda, de 3 vezes o valor, abre a conversa.
+  - Até as finanças da Fase 14, "precisa de dinheiro" é uma estimativa: um aperto sorteado por clube e temporada (crise em 18% dos clubes pequenos, 10% dos médios e 5% dos grandes) menos o saldo das vendas e compras do clube na temporada. Na Fase 14, entra o caixa de verdade.
+- **Mercado aquecido entre os clubes da CPU:**
+  - Nas janelas do país, cada clube vai ao mercado de vez em quando: 1,2% por dia os grandes, 0,8% os médios e 0,4% os pequenos. Isso dá umas 1.500 transferências por ano no mundo.
+  - O clube acha a posição mais fraca para o nível dele (o titular de um 4-4-2) e só às vezes compra sem buraco.
+  - Separa um orçamento de 15% do valor do elenco, menos o quanto precisa de dinheiro.
+  - Procura um jogador de até 31 anos, pelo menos 3 pontos melhor que o titular e no máximo 6 acima do nível do clube, que aceite o clube (não desce muito de nível) e que o vendedor libere pela regra acima dentro do orçamento. Um livre que resolve vem de graça.
+  - O vendedor não fica com menos de 18 no elenco.
+  - Grandes transferências (estrela ou 40 milhões ou mais) viram notícia, até 4 por dia.
+- **Elencos:** na janela, quem passa de 30 dispensa os mais fracos (e mais velhos), que viram livres. Lendas que sobem e garotos da base não incham mais os elencos.
+- **Salvamento:** no 1º de julho, a lista de transferências fica só com a última de cada jogador, o histórico do clube do técnico e as da temporada.
+- **Desempenho:**
+  - O índice do mundo por posição é refeito uma vez por semana, ordenado pela força, e os candidatos são sorteados na faixa.
+  - A posição nas ligas e o saldo de compras e vendas dos clubes são calculados uma vez por dia.
+- **Goleiros:** o clube não vende goleiro se ficar com menos de 2. Quem fica sem o mínimo numa posição (2 goleiros, os titulares do 4-4-2) vai ao mercado na certa até achar alguém.
+- **Teste de 10 temporadas só com a CPU** (`npx tsx scripts/simular-temporadas.ts 10`; o técnico só escala o automático e renova os contratos):
+  - Elencos entre 18 e 30 jogadores (média 25,8) o tempo todo, e nenhum clube sem goleiro.
+  - Os 11 melhores dos 20 clubes mais fortes passam de 86,6 para 89,4 e se estabilizam a partir de 2033.
+  - Cerca de 1.200 a 1.600 transferências por ano, com 5 a 45 livres por vez.
+  - A lista guardada passa de 11.800 transferências, e o salvamento vai de 5,3 para 8,5 MB.
+  - A simulação leva uns 57 segundos por temporada. Fica a anotação para otimizar (simulação num worker e o resto) no polimento da Fase 16.
