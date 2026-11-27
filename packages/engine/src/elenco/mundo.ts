@@ -2,6 +2,7 @@
  * O mundo da carreira numa data (etapa 12a): o mundo do banco com os jogadores evoluídos, os
  * aposentados fora, os juniores e as lendas renascidas dentro, e as convocações refeitas com eles.
  */
+import { idadeEm } from "../evolucao";
 import { FORCA_TETO, type Jogador } from "@newbras/data";
 import type { Mundo } from "../carreira/carreira";
 import { convocar } from "../selecoes/convocacao";
@@ -52,6 +53,8 @@ export interface CarreiraParaMundo {
   promovidos?: readonly JogadorDaBase[];
   /** Mudanças de clube (compras, vendas, dispensas, livres). */
   transferencias?: readonly Transferencia[];
+  /** Garotos que os clubes da CPU subiram da base (crise ou elenco curto). */
+  garotosCpu?: readonly JogadorDaBase[];
 }
 
 /** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
@@ -75,6 +78,8 @@ function comAjuste(j: Jogador, ajuste: number): Jogador {
   return r;
 }
 
+/** Elenco natural com os garotos da CPU, guardado pelo elenco natural e pelo número de garotos. */
+const comGarotosCache = new WeakMap<readonly Jogador[], { n: number; lista: Jogador[] }>();
 const doClubeCache = new WeakMap<readonly Jogador[], { assinatura: string; lista: Jogador[] }>();
 const transferidosCache = new WeakMap<readonly Jogador[], { chave: string; lista: Jogador[] }>();
 
@@ -93,8 +98,35 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   for (const [id, e] of Object.entries(c.jogadores ?? {})) if (e.ajuste) ajustes.set(id, e.ajuste);
   const promovidos = c.promovidos ?? [];
   const transferencias = c.transferencias ?? [];
-  if (!evolui && !saidas.size && !ajustes.size && !promovidos.length && !transferencias.length)
+  const garotos = (c.garotosCpu ?? []).filter((g) => g.entrada <= data);
+  if (
+    !evolui &&
+    !saidas.size &&
+    !ajustes.size &&
+    !promovidos.length &&
+    !transferencias.length &&
+    !garotos.length
+  )
     return base;
+  // Garotos da CPU: crescem pela idade e param aos 36.
+  const garotosPorClube = new Map<string, JogadorDaBase[]>();
+  for (const g of garotos) {
+    if (idadeEm(g.j.nascimento, data) >= 36) continue;
+    const clube = g.j.clube ?? "";
+    const l = garotosPorClube.get(clube);
+    if (l) l.push(g);
+    else garotosPorClube.set(clube, [g]);
+  }
+  const garotosHoje = new Map<string, Jogador>();
+  const garotoNaData = (g: JogadorDaBase) => {
+    let j = garotosHoje.get(g.j.id);
+    if (!j) {
+      j = jogadorDaBaseNaData(g, data);
+      garotosHoje.set(g.j.id, j);
+    }
+    return j;
+  };
+  const garotoPorId = new Map(garotos.map((g) => [g.j.id, g] as const));
   // Transferências: a última de cada jogador diz onde ele está (sem clube: livre).
   const ultima = new Map<string, Transferencia>();
   for (const t of transferencias) if (t.data <= data) ultima.set(t.jogador, t);
@@ -158,11 +190,24 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     }
     return lista;
   };
-  const jogadorBruto = (id: string) =>
-    promovidosHoje.get(id) ?? (evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id));
+  const jogadorBruto = (id: string) => {
+    const g = garotoPorId.get(id);
+    if (g) return garotoNaData(g);
+    return (
+      promovidosHoje.get(id) ?? (evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id))
+    );
+  };
   const aposentado = (id: string) => !!evolucao && evolui && evolucao.aposentado(id, data);
-  const elencoNatural = (id: string) =>
-    evolucao && evolui ? evolucao.elenco(id, data) : base.elenco(id);
+  const elencoNatural = (id: string): readonly Jogador[] => {
+    const natural = evolucao && evolui ? evolucao.elenco(id, data) : base.elenco(id);
+    const deles = garotosPorClube.get(id);
+    if (!deles) return natural;
+    const guardado = comGarotosCache.get(natural);
+    if (guardado?.n === deles.length) return guardado.lista;
+    const lista = [...natural, ...deles.map(garotoNaData)];
+    comGarotosCache.set(natural, { n: deles.length, lista });
+    return lista;
+  };
   const elencoDoClube = (id: string): readonly Jogador[] => {
     const natural = elencoNatural(id);
     if (!ultima.size) return natural;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { gerarAtributos, type Clube, type Jogador, type Pais } from "@newbras/data";
 import { estadoDe, novaCarreira, type Carreira, type Mundo } from "../carreira/carreira";
+import { mundoNaData } from "../elenco/mundo";
 import { ordenarTabela } from "../competicoes/tabela";
 import { moralDe, propostaDeRenovacao } from "../elenco/vida";
 import { salarioBase } from "../gerador/jogador";
@@ -212,5 +213,38 @@ describe("crise da CPU", () => {
         { pobre: -receita * 2 },
       ).rescisoes.length;
     expect(perdas).toBeGreaterThan(0);
+  });
+});
+
+describe("aposta na base da CPU", () => {
+  it("elenco curto sobe garotos da base até 18; na crise, até 22, e eles entram no mundo", () => {
+    const m = mundo();
+    const c = nova(m);
+    const curto: Carreira = {
+      ...c,
+      transferencias: Array.from({ length: 10 }, (_, i) => ({
+        jogador: `p${i}`,
+        de: "pobre",
+        data: "2027-01-20",
+        valor: 0,
+        tipo: "rescisao" as const,
+      })),
+    };
+    const hoje = mundoNaData(m, curto, "2027-02-01");
+    expect(hoje.elenco("pobre")).toHaveLength(14);
+    const r = crisesDaCpu(curto, hoje, "2027-02-01", { pobre: 1_000_000 });
+    expect(r.garotos).toHaveLength(3);
+    expect(r.garotos.every((g) => g.j.clube === "pobre")).toBe(true);
+    const depois = mundoNaData(m, { ...curto, garotosCpu: r.garotos }, "2027-02-02");
+    expect(depois.elenco("pobre")).toHaveLength(17);
+    const g = r.garotos[0]!.j;
+    expect(depois.jogador(g.id)?.clube).toBe("pobre");
+    // Com 19, fora da crise não sobe ninguém; na crise, mira 22 (até 3 por mês).
+    const dezenove: Carreira = { ...curto, transferencias: curto.transferencias!.slice(0, 5) };
+    const m19 = mundoNaData(m, dezenove, "2027-02-01");
+    expect(crisesDaCpu(dezenove, m19, "2027-02-01", { pobre: 1_000_000 }).garotos).toEqual([]);
+    const receita = receitaAnual(m19, "pobre");
+    const crise = crisesDaCpu(dezenove, m19, "2027-02-01", { pobre: -receita * 0.8 });
+    expect(crise.garotos).toHaveLength(3);
   });
 });
