@@ -81,6 +81,13 @@ import { cacheDoJogo, type ConviteDeAmistoso } from "../financas/amistosos";
 import { diaDasFinancas } from "../financas/mes";
 import type { CriseDoClube, DividaDaCpu, EmprestimoBancario } from "../financas/crise";
 import {
+  convitesDeEmprego,
+  esquecimento,
+  resultadoNaCarreira,
+  titulosNaCarreira,
+  type PerfilDoTecnico,
+} from "./tecnico";
+import {
   conversasDepoisDoJogo,
   diaDaDiretoria,
   type Conversa,
@@ -269,6 +276,10 @@ export interface Carreira {
   estadio?: EstadoDoEstadio;
   /** Convites de excursão (amistosos em campo neutro, com cachê). */
   convitesAmistosos?: ConviteDeAmistoso[];
+  /** Reputação, passagens, convites e demissão do técnico (etapa 15a). */
+  perfil?: PerfilDoTecnico;
+  /** Garotos que a CPU já tinha subido no clube quando o técnico chegou (ficam no elenco). */
+  herdados?: string[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -605,6 +616,8 @@ export interface Avanco {
 
 /** Avança um dia. Com jogo marcado para hoje, não avança: o jogo vem antes. */
 export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
+  // Demitido: o tempo só anda depois de escolher o próximo clube.
+  if (c.perfil?.demitido) return { carreira: c, novidades: [], parouPor: "decisao" };
   if (compromissoDoDia(c)) return { carreira: c, novidades: [], parouPor: "jogo" };
   // O mundo de hoje (o dia que fecha) e o de amanhã (pode ser o começo de uma temporada).
   const mundo = mundoNaData(mundoDoBanco, c, c.data);
@@ -784,10 +797,28 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   const negocios = diaDosNegocios(final, mundoAmanha, data);
   for (const n of negocios.noticias) novidades.unshift(n);
   // Finanças: premiações, o fechamento do mês e o caixa da CPU.
-  const premios = premiacoes(negocios.carreira, mundoAmanha, data, [...premiadas.values()]);
+  const premios = premiacoes(
+    titulosNaCarreira(negocios.carreira, mundoAmanha, data, [...premiadas.values()]),
+    mundoAmanha,
+    data,
+    [...premiadas.values()],
+  );
   const financasDoDia = diaDasFinancas(premios.carreira, mundoAmanha, data);
   // Diretoria e conversas: metas, prazos, avaliação mensal, cobranças.
-  const diretoria = diaDaDiretoria(financasDoDia.carreira, mundoAmanha, data);
+  const emprego = data.endsWith("-01")
+    ? convitesDeEmprego(esquecimento(financasDoDia.carreira, mundoAmanha, data), mundoAmanha, data)
+    : { carreira: financasDoDia.carreira, noticias: [] };
+  for (const n of emprego.noticias) novidades.unshift(n);
+  const diretoria = diaDaDiretoria(
+    emprego.noticias.length
+      ? {
+          ...emprego.carreira,
+          noticias: [...emprego.noticias, ...emprego.carreira.noticias].slice(0, MAX_NOTICIAS),
+        }
+      : emprego.carreira,
+    mundoAmanha,
+    data,
+  );
   for (const n of diretoria.noticias) novidades.unshift(n);
   const financas = { carreira: diretoria.carreira, noticias: financasDoDia.noticias };
   const extras = [...premios.noticias, ...financas.noticias];
@@ -1076,7 +1107,12 @@ export function registrarJogo(
         noticias: [...renda.noticias, ...renda.carreira.noticias].slice(0, MAX_NOTICIAS),
       }
     : renda.carreira;
-  return conversasDepoisDoJogo(c, depois, mundo, x, r).carreira;
+  const comConversas = conversasDepoisDoJogo(c, depois, mundo, x, r).carreira;
+  if (x.tipo !== "oficial") return comConversas;
+  const [gc, gf] = r.placar;
+  return x.mando === "casa"
+    ? resultadoNaCarreira(comConversas, mundo, gc, gf)
+    : resultadoNaCarreira(comConversas, mundo, gf, gc);
 }
 
 function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoPartida): Carreira {
