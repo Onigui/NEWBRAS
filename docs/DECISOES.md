@@ -492,3 +492,23 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
   - Seleções não entram: o elenco delas é a convocação.
 - **Números de uma temporada simulada (Real Madrid, 64 jogos):** cerca de 22 lesões em jogo e 11 em treino, quase nenhuma de goleiro. A média dos estudos com a elite europeia fica perto de 1,5 lesão por jogador por temporada.
 - **Peso:** a lista da CPU soma uns 160 KB ao salvamento, e a temporada continua em cerca de 11 segundos.
+
+## Categoria de base (etapa 12c, 26/11/2026)
+
+- **A base do clube do técnico** (aba Base, tecla 8) tem até 15 garotos, fora dos 30 do profissional. Começa com a base do banco. Os garotos evoluem pela mesma curva do mundo e cada um tem o potencial de verdade escondido.
+- **Olheiros:**
+  - Até 3 contratados, com nível de 1 a 5 estrelas e salário de 2.000 × nível² por mês (o salário pesa no caixa na Fase 14).
+  - O mercado tem 3 opções, que mudam todo mês.
+  - O técnico manda cada olheiro a um país por 1, 2, 3 ou 6 meses. A cada 10 dias de missão ele manda até 2 relatórios (às vezes nenhum).
+  - Os garotos têm de 15 a 17 anos, e a qualidade vem do nível do olheiro e da força do país no futebol.
+- **Relatórios:**
+  - Mostram a força de hoje e uma faixa de potencial de ± (9 − 2 × nível do olheiro), com o potencial de verdade sorteado dentro dela. O olheiro de 5 estrelas erra por 1; o de 1 estrela, por até 7.
+  - Somem em 45 dias sem resposta. O técnico traz o garoto para a base ou descarta.
+- **Peneira:** a cada temporada do clube, de 2 a 4 garotos de 15 e 16 anos do país chegam à base, com qualidade pelo nível do clube.
+- **Promoção e dispensa:**
+  - A promoção abre aos 16 anos, com vaga nos 30 do profissional. O garoto sobe com contrato de 3 anos e passa a evoluir no elenco pela curva desde o dia da promoção.
+  - Quem faz 20 anos na base sem subir é dispensado.
+  - Com o elenco cheio, a vaga só abre quando alguém sai ou se aposenta (a dispensa de profissionais vem com o mercado da Fase 13).
+- **A CPU também revela:** os garotos da base do banco nos outros clubes sobem aos 18 anos quando são ícones ou têm potencial de pelo menos o nível do clube + 2 (586 no mundo inicial); os outros saem da base. O júnior que entra no lugar do aposentado também representa a revelação da CPU.
+- **Ícones:** os 22 ídolos que recomeçam na base (Zidane, Ronaldo, Bale e outros) sobem ao profissional dos seus clubes aos 18. Por exemplo, Zidane chega ao profissional do Rondoniense em 2028, com força 66 e potencial 96. Se o clube for o do técnico, quem decide a promoção é ele.
+- **Fica para depois:** investimento na estrutura da base (com as finanças, na Fase 14) e campeonatos de base.

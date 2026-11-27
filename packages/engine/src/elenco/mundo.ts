@@ -7,6 +7,7 @@ import type { Mundo } from "../carreira/carreira";
 import { convocar } from "../selecoes/convocacao";
 import { somarDias } from "../carreira/datas";
 import { EvolucaoDoMundo } from "./evolucao";
+import { jogadorDaBaseNaData, type JogadorDaBase } from "./base";
 
 /** Marca do mundo da data: guarda o mundo do banco por trás dele. */
 const BASE = Symbol("mundo do banco");
@@ -46,6 +47,8 @@ export interface CarreiraParaMundo {
   clube?: string;
   saidas?: readonly string[];
   jogadores?: Readonly<Record<string, { ajuste?: number }>>;
+  /** Quem o técnico subiu da base (entra no elenco, evoluindo desde a promoção). */
+  promovidos?: readonly JogadorDaBase[];
 }
 
 /** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
@@ -84,13 +87,24 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   const saidas = new Set(c.saidas ?? []);
   const ajustes = new Map<string, number>();
   for (const [id, e] of Object.entries(c.jogadores ?? {})) if (e.ajuste) ajustes.set(id, e.ajuste);
-  if (!evolui && !saidas.size && !ajustes.size) return base;
-  const assinatura = `${[...saidas].join(",")}|${[...ajustes].join(",")}`;
+  const promovidos = c.promovidos ?? [];
+  if (!evolui && !saidas.size && !ajustes.size && !promovidos.length) return base;
+  // Os promovidos evoluem pela temporada do clube, como o resto do mundo.
+  const dataDoClube = evolucao && c.clube ? evolucao.dataDoClube(c.clube, data) : data;
+  const promovidosHoje = new Map(
+    promovidos.map((b) => [b.j.id, jogadorDaBaseNaData(b, dataDoClube)] as const),
+  );
+  // A CPU sobe os garotos da base do banco; no clube do técnico, quem decide é ele.
+  const daBase = evolucao?.daBase;
+  const assinatura = `${[...saidas].join(",")}|${[...ajustes].join(",")}|${[...promovidosHoje.values()].map((j) => j.id + j.forca).join(",")}`;
   const doClube = (lista: readonly Jogador[]): readonly Jogador[] => {
-    if (!saidas.size && !ajustes.size) return lista;
+    if (!saidas.size && !ajustes.size && !promovidos.length && !daBase?.size) return lista;
     const guardado = doClubeCache.get(lista);
     if (guardado?.assinatura === assinatura) return guardado.lista;
-    const r = lista
+    const r = [
+      ...lista.filter((j) => !daBase?.has(j.id) && !promovidosHoje.has(j.id)),
+      ...promovidosHoje.values(),
+    ]
       .filter((j) => !saidas.has(j.id))
       .map((j) => (ajustes.has(j.id) ? comAjuste(j, ajustes.get(j.id)!) : j));
     doClubeCache.set(lista, { assinatura, lista: r });
@@ -127,7 +141,9 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     ...(evolucao ? { evolucao } : {}),
     data,
     jogador: (id) => {
-      const j = evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id);
+      const j =
+        promovidosHoje.get(id) ??
+        (evolucao && evolui ? evolucao.jogador(id, data) : base.jogador(id));
       return j && ajustes.has(id) ? comAjuste(j, ajustes.get(id)!) : j;
     },
     elenco: (id) =>

@@ -31,6 +31,8 @@ export interface MundoParaEvolucao {
   pais(codigo: string): Pais | undefined;
   /** Elenco profissional do banco. */
   elenco(clube: string): readonly Jogador[];
+  /** Categoria de base do banco. */
+  base?(clube: string): readonly Jogador[];
   jogador(id: string): Jogador | undefined;
 }
 
@@ -200,8 +202,35 @@ export class EvolucaoDoMundo {
   private iniciar() {
     if (this.vagas.length || !this.mundo.clubes) return;
     this.clubes = this.mundo.clubes.filter((c) => !c.filialDe);
-    for (const c of this.mundo.clubes)
+    for (const c of this.mundo.clubes) {
       for (const j of this.mundo.elenco(c.id)) this.novaVaga(c.id, j, this.referencia);
+      // A CPU revela os garotos da base do banco: os ícones e quem tem potencial para o clube
+      // sobem aos 18; os outros (potencial abaixo do nível do clube + 2) saem da base.
+      for (const j of this.mundo.base?.(c.id) ?? [])
+        if (j.forcaAuge || j.potencial >= c.nivel + 2) this.subirDaBase(c, j);
+    }
+  }
+
+  /** Garotos da base do banco que a CPU sobe (o clube do técnico decide os dele). */
+  readonly daBase = new Set<string>();
+
+  private subirDaBase(c: Clube, j: Jogador) {
+    const pais = this.mundo.pais(c.pais);
+    if (!pais) return;
+    for (let k = 1; k < 10; k++) {
+      const s = inicioDaTemporadaContada(pais, this.referencia, k);
+      if (idadeEm(j.nascimento, s) < IDADE_PROMOCAO) continue;
+      const forca = Math.max(
+        j.forca,
+        Math.round(j.potencial * fracaoDoPotencial(idadeEm(j.nascimento, s), j.posicao)),
+      );
+      const atributos = escalarAtributos(j.posicao, j.atributos ?? {}, forca);
+      const g = this.novaVaga(c.id, { ...j, base: false, forca, atributos }, s);
+      g.potencialReal = Math.max(forca, j.forcaAuge ?? j.potencial);
+      this.daBase.add(j.id);
+      this.evento({ tipo: "junior", data: s, id: j.id, clube: c.id, idade: g.idadeInicio });
+      return;
+    }
   }
 
   private novaVaga(clube: string, j: Jogador, inicio: string, renascido = false): Geracao {
@@ -443,7 +472,7 @@ export class EvolucaoDoMundo {
 const fimDoAno = (data: string) => `${data.slice(0, 4)}-12-31`;
 
 /** Completa um jogador gerado (atributos e características a partir da força). */
-function completar(e: ReturnType<typeof gerarJogador>): Jogador {
+export function completar(e: ReturnType<typeof gerarJogador>): Jogador {
   const atributos = gerarAtributos({
     semente: e.id,
     posicao: e.posicao,

@@ -61,6 +61,7 @@ import { dataCurta, somarDias } from "./datas";
 import { diaDosConvocados, foraPelaSelecao, noticiaDaConvocacao } from "./selecao";
 import { evolucaoDe, mundoNaData } from "../elenco/mundo";
 import { elencoSemLesionados, riscoDeLesao } from "../elenco/lesoes";
+import { diaDaBase, type EstadoDaBase, type JogadorDaBase } from "../elenco/base";
 import {
   depoisDoJogo,
   diaDoElenco,
@@ -195,6 +196,10 @@ export interface Carreira {
   contratos?: Record<string, Contrato>;
   /** Quem saiu do clube (contrato terminado). */
   saidas?: string[];
+  /** Categoria de base: jogadores, olheiros e relatórios (sem o campo, a base do banco). */
+  base?: EstadoDaBase;
+  /** Quem subiu da base ao profissional (evoluem pela curva desde a promoção). */
+  promovidos?: JogadorDaBase[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -210,6 +215,8 @@ export interface Mundo {
   datasFifa: readonly DataFifa[];
   /** Todos os clubes (o mundo evolui com eles; sem a lista, fica parado). */
   clubes?: readonly Clube[];
+  /** Categoria de base do clube no banco. */
+  base?(clube: string): readonly Jogador[];
 }
 
 export function mundoDoBanco(banco: Banco): Mundo {
@@ -218,11 +225,13 @@ export function mundoDoBanco(banco: Banco): Mundo {
   const paises = new Map(banco.paises.map((p) => [p.codigo, p]));
   const competicoes = new Map(banco.competicoes.map((c) => [c.id, c]));
   const elencos = new Map<string, Jogador[]>();
+  const bases = new Map<string, Jogador[]>();
   for (const j of banco.jogadores) {
-    if (!j.clube || j.base) continue;
-    const lista = elencos.get(j.clube);
+    if (!j.clube) continue;
+    const mapa = j.base ? bases : elencos;
+    const lista = mapa.get(j.clube);
     if (lista) lista.push(j);
-    else elencos.set(j.clube, [j]);
+    else mapa.set(j.clube, [j]);
   }
   const porPais = new Map<string, Clube[]>();
   for (const c of banco.clubes) {
@@ -260,6 +269,7 @@ export function mundoDoBanco(banco: Banco): Mundo {
     clubesDoPais: (codigo) => porPais.get(codigo) ?? [],
     datasFifa: banco.datasFifa,
     clubes: banco.clubes,
+    base: (id) => bases.get(id) ?? [],
   };
 }
 
@@ -637,13 +647,15 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     data,
     virou ? minutosNaVirada(mundo, c.clube, data, convocados.jogadores) : convocados.jogadores,
   );
-  // Lesões, moral e contratos do dia.
+  // Lesões, moral e contratos do dia; a base (olheiros, peneira e dispensas).
   const dia = diaDoElenco(c, mundoAmanha, data, elenco.jogadores);
+  const base = diaDaBase(c, mundoAmanha, data, virou);
   for (const n of [
     ...convocados.noticias,
     ...(apresentacao ? [apresentacao] : []),
     ...elenco.noticias,
     ...dia.noticias,
+    ...base.noticias,
   ]) {
     novidades.unshift(n);
     noticias = [n, ...noticias].slice(0, MAX_NOTICIAS);
@@ -653,6 +665,7 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     data,
     competicoes,
     jogadores: dia.jogadores,
+    ...(base.base ? { base: base.base } : {}),
     ...(dia.saidas.length ? { saidas: [...(c.saidas ?? []), ...dia.saidas] } : {}),
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
