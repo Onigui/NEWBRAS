@@ -145,6 +145,13 @@ export function QuadroDaDiretoria({ c, montado }: { c: Carreira; montado: MundoM
       <div className="mt-1 h-1.5 w-full max-w-60 rounded bg-white/10">
         <div className={`h-1.5 rounded ${cor}`} style={{ width: `${d.confianca}%` }} />
       </div>
+      {(c.crise?.mesesAtrasados ?? 0) > 0 && (
+        <p className="mt-1 text-[#ff8a7a]">
+          {t("Salários atrasados há {n} mês(es): a diretoria está furiosa.", {
+            n: c.crise?.mesesAtrasados ?? 0,
+          })}
+        </p>
+      )}
       {d.metas && (
         <p className="mt-2">
           {t("Meta na liga: até o {meta}º lugar.", { meta: d.metas.posicao })}{" "}

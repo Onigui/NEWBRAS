@@ -30,6 +30,7 @@ import {
   type PropostaRecebida,
 } from "./comum";
 import { aceitarEmprestimoProposto, propostaDeEmprestimo } from "./negocios";
+import { proibidoDeContratar } from "../financas/crise";
 import { janelaAberta, salarioPedido, valorDeMercado } from "./valor";
 import { respostaDeVenda, situacaoDoClube } from "./situacao";
 
@@ -49,7 +50,8 @@ export type ResultadoProposta =
   | { tipo: "recusa-jogador"; motivo: "clube-menor" }
   | {
       tipo: "impossivel";
-      motivo: "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" | "em-negocio";
+      motivo:
+        "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" | "em-negocio" | "proibido";
     };
 
 /** Quanto o clube pede, pela situação dele (dinheiro, briga por título) e pelo peso do jogador. */
@@ -73,6 +75,7 @@ export function proporCompra(
   if (!j.clube) return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
   if (j.clube === c.clube) return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
   if (presosEmNegocio(c).has(id)) return fim({ tipo: "impossivel", motivo: "em-negocio" });
+  if (proibidoDeContratar(c, mundo)) return fim({ tipo: "impossivel", motivo: "proibido" });
   if (!janelaAberta(mundo.pais(nosso.pais), c.data))
     return fim({ tipo: "impossivel", motivo: "janela-fechada" });
   if (mundo.elenco(c.clube).length >= ELENCO_MAXIMO)
@@ -118,6 +121,8 @@ export function contratarLivre(
   const nosso = mundo.clube(c.clube);
   if (!j || !nosso || !livresDe(c).includes(id))
     return { carreira: c, resultado: { tipo: "impossivel", motivo: "mesmo-clube" } };
+  if (proibidoDeContratar(c, mundo))
+    return { carreira: c, resultado: { tipo: "impossivel", motivo: "proibido" } };
   if (mundo.elenco(c.clube).length >= ELENCO_MAXIMO)
     return { carreira: c, resultado: { tipo: "impossivel", motivo: "elenco-cheio" } };
   if (!aceitaOClube(mundo, { ...j, clube: undefined } as Jogador, nosso))

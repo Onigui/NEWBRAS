@@ -66,6 +66,8 @@ export interface EstadoCompeticao {
   /** Todos os vencedores do playoff, quando ele dá mais de uma vaga (Série B: os dois). */
   vencedoresPlayoff?: string[];
   classificacao?: string[];
+  /** Pontos tirados por punição (salários atrasados), por clube. */
+  penalidades?: Record<string, number>;
   /** Gols e assistências de cada jogador na competição. */
   artilharia: Record<string, [number, number]>;
   /**
@@ -869,7 +871,14 @@ export function tabelaDoGrupo(
   const ef = e.fases[f];
   const grupo = ef?.grupos?.[g] ?? [];
   const jogos = e.jogos.filter((j) => j.fase === f && j.grupo === g);
-  return ordenarTabela(grupo, jogos, criteriosDe(c), c.pontos, `${c.id}:${e.temporada}:${f}:${g}`);
+  return ordenarTabela(
+    grupo,
+    jogos,
+    criteriosDe(c),
+    c.pontos,
+    `${c.id}:${e.temporada}:${f}:${g}`,
+    e.penalidades,
+  );
 }
 
 /** Classificação de uma fase de grupos: primeiros de cada grupo, depois segundos... */

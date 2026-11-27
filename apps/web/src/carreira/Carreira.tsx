@@ -365,7 +365,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
             {aba === "base" && <Base c={c} montado={montado} mudar={mudar} />}
             {aba === "mercado" && <Mercado c={c} montado={montado} mudar={mudar} />}
-            {aba === "financas" && <Financas c={c} montado={montado} />}
+            {aba === "financas" && <Financas c={c} montado={montado} mudar={mudar} />}
             {aba === "escalacao" && (
               <div className="flex flex-col gap-3">
                 <Tatica c={c} mudar={mudar} />

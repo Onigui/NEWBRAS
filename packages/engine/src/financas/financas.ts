@@ -38,7 +38,7 @@ export const FATOR_DO_PAIS: Readonly<Record<string, number>> = {
   USA: 0.9,
   POR: 0.8,
   NED: 0.8,
-  BRA: 0.65,
+  BRA: 0.75,
   MEX: 0.8,
   TUR: 0.8,
   ARG: 0.55,
@@ -54,7 +54,9 @@ export type CategoriaFinanceira =
   | "salarios"
   | "estrutura"
   | "manutencao"
-  | "olheiros";
+  | "olheiros"
+  | "emprestimo"
+  | "credito";
 
 /** Receitas e despesas do clube do técnico num mês (receita positiva, despesa negativa). */
 export interface MesFinanceiro {
@@ -152,9 +154,11 @@ export function orcamentoMensal(
 ): Partial<Record<CategoriaFinanceira, number>> {
   const r = receitaAnual(mundo, c.clube) / 12;
   const olheiros = (c.base?.olheiros ?? []).reduce((s, o) => s + o.salario, 0);
+  // Em crise (salários atrasados ou caixa negativo), os patrocinadores desconfiam: 15% a menos.
+  const emCrise = (c.crise?.mesesAtrasados ?? 0) > 0 || caixaDe(c, mundo) < 0;
   return {
     tv: arredondar(r * 0.3),
-    patrocinio: arredondar(r * 0.22),
+    patrocinio: arredondar(r * 0.22 * (emCrise ? 0.85 : 1)),
     comercial: arredondar(r * 0.06),
     salarios: -folhaSalarial(c, mundo),
     estrutura: -arredondar(r * 0.2),
@@ -313,7 +317,7 @@ export function precisaDeDinheiro(
 }
 
 /** O mês da CPU: receita (com ajuste pela posição na liga) menos folha e estrutura. */
-function mesDaCpu(c: Carreira, mundo: Mundo): Record<string, number> {
+export function mesDaCpu(c: Carreira, mundo: Mundo): Record<string, number> {
   const caixas: Record<string, number> = { ...c.caixasCpu };
   const posicoes = posicoesNaLiga(c, mundo);
   for (const x of mundo.clubes ?? []) {
@@ -335,7 +339,7 @@ function mesDaCpu(c: Carreira, mundo: Mundo): Record<string, number> {
 }
 
 /** Compras e vendas do dia no caixa dos clubes da CPU (o técnico já paga e recebe na hora). */
-function transferenciasNoCaixa(c: Carreira, mundo: Mundo, data: string): Carreira {
+export function transferenciasNoCaixa(c: Carreira, mundo: Mundo, data: string): Carreira {
   const hoje = (c.transferencias ?? []).filter((t) => t.data === data && t.valor > 0);
   if (!hoje.length) return c;
   const caixas: Record<string, number> = { ...c.caixasCpu };
@@ -348,33 +352,4 @@ function transferenciasNoCaixa(c: Carreira, mundo: Mundo, data: string): Carreir
     if (t.para) mexer(t.para, -t.valor);
   }
   return { ...c, caixasCpu: caixas };
-}
-
-/** O dia das finanças: o mês (todo dia 1) e as transferências do dia no caixa da CPU. */
-export function diaDasFinancas(
-  c: Carreira,
-  mundo: Mundo,
-  data: string,
-): { carreira: Carreira; noticias: Noticia[] } {
-  let r = transferenciasNoCaixa(c, mundo, data);
-  const noticias: Noticia[] = [];
-  if (data.endsWith("-01")) {
-    const valores = orcamentoMensal(r, mundo);
-    r = lancar(r, mundo, data, valores);
-    r = { ...r, caixasCpu: mesDaCpu(r, mundo) };
-    const saldo = Object.values(valores).reduce((s, v) => s + (v ?? 0), 0);
-    noticias.push({
-      data,
-      tipo: "carreira",
-      ...marcar(
-        "Fechamento do mês: salários de {salarios} pagos; TV, patrocínio e comercial somaram {receitas}. Saldo fixo do mês: {saldo}.",
-        {
-          salarios: -(valores.salarios ?? 0),
-          receitas: (valores.tv ?? 0) + (valores.patrocinio ?? 0) + (valores.comercial ?? 0),
-          saldo,
-        },
-      ),
-    });
-  }
-  return { carreira: r, noticias };
 }

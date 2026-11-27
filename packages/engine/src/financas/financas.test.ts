@@ -5,7 +5,6 @@ import { salarioBase } from "../gerador/jogador";
 import {
   bilheteria,
   caixaDaCpu,
-  diaDasFinancas,
   folhaSalarial,
   orcamentoMensal,
   precisaDeDinheiro,
@@ -13,6 +12,7 @@ import {
   receitaAnual,
   rendaDoJogo,
 } from "./financas";
+import { diaDasFinancas } from "./mes";
 
 const PAIS = {
   codigo: "BRA",

@@ -512,7 +512,9 @@ function Renovacao({
                 ? t("Emprestado: o contrato é com o clube dono do passe.")
                 : p.recusa === "pre-contrato"
                   ? t("Já assinou pré-contrato com outro clube e sai no fim do contrato.")
-                  : t("Ele pensa em parar e não quer renovar.")}
+                  : p.recusa === "salarios-atrasados"
+                    ? t("Com salários atrasados, ninguém conversa sobre renovação.")
+                    : t("Ele pensa em parar e não quer renovar.")}
         </p>
       ) : (
         <div className="mt-1 flex flex-wrap items-center gap-1">

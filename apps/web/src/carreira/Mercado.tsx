@@ -75,15 +75,19 @@ function textoDoResultado(r: ResultadoProposta): string {
     case "recusa-jogador":
       return t("O jogador não quer: o clube é de nível bem menor que o dele.");
     case "impossivel":
-      return r.motivo === "janela-fechada"
-        ? t("A janela de transferências está fechada: fora dela, só jogadores livres.")
-        : r.motivo === "caixa"
-          ? t("Não há dinheiro em caixa para essa oferta.")
-          : r.motivo === "elenco-cheio"
-            ? t("O elenco já tem 30 profissionais.")
-            : r.motivo === "em-negocio"
-              ? t("Ele está emprestado, com pré-contrato ou em leilão: não dá para comprar agora.")
-              : t("Não dá para negociar esse jogador.");
+      return r.motivo === "proibido"
+        ? t("Proibido de contratar: regularize os salários atrasados e a dívida (aba Finanças).")
+        : r.motivo === "janela-fechada"
+          ? t("A janela de transferências está fechada: fora dela, só jogadores livres.")
+          : r.motivo === "caixa"
+            ? t("Não há dinheiro em caixa para essa oferta.")
+            : r.motivo === "elenco-cheio"
+              ? t("O elenco já tem 30 profissionais.")
+              : r.motivo === "em-negocio"
+                ? t(
+                    "Ele está emprestado, com pré-contrato ou em leilão: não dá para comprar agora.",
+                  )
+                : t("Não dá para negociar esse jogador.");
   }
 }
 
@@ -97,6 +101,10 @@ function textoDoEmprestimo(r: CondicoesDeEmprestimo | { tipo: "caixa" }): string
       return t("O clube não empresta: o elenco já está curto.");
     case "clube-menor":
       return t("O jogador não quer: o clube é de nível bem menor que o dele.");
+    case "proibido":
+      return t(
+        "Proibido de contratar: regularize os salários atrasados e a dívida (aba Finanças).",
+      );
     case "em-negocio":
       return t("Ele já está emprestado, com pré-contrato ou em leilão.");
     case "janela-fechada":
@@ -127,15 +135,17 @@ function textoDaTroca(r: ResultadoTroca, nome: (id: string) => string): string {
         jogador: nome(r.jogador),
       });
     case "impossivel":
-      return r.motivo === "janela-fechada"
-        ? t("Troca só com as janelas dos dois clubes abertas.")
-        : r.motivo === "caixa"
-          ? t("Não há dinheiro em caixa para a diferença.")
-          : r.motivo === "elenco-cheio"
-            ? t("O elenco já tem 30 profissionais.")
-            : r.motivo === "em-negocio"
-              ? t("Algum dos jogadores está emprestado, com pré-contrato ou em leilão.")
-              : t("Escolha de 1 a 3 jogadores do elenco para oferecer.");
+      return r.motivo === "proibido"
+        ? t("Proibido de contratar: regularize os salários atrasados e a dívida (aba Finanças).")
+        : r.motivo === "janela-fechada"
+          ? t("Troca só com as janelas dos dois clubes abertas.")
+          : r.motivo === "caixa"
+            ? t("Não há dinheiro em caixa para a diferença.")
+            : r.motivo === "elenco-cheio"
+              ? t("O elenco já tem 30 profissionais.")
+              : r.motivo === "em-negocio"
+                ? t("Algum dos jogadores está emprestado, com pré-contrato ou em leilão.")
+                : t("Escolha de 1 a 3 jogadores do elenco para oferecer.");
   }
 }
 
@@ -152,13 +162,15 @@ function textoDoPreContrato(r: ResultadoPreContrato): string {
             })
           : t("Ele pede pelo menos {pedido} por mês.", { pedido: dinheiro(r.pedido ?? 0) });
     case "impossivel":
-      return r.motivo === "contrato-longo"
-        ? t("Pré-contrato só nos últimos 6 meses do contrato dele.")
-        : r.motivo === "elenco-cheio"
-          ? t("O elenco já tem 30 profissionais.")
-          : r.motivo === "em-negocio"
-            ? t("Ele já está emprestado, com pré-contrato ou em leilão.")
-            : t("Não dá para negociar esse jogador.");
+      return r.motivo === "proibido"
+        ? t("Proibido de contratar: regularize os salários atrasados e a dívida (aba Finanças).")
+        : r.motivo === "contrato-longo"
+          ? t("Pré-contrato só nos últimos 6 meses do contrato dele.")
+          : r.motivo === "elenco-cheio"
+            ? t("O elenco já tem 30 profissionais.")
+            : r.motivo === "em-negocio"
+              ? t("Ele já está emprestado, com pré-contrato ou em leilão.")
+              : t("Não dá para negociar esse jogador.");
   }
 }
 
@@ -167,6 +179,10 @@ function textoDoLance(r: ResultadoLance): string {
   switch (r.motivo) {
     case "baixo":
       return t("O lance mínimo agora é {valor}.", { valor: dinheiro(r.minimo ?? 0) });
+    case "proibido":
+      return t(
+        "Proibido de contratar: regularize os salários atrasados e a dívida (aba Finanças).",
+      );
     case "caixa":
       return t("Não há dinheiro em caixa para esse lance.");
     case "janela-fechada":

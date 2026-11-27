@@ -141,7 +141,13 @@ export interface PropostaDeRenovacao {
   /** Durações que ele aceita, em meses. */
   meses: number[];
   /** Por que não quer renovar (vazio: aceita). */
-  recusa?: "insatisfeito" | "aposentadoria" | "contrato-longo" | "emprestado" | "pre-contrato";
+  recusa?:
+    | "insatisfeito"
+    | "aposentadoria"
+    | "contrato-longo"
+    | "emprestado"
+    | "pre-contrato"
+    | "salarios-atrasados";
 }
 
 /** Emprestado ao clube do técnico: o contrato é do dono do passe. */
@@ -157,6 +163,8 @@ export function propostaDeRenovacao(c: Carreira, mundo: Mundo, id: string): Prop
   const atual = contratoDe(c, mundo, id)?.salario ?? 0;
   const moral = moralDe(e);
   if (emprestadoAqui(c, id)) return { salario: 0, meses: [], recusa: "emprestado" };
+  if ((c.crise?.mesesAtrasados ?? 0) > 0)
+    return { salario: 0, meses: [], recusa: "salarios-atrasados" };
   if ((c.preContratos ?? []).some((p) => p.jogador === id && p.de === c.clube))
     return { salario: 0, meses: [], recusa: "pre-contrato" };
   // Pede pela força; estrela e jogador insatisfeito pedem mais; nunca menos que 5% de aumento.

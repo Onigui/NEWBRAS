@@ -21,7 +21,8 @@ export type TipoTransferencia =
   | "volta-de-emprestimo"
   | "opcao-de-compra"
   | "pre-contrato"
-  | "leilao";
+  | "leilao"
+  | "rescisao";
 
 export interface Transferencia {
   jogador: string;
