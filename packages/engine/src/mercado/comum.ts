@@ -75,6 +75,23 @@ export interface PreContrato {
   salario: number;
 }
 
+/**
+ * Sondagem de um clube da CPU por jogador do técnico no último ano de contrato: a diretoria
+ * avisa, o jogador vem conversar e dá um prazo; sem renovação até lá, assina o pré-contrato.
+ */
+export interface Sondagem {
+  jogador: string;
+  clube: string;
+  /** Dia em que a diretoria avisou. */
+  inicio: string;
+  /** Dia em que o jogador vem conversar com o técnico. */
+  conversa: string;
+  /** Até quando ele espera a renovação. */
+  prazo: string;
+  /** O técnico liberou o jogador para negociar. */
+  liberado?: boolean;
+}
+
 export interface Lance {
   clube: string;
   valor: number;
@@ -152,6 +169,7 @@ export function saiuDoClube(c: Carreira, id: string, manterContrato = false): Ca
     ...(c.leiloes
       ? { leiloes: c.leiloes.filter((l) => l.jogador !== id || l.vendedor !== c.clube) }
       : {}),
+    ...(c.sondagens ? { sondagens: c.sondagens.filter((x) => x.jogador !== id) } : {}),
   };
 }
 

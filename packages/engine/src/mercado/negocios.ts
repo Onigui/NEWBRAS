@@ -11,10 +11,11 @@ import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
 import { estadoDe } from "../carreira/carreira";
 import { diasEntre, somarDias } from "../carreira/datas";
-import { contratoDe, moralDe } from "../elenco/vida";
+import { contratoDe } from "../elenco/vida";
 import { idadeEm } from "../evolucao";
 import { salarioBase } from "../gerador/jogador";
 import { Rng } from "../rng";
+import { diaDasSondagens } from "./sondagens";
 import {
   aceitaOClube,
   caixaDe,
@@ -673,9 +674,10 @@ export function diaDosNegocios(
   c: Carreira,
   mundo: Mundo,
   data: string,
-): { carreira: Carreira; noticias: Noticia[] } {
+): { carreira: Carreira; noticias: Noticia[]; decisao: boolean } {
   const rng = new Rng(`${c.semente}:negocios:${data}`);
   const noticias: Noticia[] = [];
+  let decisao = false;
   let r = c;
   // Quem mudou de clube hoje (a CPU não mexe de novo no mesmo dia).
   const movidos = new Set(
@@ -810,24 +812,16 @@ export function diaDosNegocios(
     }
     r = { ...r, preContratos: ficam };
   }
-  const assediados = assedioDaCpu(r, mundo, data, rng.fork("assedio"));
-  if (assediados.length) {
-    r = { ...r, preContratos: [...(r.preContratos ?? []), ...assediados] };
-    for (const p of assediados)
-      noticias.push(
-        noticia(
-          data,
-          marcar(
-            "{jogador} assinou pré-contrato com o {clube} e sai quando o contrato acabar, em {data}.",
-            {
-              jogador: mundo.jogador(p.jogador)?.nome ?? p.jogador,
-              clube: nomeDoClube(mundo, p.para),
-              data: p.chegada,
-            },
-          ),
-        ),
-      );
-  }
+  // Sondagens: aviso da diretoria, conversa do jogador, prazo e, sem renovação, o pré-contrato.
+  const sondagens = diaDasSondagens(r, mundo, data, rng.fork("assedio"));
+  if (sondagens.decisao) decisao = true;
+  noticias.push(...sondagens.noticias);
+  if (sondagens.sondagens.length || r.sondagens?.length)
+    r = { ...r, sondagens: sondagens.sondagens };
+  if (sondagens.preContratos.length)
+    r = { ...r, preContratos: [...(r.preContratos ?? []), ...sondagens.preContratos] };
+  if (sondagens.propostas.length)
+    r = { ...r, propostas: [...(r.propostas ?? []), ...sondagens.propostas] };
 
   // Leilões: fecham os vencidos, a CPU abre leilões de clubes em crise e dá lances.
   const leiloes = diaDosLeiloes(r, mundo, data, rng.fork("leiloes"), movidos);
@@ -852,46 +846,7 @@ export function diaDosNegocios(
 
   if (novas.length) r = { ...r, transferencias: [...(r.transferencias ?? []), ...novas] };
   if (noticias.length) r = { ...r, noticias: comNoticias(r, noticias) };
-  return { carreira: r, noticias };
-}
-
-/** Clubes da CPU que assinam pré-contrato com jogadores do técnico no fim do contrato. */
-function assedioDaCpu(c: Carreira, mundo: Mundo, data: string, rng: Rng): PreContrato[] {
-  const ja = new Set((c.preContratos ?? []).map((p) => p.jogador));
-  const nivel = mundo.clube(c.clube)?.nivel ?? 0;
-  const elenco = mundo.elenco(c.clube);
-  const novos: PreContrato[] = [];
-  for (const j of elenco) {
-    if (ja.has(j.id) || j.forca < 55 || emprestadoAoClube(c, j.id)) continue;
-    const contrato = contratoDe(c, mundo, j.id);
-    if (!contrato) continue;
-    const faltam = diasEntre(data, contrato.fim);
-    if (faltam < 1 || faltam > DIAS_DO_PRE_CONTRATO) continue;
-    const peso = importanciaNoElenco(elenco, j.id);
-    const chance = 0.004 * (peso === "craque" ? 1.5 : peso === "titular" ? 1 : 0.5);
-    if (!rng.chance(chance)) continue;
-    // Feliz no clube, só sai para um clube do mesmo tamanho ou maior.
-    const contente = moralDe(estadoDe(c, j.id)) >= 45;
-    const candidatos = (mundo.clubes ?? []).filter(
-      (x) =>
-        x.id !== c.clube &&
-        !x.filialDe &&
-        x.nivel >= j.forca - 10 &&
-        x.nivel <= j.forca + 5 &&
-        (!contente || x.nivel >= nivel - 3),
-    );
-    if (!candidatos.length) continue;
-    const clube = candidatos[rng.int(0, candidatos.length - 1)] as Clube;
-    novos.push({
-      jogador: j.id,
-      de: c.clube,
-      para: clube.id,
-      assinatura: data,
-      chegada: somarDias(contrato.fim, 1),
-      salario: salarioPedido(j, contrato, salarioBase),
-    });
-  }
-  return novos;
+  return { carreira: r, noticias, decisao };
 }
 
 /** Empréstimos entre clubes da CPU: o grande cede o garoto que não joga a um clube do nível dele. */

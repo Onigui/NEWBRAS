@@ -606,7 +606,12 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **Pré-contrato:**
   - Com jogador de outro clube nos últimos 6 meses do contrato dele, a qualquer hora (sem janela) e sem pagar nada ao clube. Ele chega no dia seguinte ao fim do contrato, com 3 anos de contrato novo e o salário combinado.
   - O reserva assina pelo salário que pede. O titular do clube dele quer 25% a mais, a não ser que vá para um clube maior (3 pontos de nível ou mais). O jogador também não desce muito de nível, como na compra.
-  - A CPU faz o mesmo com o técnico: nos últimos 6 meses, um clube interessado pode assinar pré-contrato com um jogador que não renovou. Aí ele não renova mais e sai de graça no fim do contrato. Quem está contente (moral 45 ou mais) só aceita clube do mesmo tamanho ou maior. O aviso dos 6 meses ("renove") é a hora de agir.
+  - A CPU faz o mesmo com o técnico, mas nunca de surpresa (pedido do dono, 27/11, como no PES e no FIFA). No último ano de contrato (9 meses ou menos), um clube interessado primeiro **sonda** o jogador:
+    1. A diretoria avisa ("o clube X está sondando fulano; renove para segurá-lo"). Se a janela do clube estiver aberta, ele também faz uma proposta para levar agora, pagando 85% do valor.
+    2. Uma semana depois, o próprio jogador vem conversar: tem a proposta e quer saber se o clube conta com ele. Dá um prazo para a renovação, de pelo menos 3 semanas e nunca antes de entrar nos 6 meses finais. O avanço até o próximo jogo para nesse dia e 7 dias antes do prazo, com um lembrete.
+    3. Um painel no topo da carreira mostra a conversa até o técnico decidir: renovar ali mesmo (com a proposta na mão, ele pede 15% a mais de salário) ou liberar o jogador para acertar com o outro clube. Insatisfeito (moral abaixo de 25), ele não renova, e o caminho é vender ou deixar sair.
+    4. Sem renovação até o prazo, ele assina o pré-contrato e sai de graça no fim do contrato.
+  - Quem está contente (moral 45 ou mais) só é sondado por clube do mesmo tamanho ou maior. A chance de sondagem segue o peso no elenco (craque 1,5 vez, reserva metade).
 - **Empréstimos nos dois sentidos:**
   - **Pegar emprestado:** o dono cede reservas e jovens titulares (até 23 anos, se não estiver brigando pelo título), nunca o craque, e não empresta com o elenco curto. O técnico vê as condições e fecha:
     - prazo: até o fim da temporada do clube ou até o fim da próxima;

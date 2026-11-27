@@ -47,6 +47,7 @@ import { Plantel } from "./Plantel";
 import { Selecoes } from "./Selecoes";
 import { Base } from "./Base";
 import { Mercado } from "./Mercado";
+import { Sondagens } from "./Sondagens";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
@@ -264,6 +265,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         </div>
       </header>
 
+      <Sondagens c={c} montado={montado} mudar={mudar} />
       {c.versaoBanco !== montado.banco.meta.versao && (
         <p className="rounded border border-[#ffa64d]/40 bg-[#ffa64d]/10 px-3 py-2 text-sm text-[#ffc38a]">
           {t(
