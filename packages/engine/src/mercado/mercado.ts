@@ -6,105 +6,39 @@
  * Toda mudança de clube fica numa lista de transferências na carreira; o mundo da data lê essa
  * lista para montar os elencos (quem saiu some, quem chegou entra, quem está sem clube é livre).
  */
-import type { Clube, Contrato, Jogador } from "@newbras/data";
+import type { Clube, Jogador } from "@newbras/data";
 import { marcar } from "@newbras/textos";
 import type { Carreira, Mundo, Noticia } from "../carreira/carreira";
-import { estadoDe } from "../carreira/carreira";
 import { diasEntre, somarDias } from "../carreira/datas";
-import { contratoDe, somarMeses } from "../elenco/vida";
-import { idadeEm } from "../evolucao";
+import { contratoDe } from "../elenco/vida";
 import { salarioBase } from "../gerador/jogador";
 import { Rng } from "../rng";
+import {
+  aceitaOClube,
+  caixaDe,
+  chegouAoClube,
+  comNoticias,
+  contratoNovo,
+  DIAS_DA_PROPOSTA,
+  ELENCO_MAXIMO,
+  emprestadoAoClube,
+  presosEmNegocio,
+  livresDe,
+  noticia,
+  saiuDoClube,
+  transferir,
+  type PropostaRecebida,
+} from "./comum";
+import { aceitarEmprestimoProposto, propostaDeEmprestimo } from "./negocios";
 import { janelaAberta, salarioPedido, valorDeMercado } from "./valor";
 import { respostaDeVenda, situacaoDoClube } from "./situacao";
 
-export type TipoTransferencia = "compra" | "venda" | "livre" | "dispensa" | "fim-de-contrato";
+export * from "./comum";
 
-export interface Transferencia {
-  jogador: string;
-  /** Clube de onde saiu (vazio: estava livre). */
-  de?: string;
-  /** Clube para onde foi (vazio: ficou livre). */
-  para?: string;
-  data: string;
-  valor: number;
-  tipo: TipoTransferencia;
-}
-
-export interface PropostaRecebida {
-  id: string;
-  jogador: string;
-  clube: string;
-  valor: number;
-  /** Até quando vale. */
-  ate: string;
-}
-
-/** O elenco profissional não passa disso, e o da CPU não vende abaixo disso. */
-const ELENCO_MAXIMO = 30;
-/** Proposta recebida vale tantos dias. */
-const DIAS_DA_PROPOSTA = 7;
 /** Chance, por dia de janela, de um jogador à venda receber proposta. */
 const CHANCE_PROPOSTA_A_VENDA = 0.12;
 /** Chance, por dia de janela, de um dos 5 melhores do clube receber proposta sem estar à venda. */
 const CHANCE_PROPOSTA_CRAQUE = 0.006;
-
-const noticia = (data: string, texto: ReturnType<typeof marcar>): Noticia => ({
-  data,
-  tipo: "elenco",
-  ...texto,
-});
-
-const comNoticias = (c: Carreira, novas: Noticia[]): Noticia[] =>
-  [...novas, ...c.noticias].slice(0, 200);
-
-// --------------------------------------------------------------------------------- Caixa
-
-/** Caixa para contratações: começa com 10% do valor do elenco (as finanças vêm na Fase 14). */
-export function caixaDe(c: Carreira, mundo: Mundo): number {
-  if (c.caixa !== undefined) return c.caixa;
-  const soma = mundo
-    .elenco(c.clube)
-    .reduce((s, j) => s + valorDeMercado(j, c.inicio, contratoDe(c, mundo, j.id)), 0);
-  return Math.round((soma * 0.1) / 100_000) * 100_000;
-}
-
-// --------------------------------------------------------------------------- Transferências
-
-/** Quem está sem clube (livre) na carreira: a última transferência dele foi para lugar nenhum. */
-export function livresDe(c: Pick<Carreira, "transferencias">): string[] {
-  const ultima = new Map<string, Transferencia>();
-  for (const t of c.transferencias ?? []) ultima.set(t.jogador, t);
-  return [...ultima.values()].filter((t) => !t.para).map((t) => t.jogador);
-}
-
-function transferir(c: Carreira, t: Transferencia): Carreira {
-  return { ...c, transferencias: [...(c.transferencias ?? []), t] };
-}
-
-/** Saiu do clube do técnico: tira o estado, o contrato, a venda e as propostas dele. */
-function saiuDoClube(c: Carreira, id: string): Carreira {
-  const jogadores = { ...c.jogadores };
-  delete jogadores[id];
-  const contratos = { ...c.contratos };
-  delete contratos[id];
-  return {
-    ...c,
-    jogadores,
-    contratos,
-    aVenda: (c.aVenda ?? []).filter((x) => x !== id),
-    propostas: (c.propostas ?? []).filter((p) => p.jogador !== id),
-  };
-}
-
-/** Chegou ao clube do técnico: estado novo e contrato. */
-function chegouAoClube(c: Carreira, id: string, contrato: Contrato): Carreira {
-  return {
-    ...c,
-    jogadores: { ...c.jogadores, [id]: estadoDe(c, id) },
-    contratos: { ...c.contratos, [id]: contrato },
-  };
-}
 
 // ------------------------------------------------------------------------------ Compra
 
@@ -113,27 +47,16 @@ export type ResultadoProposta =
   | { tipo: "contraproposta"; pedido: number }
   | { tipo: "recusa-clube"; motivo: "pedido" | "elenco-curto" | "intransferivel"; pedido?: number }
   | { tipo: "recusa-jogador"; motivo: "clube-menor" }
-  | { tipo: "impossivel"; motivo: "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" };
+  | {
+      tipo: "impossivel";
+      motivo: "janela-fechada" | "caixa" | "elenco-cheio" | "mesmo-clube" | "em-negocio";
+    };
 
 /** Quanto o clube pede, pela situação dele (dinheiro, briga por título) e pelo peso do jogador. */
 export function pedidoDoClube(c: Carreira, mundo: Mundo, j: Jogador): number {
   if (!j.clube) return 0;
   const situacao = situacaoDoClube(c, mundo, j.clube, c.data);
   return respostaDeVenda(mundo, situacao, j, 0, c.data).pedido;
-}
-
-/** O jogador aceita ir para o clube? Não desce muito de nível. */
-export function aceitaOClube(mundo: Mundo, j: Jogador, destino: Clube): boolean {
-  const origem = j.clube ? mundo.clube(j.clube) : undefined;
-  if (!origem) return j.forca <= destino.nivel + 12;
-  return destino.nivel >= origem.nivel - 8 || j.forca <= destino.nivel + 3;
-}
-
-/** Contrato para quem chega: 3 anos (2 depois dos 31, 1 depois dos 34). */
-function contratoNovo(j: Jogador, data: string, salario: number): Contrato {
-  const idade = idadeEm(j.nascimento, data);
-  const anos = idade >= 34 ? 1 : idade >= 31 ? 2 : 3;
-  return { fim: somarMeses(data, anos * 12), salario };
 }
 
 /** Proposta de compra a outro clube. Aceita: o jogador vem na hora. */
@@ -149,6 +72,7 @@ export function proporCompra(
   if (!j || !nosso) return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
   if (!j.clube) return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
   if (j.clube === c.clube) return fim({ tipo: "impossivel", motivo: "mesmo-clube" });
+  if (presosEmNegocio(c).has(id)) return fim({ tipo: "impossivel", motivo: "em-negocio" });
   if (!janelaAberta(mundo.pais(nosso.pais), c.data))
     return fim({ tipo: "impossivel", motivo: "janela-fechada" });
   if (mundo.elenco(c.clube).length >= ELENCO_MAXIMO)
@@ -226,7 +150,7 @@ export function custoDaDispensa(c: Carreira, mundo: Mundo, id: string): number {
 /** Dispensa um profissional: paga a rescisão e ele fica livre. */
 export function dispensarJogador(c: Carreira, mundo: Mundo, id: string): Carreira {
   const j = mundo.jogador(id);
-  if (!j || !mundo.elenco(c.clube).some((x) => x.id === id)) return c;
+  if (!j || !mundo.elenco(c.clube).some((x) => x.id === id) || emprestadoAoClube(c, id)) return c;
   const custo = custoDaDispensa(c, mundo, id);
   let r = transferir(c, { jogador: id, de: c.clube, data: c.data, valor: custo, tipo: "dispensa" });
   r = saiuDoClube(r, id);
@@ -246,17 +170,28 @@ export function dispensarJogador(c: Carreira, mundo: Mundo, id: string): Carreir
 }
 
 /** Quem saiu porque o contrato acabou fica livre. */
+/** Quem saiu porque o contrato acabou fica livre (ou vai para quem assinou o pré-contrato). */
 export function fimDeContrato(c: Carreira, ids: readonly string[], data: string): Carreira {
   let r = c;
-  for (const id of ids)
+  for (const id of ids) {
+    const pre = (c.preContratos ?? []).find((p) => p.jogador === id && p.de === c.clube);
     r = saiuDoClube(
-      transferir(r, { jogador: id, de: c.clube, data, valor: 0, tipo: "fim-de-contrato" }),
+      transferir(r, {
+        jogador: id,
+        de: c.clube,
+        ...(pre ? { para: pre.para } : {}),
+        data,
+        valor: 0,
+        tipo: pre ? "pre-contrato" : "fim-de-contrato",
+      }),
       id,
     );
+  }
   return r;
 }
 
 export function porAVenda(c: Carreira, id: string, sim: boolean): Carreira {
+  if (sim && emprestadoAoClube(c, id)) return c;
   const lista = (c.aVenda ?? []).filter((x) => x !== id);
   return { ...c, aVenda: sim ? [...lista, id] : lista };
 }
@@ -282,6 +217,7 @@ export function aceitarProposta(c: Carreira, mundo: Mundo, id: string): Carreira
   const p = (c.propostas ?? []).find((x) => x.id === id);
   const j = p ? mundo.jogador(p.jogador) : undefined;
   if (!p || !j || p.ate < c.data) return c;
+  if (p.emprestimo) return aceitarEmprestimoProposto(c, mundo, p);
   let r = transferir(c, {
     jogador: p.jogador,
     de: c.clube,
@@ -327,6 +263,7 @@ export function diaDoMercado(
   const craques = new Set(elenco.slice(0, 5).map((j) => j.id));
   const aVenda = new Set(c.aVenda ?? []);
   for (const j of elenco) {
+    if (emprestadoAoClube(c, j.id)) continue;
     const chance = aVenda.has(j.id)
       ? CHANCE_PROPOSTA_A_VENDA
       : craques.has(j.id)
@@ -357,6 +294,27 @@ export function diaDoMercado(
           jogador: j.nome,
           valor,
         }),
+      ),
+    );
+  }
+  // Empréstimo: os oferecidos recebem propostas de clubes onde jogariam.
+  for (const id of c.aEmprestimo ?? []) {
+    const j = elenco.find((x) => x.id === id);
+    if (!j || atuais.some((p) => p.jogador === id)) continue;
+    const p = propostaDeEmprestimo(c, mundo, j, data, rng);
+    if (!p) continue;
+    atuais.push(p);
+    noticias.push(
+      noticia(
+        data,
+        marcar(
+          "Proposta de empréstimo do {clube} por {jogador} até {fim}. Responda na aba Mercado.",
+          {
+            clube: mundo.clube(p.clube)?.nomeCurto ?? p.clube,
+            jogador: j.nome,
+            fim: p.emprestimo?.fim ?? "",
+          },
+        ),
       ),
     );
   }

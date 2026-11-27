@@ -141,8 +141,12 @@ export interface PropostaDeRenovacao {
   /** Durações que ele aceita, em meses. */
   meses: number[];
   /** Por que não quer renovar (vazio: aceita). */
-  recusa?: "insatisfeito" | "aposentadoria" | "contrato-longo";
+  recusa?: "insatisfeito" | "aposentadoria" | "contrato-longo" | "emprestado" | "pre-contrato";
 }
+
+/** Emprestado ao clube do técnico: o contrato é do dono do passe. */
+const emprestadoAqui = (c: Carreira, id: string) =>
+  (c.emprestimos ?? []).some((e) => e.jogador === id && e.para === c.clube);
 
 /** O que o jogador pede para renovar (o técnico escolhe a duração). */
 export function propostaDeRenovacao(c: Carreira, mundo: Mundo, id: string): PropostaDeRenovacao {
@@ -152,6 +156,9 @@ export function propostaDeRenovacao(c: Carreira, mundo: Mundo, id: string): Prop
   const idade = idadeEm(j.nascimento, c.data);
   const atual = contratoDe(c, mundo, id)?.salario ?? 0;
   const moral = moralDe(e);
+  if (emprestadoAqui(c, id)) return { salario: 0, meses: [], recusa: "emprestado" };
+  if ((c.preContratos ?? []).some((p) => p.jogador === id && p.de === c.clube))
+    return { salario: 0, meses: [], recusa: "pre-contrato" };
   // Pede pela força; estrela e jogador insatisfeito pedem mais; nunca menos que 5% de aumento.
   const pedido =
     salarioBase(j.forca) * (j.estrela ? 1.25 : 1) * (moral < 45 ? 1.2 : moral >= 75 ? 0.95 : 1);
@@ -258,8 +265,10 @@ export function diaDoElenco(
     if (faltam <= 180 && faltam >= 0) moral -= 0.1;
     e = { ...e, moral: limitar(moral) };
     novos[j.id] = e;
-    if (!contrato) continue;
-    if (AVISOS_DE_CONTRATO.includes(faltam))
+    // O emprestado volta ao dono no fim do empréstimo (o dia dos negócios cuida disso).
+    if (!contrato || emprestadoAqui(c, j.id)) continue;
+    const pre = (c.preContratos ?? []).find((p) => p.jogador === j.id && p.de === c.clube);
+    if (!pre && AVISOS_DE_CONTRATO.includes(faltam))
       noticias.push({
         data,
         tipo: "elenco",
@@ -274,7 +283,12 @@ export function diaDoElenco(
       noticias.push({
         data,
         tipo: "elenco",
-        ...marcar("{jogador} deixou o clube: o contrato terminou.", { jogador: j.nome }),
+        ...(pre
+          ? marcar("{jogador} deixou o clube: foi para o {clube}, com quem assinou pré-contrato.", {
+              jogador: j.nome,
+              clube: mundo.clube(pre.para)?.nomeCurto ?? pre.para,
+            })
+          : marcar("{jogador} deixou o clube: o contrato terminou.", { jogador: j.nome })),
       });
     }
   }

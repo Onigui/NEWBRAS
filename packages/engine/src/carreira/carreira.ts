@@ -66,9 +66,13 @@ import { compactarTransferencias, mercadoDaCpu } from "../mercado/cpu";
 import {
   diaDoMercado,
   fimDeContrato,
+  type Emprestimo,
+  type Leilao,
+  type PreContrato,
   type PropostaRecebida,
   type Transferencia,
 } from "../mercado/mercado";
+import { diaDosNegocios } from "../mercado/negocios";
 import {
   depoisDoJogo,
   diaDoElenco,
@@ -215,6 +219,14 @@ export interface Carreira {
   aVenda?: string[];
   /** Propostas da CPU por jogadores do técnico. */
   propostas?: PropostaRecebida[];
+  /** Jogadores do técnico oferecidos por empréstimo. */
+  aEmprestimo?: string[];
+  /** Empréstimos em andamento no mundo (do técnico e entre clubes da CPU). */
+  emprestimos?: Emprestimo[];
+  /** Pré-contratos assinados com o clube do técnico ou com jogadores dele. */
+  preContratos?: PreContrato[];
+  /** Leilões abertos (do técnico e de clubes da CPU). */
+  leiloes?: Leilao[];
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -714,9 +726,12 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
     moral: Math.round((c.moral + (50 - c.moral) * 0.02) * 10) / 10,
     noticias,
   };
-  // Quem terminou o contrato fica livre (no mercado).
+  // Quem terminou o contrato fica livre (no mercado) ou vai para quem assinou o pré-contrato.
   const final = dia.saidas.length ? fimDeContrato(carreira, dia.saidas, data) : carreira;
-  return { carreira: final, novidades, parouPor: jogo ? "jogo" : "dia" };
+  // Empréstimos que acabam, pré-contratos que chegam, leilões e os empréstimos da CPU.
+  const negocios = diaDosNegocios(final, mundoAmanha, data);
+  for (const n of negocios.noticias) novidades.unshift(n);
+  return { carreira: negocios.carreira, novidades, parouPor: jogo ? "jogo" : "dia" };
 }
 
 /** No 1º de julho, a lista de transferências encolhe (fica a última de cada jogador). */
