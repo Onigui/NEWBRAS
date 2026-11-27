@@ -9,7 +9,7 @@ export * from "./competicoes";
 export { convocar, TAMANHO_DA_CONVOCACAO, VAGAS_DA_CONVOCACAO } from "./selecoes/convocacao";
 
 /** Versão do motor. Muda quando o resultado de uma mesma semente pode mudar. */
-export const ENGINE_VERSION = "0.36.0";
+export const ENGINE_VERSION = "0.37.0";
 export {
   CHANCE_DE_AMISTOSO,
   diasDosAmistosos,
@@ -123,6 +123,30 @@ export {
   type ResultadoPreContrato,
   type ResultadoTroca,
 } from "./mercado/negocios";
+export {
+  aceitarNome,
+  AMPLIACOES,
+  capacidadeAtual,
+  capacidadeExigida,
+  definirMensalidade,
+  definirPrecos,
+  estadioDe,
+  iniciarObra,
+  mensalidadeJusta,
+  nomeDoEstadio,
+  orcamentoDaObra,
+  precosAtuais,
+  precosJustos,
+  publicoDoJogo,
+  recusarNome,
+  responderEvento,
+  SETORES,
+  sociosEsperados,
+  tetoDosPrecos,
+  type EstadoDoEstadio,
+  type OfertaDeEvento,
+  type Setor,
+} from "./financas/estadio";
 export {
   criseDe,
   dividaBancaria,

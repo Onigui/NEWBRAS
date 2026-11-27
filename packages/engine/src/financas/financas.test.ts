@@ -128,7 +128,9 @@ describe("finanças do técnico", () => {
     expect(orcamento.salarios).toBe(-folhaSalarial(c, m));
     const saldo = Object.values(orcamento).reduce((s, v) => s + (v ?? 0), 0);
     const r = diaDasFinancas(c, m, "2027-02-01");
-    expect(r.carreira.caixa).toBe(10_000_000 + saldo);
+    // O estádio soma a mensalidade dos sócios no mesmo dia.
+    const socios = r.carreira.financas?.[0]?.valores.socios ?? 0;
+    expect((r.carreira.caixa ?? 0) - socios).toBe(10_000_000 + saldo);
     expect(r.carreira.financas?.[0]?.mes).toBe("2027-02");
     expect(r.noticias[0]?.texto).toContain("Fechamento do mês");
     // Fora do dia 1, nada muda.

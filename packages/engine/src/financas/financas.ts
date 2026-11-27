@@ -56,7 +56,11 @@ export type CategoriaFinanceira =
   | "manutencao"
   | "olheiros"
   | "emprestimo"
-  | "credito";
+  | "credito"
+  | "socios"
+  | "naming"
+  | "eventos"
+  | "obras";
 
 /** Receitas e despesas do clube do técnico num mês (receita positiva, despesa negativa). */
 export interface MesFinanceiro {
@@ -108,10 +112,10 @@ export function precoDoIngresso(mundo: Mundo, clube: string): number {
 }
 
 /** Manutenção do estádio por mês: meio jogo de casa cheia. */
-export function manutencaoMensal(mundo: Mundo, clube: string): number {
+export function manutencaoMensal(mundo: Mundo, clube: string, capacidade?: number): number {
   const c = mundo.clube(clube);
   if (!c) return 0;
-  return arredondar(c.estadio.capacidade * precoDoIngresso(mundo, clube) * 0.5);
+  return arredondar((capacidade ?? c.estadio.capacidade) * precoDoIngresso(mundo, clube) * 0.5);
 }
 
 /**
@@ -162,7 +166,7 @@ export function orcamentoMensal(
     comercial: arredondar(r * 0.06),
     salarios: -folhaSalarial(c, mundo),
     estrutura: -arredondar(r * 0.2),
-    manutencao: -manutencaoMensal(mundo, c.clube),
+    manutencao: -manutencaoMensal(mundo, c.clube, c.estadio?.capacidade),
     ...(olheiros ? { olheiros: -olheiros } : {}),
   };
 }
@@ -212,7 +216,7 @@ export function bilheteria(c: Carreira, mundo: Mundo, x: Compromisso): Carreira 
 /** Peso da premiação de título (e metade para o vice), em parte da receita anual. */
 function pesoDoPremio(tipo: string, escopo: string): number {
   if (escopo === "mundial") return 0.08;
-  if (escopo === "continental") return 0.12;
+  if (escopo === "confederacao") return 0.12;
   if (escopo === "estado") return 0.02;
   return tipo === "liga" ? 0.1 : 0.04;
 }

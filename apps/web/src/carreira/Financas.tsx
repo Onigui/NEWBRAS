@@ -16,15 +16,14 @@ import {
   quitarEmprestimo,
   folhaSalarial,
   orcamentoMensal,
-  precoDoIngresso,
   receitaAnual,
-  rendaDoJogo,
   type Carreira,
   type CategoriaFinanceira,
 } from "@newbras/engine";
 import { locale, t } from "@newbras/textos";
 import { NOME_POSICAO } from "@newbras/data";
 import { estiloCampo } from "../editor/ui";
+import { PainelDoEstadio } from "./Estadio";
 
 const botao =
   "rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho disabled:opacity-40";
@@ -44,6 +43,10 @@ const NOME: Record<CategoriaFinanceira, string> = {
   olheiros: t("Olheiros"),
   emprestimo: t("Parcelas do banco"),
   credito: t("Crédito bancário"),
+  socios: t("Sócios"),
+  naming: t("Nome do estádio"),
+  eventos: t("Eventos"),
+  obras: t("Obras"),
 };
 const RECEITAS: CategoriaFinanceira[] = [
   "tv",
@@ -51,6 +54,9 @@ const RECEITAS: CategoriaFinanceira[] = [
   "comercial",
   "bilheteria",
   "premios",
+  "socios",
+  "naming",
+  "eventos",
   "credito",
 ];
 const DESPESAS: CategoriaFinanceira[] = [
@@ -58,6 +64,7 @@ const DESPESAS: CategoriaFinanceira[] = [
   "estrutura",
   "manutencao",
   "olheiros",
+  "obras",
   "emprestimo",
 ];
 
@@ -85,12 +92,10 @@ export function Financas({
   const oferta = ofertaDeCredito(c, mundo);
   const [valor, setValor] = useState(0);
   const [prazo, setPrazo] = useState<number>(24);
-  const clube = mundo.clube(c.clube);
   const caixa = caixaDe(c, mundo);
   const receita = receitaAnual(mundo, c.clube);
   const orcamento = orcamentoMensal(c, mundo);
   const saldoFixo = Object.values(orcamento).reduce((s, v) => s + (v ?? 0), 0);
-  const jogo = rendaDoJogo(c, mundo, false);
   const folha = folhaSalarial(c, mundo);
   const meses = [...(c.financas ?? [])].reverse().slice(0, 12);
   const transferenciasDoMes = (mes: string) => {
@@ -179,26 +184,9 @@ export function Financas({
             )}
           </p>
         </div>
-        <div>
-          <h2 className="mb-2 font-placar text-xl font-bold">{t("Estádio")}</h2>
-          <p className="text-sm">
-            {t("{estadio}: {capacidade} lugares, ingresso médio de {preco}.", {
-              estadio: clube?.estadio.nome ?? "",
-              capacidade: dinheiro(clube?.estadio.capacidade ?? 0),
-              preco: dinheiro(precoDoIngresso(mundo, c.clube)),
-            })}
-          </p>
-          <p className="text-sm">
-            {t("Público esperado agora: {publico}, renda de {renda} por jogo em casa.", {
-              publico: dinheiro(jogo.publico),
-              renda: dinheiro(jogo.renda),
-            })}
-          </p>
-          <p className="mt-1 text-xs text-suave">
-            {t("O público sobe com a reputação do clube e com a moral do time.")}
-          </p>
-        </div>
       </section>
+
+      <PainelDoEstadio c={c} montado={montado} mudar={mudar} />
 
       <section>
         <h2 className="mb-2 font-placar text-xl font-bold">{t("Banco")}</h2>
