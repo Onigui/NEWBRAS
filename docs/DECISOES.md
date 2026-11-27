@@ -658,3 +658,29 @@ Pedido do dono: o atacante 90 não pode render 90 jogando de meia-armador, como 
 - **"Precisa de dinheiro" vem do caixa:** com 4 meses de receita ou mais de folga, nada; no zero, 0,6; com 2,7 meses no vermelho, 1. A estimativa da etapa 13b (aperto sorteado por temporada menos o saldo de vendas) saiu. O orçamento de compra da CPU agora também respeita o caixa (até 80% dele, sem passar de 15% do valor do elenco).
 - **Fica para as próximas etapas:** dívida, salários atrasados e o efeito cascata, punições e empréstimo bancário com juros para o técnico e para a CPU (14b); ingressos por setor, sócio-torcedor, obras, naming rights e o resto do estádio (14c).
 - **Teste de 4 temporadas só com a CPU:** clubes da CPU no vermelho caem de 18% (sorteio inicial) para 9% a 11% e ficam estáveis. Com o tempo, uns 70% têm folga de 4 meses de receita ou mais. Elencos de 18 a 30, nenhum clube sem goleiro, e uns 45 segundos por temporada.
+
+## Conversas com os jogadores e cobranças da diretoria (pedido do dono, 27/11/2026)
+
+Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria falam com o técnico, e cada resposta mexe na moral e no humor dos jogadores e na confiança da diretoria.
+
+- **Conversas dos jogadores** (depois de cada jogo, no máximo uma nova por jogo, até 3 esperando e o mesmo jogador só volta depois de 40 dias):
+  - **Quer sair:** o insatisfeito (moral abaixo de 25) pede para ser negociado. "Vou te negociar" põe na lista de venda (moral +10) e vira promessa: tirar da lista depois é traição (moral −15). "Você fica" derruba a moral (−10).
+  - **Quer jogar:** a promessa da base (até 22 anos, com 6 pontos de potencial a crescer) depois de 4 jogos fora, ou o reserva quase titular depois de 6, pede chances. As respostas:
+    - "Prometo mais minutos" (moral +8): ele precisa jogar 2 dos 5 jogos oficiais seguintes. Cumprida, moral +10; quebrada, −20 e humor em baixa.
+    - "Espere a sua vez": moral −8.
+    - "Vamos te emprestar": oferece por empréstimo, moral +4.
+  - **Cansado:** quem joga 60 minutos ou mais com condição abaixo de 70% reclama. "Vou te poupar" (moral +4) promete no máximo 45 minutos no jogo oficial seguinte (cumprida +4, quebrada −12). "Preciso de você em campo" custa −6.
+  - Cada conversa espera 7 dias. Sem resposta, o jogador se sente ignorado (moral −10).
+- **Diretoria:**
+  - **Metas da temporada:** quando a liga começa, a diretoria define a meta pela força do clube entre os participantes, e também pede contas no azul:
+    - os 2 mais fortes: brigar pelo título (até o 2º);
+    - o primeiro quarto: vaga (até a posição de um quarto da tabela);
+    - até dois terços: campanha tranquila (até a metade + 1);
+    - o resto: não cair (até 4 posições do fim).
+  - **Confiança (0 a 100, começa em 60):**
+    - Vitória +2, derrota −2,5. Vencer um clube bem mais forte vale +2 a mais; perder para um bem mais fraco, −2 a mais.
+    - Todo mês, com 8 jogos ou mais, estar dentro da meta dá +3 e estar mais de 3 posições abaixo dá −4. Caixa negativo, −3.
+    - No fim da liga, meta cumprida dá +15; não cumprida, −20.
+  - **Cobranças:** abaixo de 40, a diretoria cobra reação (com a posição e a meta); abaixo de 25, dá um ultimato. A partir de 80, elogia. Cada aviso vem no máximo uma vez a cada 30 dias.
+  - A demissão fica para a Fase 15, junto com os convites de outros clubes.
+- **Na tela:** as conversas ficam num painel no topo da carreira, com as respostas e uma dica do efeito de cada uma. O avanço até o próximo jogo para quando a diretoria fala. A aba Início ganhou o quadro da diretoria, com a barra de confiança, a meta, a posição atual e as promessas em andamento.

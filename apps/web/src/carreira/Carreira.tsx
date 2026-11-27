@@ -49,6 +49,7 @@ import { Base } from "./Base";
 import { Mercado } from "./Mercado";
 import { Financas } from "./Financas";
 import { Sondagens } from "./Sondagens";
+import { Conversas, QuadroDaDiretoria } from "./Conversas";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
@@ -269,6 +270,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
       </header>
 
       <Sondagens c={c} montado={montado} mudar={mudar} />
+      <Conversas c={c} montado={montado} mudar={mudar} />
       {c.versaoBanco !== montado.banco.meta.versao && (
         <p className="rounded border border-[#ffa64d]/40 bg-[#ffa64d]/10 px-3 py-2 text-sm text-[#ffc38a]">
           {t(
@@ -489,6 +491,7 @@ function Inicio({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <div className="flex flex-col gap-4">
+        <QuadroDaDiretoria c={c} montado={montado} />
         <div className="rounded border border-placar-borda p-3">
           <p className="text-xs font-bold text-suave">{t("Próximo jogo")}</p>
           {proximo && adv ? (
