@@ -149,3 +149,46 @@ describe("evolução dos jogadores", () => {
     );
   });
 });
+
+describe("renascimento das lendas", () => {
+  it("qualquer clube do mundo com a mesma chance, nunca o clube de onde saiu", () => {
+    const clubes = Array.from(
+      { length: 40 },
+      (_, i) =>
+        ({
+          id: `c${i}`,
+          nome: `c${i}`,
+          nomeCurto: `c${i}`,
+          pais: "ENG",
+          nivel: i < 4 ? 90 : 40,
+        }) as unknown as Clube,
+    );
+    const destinos = new Map<string, number>();
+    for (let s = 0; s < 400; s++) {
+      const lenda = jogador(`lenda${s}`, "c0", {
+        nascimento: "1990-05-01",
+        forca: 84,
+        potencial: 92,
+        estrela: true,
+      });
+      const m: MundoParaEvolucao = {
+        clubes,
+        clube: (id) => clubes.find((c) => c.id === id),
+        pais: (c) => (c === "ENG" ? PAIS : undefined),
+        elenco: (id) => (id === "c0" ? [lenda] : []),
+        jogador: (id) => (id === lenda.id ? lenda : undefined),
+      };
+      const e = new EvolucaoDoMundo(m, `s${s}`, "2026-07-11");
+      const r = clubes
+        .flatMap((c) => e.elenco(c.id, "2036-09-01"))
+        .find((j) => j.id === `${lenda.id}~r`);
+      if (r?.clube) destinos.set(r.clube, (destinos.get(r.clube) ?? 0) + 1);
+    }
+    expect(destinos.get("c0") ?? 0).toBe(0);
+    // Os 4 clubes fortes (de 39 possíveis) ficam perto da parte deles: ~10%, não a maioria.
+    const fortes = ["c1", "c2", "c3"].reduce((s, c) => s + (destinos.get(c) ?? 0), 0);
+    const total = [...destinos.values()].reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(300);
+    expect(fortes / total).toBeLessThan(0.2);
+  });
+});

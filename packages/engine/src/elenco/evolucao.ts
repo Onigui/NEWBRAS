@@ -345,12 +345,16 @@ export class EvolucaoDoMundo {
     return this.geracao(v.clube, completar({ ...entrada, estrela }), data);
   }
 
-  /** A lenda renasce com 16 a 18 anos na base de um clube sorteado e sobe aos 18. */
+  /**
+   * A lenda renasce com 16 a 18 anos na base de qualquer clube do mundo, sorteado com chance igual
+   * para todos (menos o clube de onde ela saiu): a graça é um time fraco ganhar um prodígio. Sobe
+   * ao profissional aos 18 (no clube do técnico, quem decide é ele).
+   */
   private renascer(g: Geracao, data: string) {
-    if (!this.clubes.length) return;
+    const candidatos = this.clubes.filter((c) => c.id !== g.clube);
+    if (!candidatos.length) return;
     const rng = new Rng(`${this.semente}:renascimento:${g.j.id}`);
-    // Clube sorteado; os de nível mais alto têm mais chance (um clube grande tem mais olheiros).
-    const destino = rng.weighted(this.clubes, (c) => c.nivel * c.nivel);
+    const destino = candidatos[rng.int(0, candidatos.length - 1)] as Clube;
     const pais = this.mundo.pais(destino.pais);
     if (!pais) return;
     const idade = rng.int(IDADE_RENASCIMENTO[0], IDADE_RENASCIMENTO[1]);
@@ -405,7 +409,8 @@ export class EvolucaoDoMundo {
     });
   }
 
-  private renascidos = new Set<string>();
+  /** Lendas renascidas (ids). */
+  readonly renascidos = new Set<string>();
 
   /** Elenco profissional do clube na data. */
   elenco(clube: string, data: string): readonly Jogador[] {
