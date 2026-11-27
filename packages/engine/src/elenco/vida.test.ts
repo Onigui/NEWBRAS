@@ -77,7 +77,7 @@ function nova(m = mundo()): Carreira {
 describe("lesões", () => {
   it("sorteia pela gravidade, a maioria leve, e conta a volta pela data", () => {
     const rng = new Rng("lesoes");
-    const lista = Array.from({ length: 2000 }, () => sortearLesao(rng, "2027-03-01"));
+    const lista = Array.from({ length: 2000 }, () => sortearLesao(rng, "2027-03-01", "treino"));
     const leves = lista.filter((l) => l.dias <= 21).length / lista.length;
     expect(leves).toBeGreaterThan(0.5);
     expect(lista.some((l) => l.nome === TIPOS_DE_LESAO.at(-1)!.nome)).toBe(true);
@@ -134,7 +134,9 @@ describe("contratos", () => {
       jovem: { ...c.jogadores.jovem!, lesao: { nome: "Pancada", ate: "2027-01-05", dias: 3 } },
     };
     const volta = diaDoElenco(c, m, "2027-01-05", machucado);
-    expect(volta.jogadores.jovem?.lesao).toBeUndefined();
+    expect(lesionado(volta.jogadores.jovem, "2027-01-05")).toBe(false);
+    // A lesão fica guardada (para a recaída).
+    expect(volta.jogadores.jovem?.lesao?.nome).toBe("Pancada");
     expect(volta.noticias.some((n) => n.texto.includes("recuperado"))).toBe(true);
   });
 });

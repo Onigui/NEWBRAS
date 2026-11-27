@@ -3,49 +3,28 @@
  * contratos (aviso, renovação e saída quando acabam) e o peso dos minutos jogados na evolução.
  */
 import type { Contrato } from "@newbras/data";
-import { chave, marcar, t } from "@newbras/textos";
+import { marcar, t } from "@newbras/textos";
 import type { Carreira, Compromisso, EstadoJogador, Mundo, Noticia } from "../carreira/carreira";
 import { estadoDe } from "../carreira/carreira";
-import { diasEntre, somarDias } from "../carreira/datas";
+import { diasEntre } from "../carreira/datas";
 import { idadeEm } from "../evolucao";
 import { salarioBase } from "../gerador/jogador";
 import type { LadoCampo, ResultadoPartida } from "../partida/tipos";
 import { Rng } from "../rng";
+import {
+  CHANCE_LESAO_TREINO,
+  emFerias,
+  lesionado,
+  riscoDeLesao,
+  sortearLesao,
+  type CausaDaLesao,
+} from "./lesoes";
 
 // --------------------------------------------------------------------------------- Lesões
 
-export interface Lesao {
-  /** Nome da lesão em português (a chave da tradução). */
-  nome: string;
-  /** Volta a poder jogar nesta data. */
-  ate: string;
-  dias: number;
-}
-
-/** Tipos de lesão, do mais comum ao mais raro, com a faixa de dias fora. */
-export const TIPOS_DE_LESAO: readonly { nome: string; dias: [number, number]; peso: number }[] = [
-  { nome: chave("Pancada"), dias: [2, 6], peso: 30 },
-  { nome: chave("Estiramento muscular"), dias: [7, 21], peso: 28 },
-  { nome: chave("Entorse no tornozelo"), dias: [10, 28], peso: 15 },
-  { nome: chave("Lesão muscular na coxa"), dias: [21, 45], peso: 13 },
-  { nome: chave("Lesão no joelho"), dias: [40, 100], peso: 7 },
-  { nome: chave("Fratura"), dias: [60, 120], peso: 4 },
-  { nome: chave("Ruptura do ligamento cruzado"), dias: [180, 270], peso: 3 },
-];
-/** Chance de se machucar num dia de treino (mais alta com o jogador cansado). */
-export const CHANCE_LESAO_TREINO = 0.001;
+export { CHANCE_LESAO_TREINO, lesionado, sortearLesao, TIPOS_DE_LESAO, type Lesao } from "./lesoes";
 /** Condição de quem volta de lesão (no máximo). */
 const CONDICAO_NA_VOLTA = 85;
-
-export function sortearLesao(rng: Rng, data: string): Lesao {
-  const tipo = rng.weighted(TIPOS_DE_LESAO, (x) => x.peso);
-  const dias = rng.int(tipo.dias[0], tipo.dias[1]);
-  return { nome: tipo.nome, ate: somarDias(data, dias), dias };
-}
-
-export function lesionado(e: Pick<EstadoJogador, "lesao"> | undefined, data: string): boolean {
-  return !!e?.lesao && e.lesao.ate > data;
-}
 
 // ---------------------------------------------------------------------------------- Moral
 
@@ -83,9 +62,14 @@ export function depoisDoJogo(
   const noticias: Noticia[] = [];
   const titulares = new Set(r.vagas[nosso]);
   const perdidos = new Map<string, number>();
-  for (const ev of r.eventos)
+  // A causa da lesão: com quem fez a falta (outro), foi pancada; sem, foi o cansaço.
+  const causas = new Map<string, CausaDaLesao>();
+  for (const ev of r.eventos) {
     if (ev.tipo === "penalti-perdido" && ev.time === nosso && ev.jogador)
       perdidos.set(ev.jogador, (perdidos.get(ev.jogador) ?? 0) + 1);
+    if (ev.tipo === "lesao" && ev.time === nosso && ev.jogador)
+      causas.set(ev.jogador, ev.outro ? "falta" : "cansaco");
+  }
   const jogaram = new Map(r.jogadores.filter((e) => e.time === nosso).map((e) => [e.id, e]));
   // Os mais fortes do elenco sentem mais ficar de fora.
   const elenco = [...mundo.elenco(antes.clube)].sort((a, b) => b.forca - a.forca);
@@ -111,7 +95,12 @@ export function depoisDoJogo(
     }
     let lesao = e.lesao;
     if (est?.lesionado) {
-      lesao = sortearLesao(rng, antes.data);
+      lesao = sortearLesao(
+        rng,
+        antes.data,
+        causas.get(j.id) ?? "cansaco",
+        idadeEm(j.nascimento, antes.data),
+      );
       noticias.push({
         data: antes.data,
         tipo: "elenco",
@@ -229,23 +218,27 @@ export function diaDoElenco(
 ): { jogadores: Record<string, EstadoJogador>; noticias: Noticia[]; saidas: string[] } {
   const rng = new Rng(`${c.semente}:treino:${data}`);
   const novos = { ...jogadores };
+  const ferias = emFerias(mundo.pais(mundo.clube(c.clube)?.pais ?? ""), data);
   const noticias: Noticia[] = [];
   const saidas: string[] = [];
   for (const j of mundo.elenco(c.clube)) {
     let e = novos[j.id] ?? estadoDe(c, j.id);
-    // Volta de lesão.
-    if (e.lesao && e.lesao.ate <= data) {
-      const { lesao: _, ...resto } = e;
-      e = { ...resto, condicao: Math.min(e.condicao, CONDICAO_NA_VOLTA) };
+    // Volta de lesão (a lesão fica guardada: logo depois da volta, o risco de recaída é maior).
+    if (e.lesao && e.lesao.ate === data) {
+      e = { ...e, condicao: Math.min(e.condicao, CONDICAO_NA_VOLTA) };
       noticias.push({
         data,
         tipo: "elenco",
         ...marcar("{jogador} está recuperado e pode jogar.", { jogador: j.nome }),
       });
     }
-    // Lesão no treino.
-    if (!lesionado(e, data) && rng.chance(CHANCE_LESAO_TREINO * (1 + (100 - e.condicao) / 50))) {
-      const lesao = sortearLesao(rng, data);
+    // Lesão no treino (nas férias não tem treino).
+    const chance =
+      CHANCE_LESAO_TREINO *
+      (1 + (100 - e.condicao) / 50) *
+      riscoDeLesao(j, data, c.semente, e.lesao);
+    if (!ferias && !lesionado(e, data) && rng.chance(chance)) {
+      const lesao = sortearLesao(rng, data, "treino", idadeEm(j.nascimento, data));
       e = { ...e, lesao };
       noticias.push({
         data,

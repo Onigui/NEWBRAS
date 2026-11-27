@@ -550,6 +550,7 @@
   "Procurar time": "",
   "Procurar time ou jogador": "",
   "Procure qualquer clube do mundo": "",
+  "Propenso a lesões.": "",
   "Próxima rodada": "",
   "Próximo jogo": "",
   "Próximo mês": "",
@@ -558,6 +559,7 @@
   "Quartas de final": "",
   "Quem joga aqui{escolhido}": "",
   "Rápida (3 min)": "",
+  "Raramente se machuca.": "",
   "Rebaixado: o {clube} vai para a {destino} na próxima temporada.": "",
   "recua para não tomar uma goleada ainda maior": "",
   "Redondo": "",
@@ -663,5 +665,6 @@
   "Voltar": "",
   "Voltar à carreira": "",
   "Voltar ao automático": "",
-  "Voltar ao menu": ""
+  "Voltar ao menu": "",
+  "Voltou de lesão há pouco: risco maior de recaída até {data}.": ""
 }

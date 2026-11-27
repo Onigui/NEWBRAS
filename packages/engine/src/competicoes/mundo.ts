@@ -26,6 +26,7 @@ import {
   type Movimento,
 } from "./competicao";
 import { autoresDosGols, forcaDoElenco, simularRapido } from "./rapida";
+import { elencoSemLesionados, lesaoNaCpu, type LesionadosDaCpu } from "../elenco/lesoes";
 import {
   amistososRecentes,
   jogarAmistosos,
@@ -69,6 +70,8 @@ export interface MundoCompeticoes {
   historico: RegistroHistorico[];
   /** Amistosos de seleções nas datas FIFA (os do último ano e os marcados). */
   amistosos?: readonly AmistosoDeSelecao[];
+  /** Lesionados dos clubes da CPU: clube → [jogador, volta em]. */
+  lesionados?: LesionadosDaCpu;
 }
 
 /** O que as competições precisam saber do mundo. */
@@ -880,8 +883,7 @@ export function iniciarMundo(
 
 /** Cache de força por elenco (o elenco só muda com transferências, na Fase 13). */
 const forcas = new WeakMap<readonly Jogador[], number>();
-function forca(m: MundoParaCompeticoes, clube: string): number {
-  const elenco = m.elenco(clube);
+function forca(m: MundoParaCompeticoes, clube: string, elenco = m.elenco(clube)): number {
   let f = forcas.get(elenco);
   if (f === undefined) {
     f = forcaDoElenco(elenco);
@@ -918,23 +920,29 @@ function simularJogosDoDia(
   data: string,
   semente: string,
   pular?: (competicao: string, indice: number) => boolean,
+  lesionados?: LesionadosDaCpu,
 ): JogoSimulado[] {
   const idx = jogosDoDia(e, data).filter((i) => !pular?.(c.id, i));
   if (!idx.length) return [];
   const rng = new Rng(`${semente}:${c.id}:${data}`);
   const lista: JogoSimulado[] = [];
+  // Os clubes da CPU jogam sem os lesionados.
+  const disponivel = (clube: string) =>
+    elencoSemLesionados(m.elenco(clube), lesionados, clube, data);
   for (const i of idx) {
     const j = e.jogos[i];
     if (!j || j.placar) continue;
     const d = desempateDoJogo(c, e, j);
-    const r = simularRapido(rng, forca(m, j.casa), forca(m, j.fora), {
+    const casa = disponivel(j.casa);
+    const fora = disponivel(j.fora);
+    const r = simularRapido(rng, forca(m, j.casa, casa), forca(m, j.fora, fora), {
       ...(j.neutro ? { neutro: true } : {}),
       desempate: d.desempate,
       ...(d.agregado ? { agregado: d.agregado } : {}),
     });
     const autores = {
-      casa: autoresDosGols(rng, m.elenco(j.casa), r.placar[0]),
-      fora: autoresDosGols(rng, m.elenco(j.fora), r.placar[1]),
+      casa: autoresDosGols(rng, casa, r.placar[0]),
+      fora: autoresDosGols(rng, fora, r.placar[1]),
     };
     const relogio = new Rng(`${semente}:${c.id}:${data}:${i}:minutos`);
     const gols: JogoSimulado["gols"] = [];
@@ -975,12 +983,27 @@ export function jogarDia(
   pular?: (competicao: string, indice: number) => boolean,
 ): MundoCompeticoes {
   let competicoes: Record<string, EstadoCompeticao> | null = null;
+  let lesionados: Record<string, readonly (readonly [string, string])[]> | undefined;
   for (const [id, e0] of Object.entries(estado.competicoes)) {
     if (!jogosDoDia(e0, data).length) continue;
     const c = m.competicao(id);
     if (!c) continue;
-    const jogos = simularJogosDoDia(m, c, e0, data, semente, pular);
+    const jogos = simularJogosDoDia(m, c, e0, data, semente, pular, estado.lesionados);
     if (!jogos.length) continue;
+    // Lesões nos clubes da CPU (seleções não: o elenco delas é a convocação).
+    if (c.categoria !== "selecoes")
+      for (const j of jogos)
+        for (const clube of [j.casa, j.fora]) {
+          const l = lesaoNaCpu(
+            elencoSemLesionados(m.elenco(clube), lesionados, clube, data),
+            data,
+            semente,
+            `${id}:${data}:${j.indice}:${clube}`,
+          );
+          if (!l) continue;
+          lesionados ??= { ...estado.lesionados };
+          lesionados[clube] = [...(lesionados[clube] ?? []).filter(([, ate]) => ate > data), l];
+        }
     let e = lancarResultados(
       e0,
       jogos.map((j) => ({
@@ -1004,11 +1027,21 @@ export function jogarDia(
   let amistosos = jogarAmistosos(m, agora, antes, data, semente);
   const novos = marcarAmistosos(m, agora, amistosos, somarDias(data, 1), semente);
   if (novos.length) amistosos = [...amistososRecentes(amistosos, data), ...novos];
-  if (!competicoes && !distribuidas && amistosos === antes) return estado;
+  // Uma vez por mês, tira da lista os que já voltaram.
+  if (data.endsWith("-01") && estado.lesionados) {
+    lesionados ??= { ...estado.lesionados };
+    for (const [clube, l] of Object.entries(lesionados)) {
+      const ainda = l.filter(([, ate]) => ate > data);
+      if (ainda.length) lesionados[clube] = ainda;
+      else delete lesionados[clube];
+    }
+  }
+  if (!competicoes && !distribuidas && amistosos === antes && !lesionados) return estado;
   return {
     ...estado,
     competicoes: agora,
     ...(amistosos.length ? { amistosos } : {}),
+    ...(lesionados ? { lesionados } : {}),
   };
 }
 
@@ -1027,7 +1060,7 @@ export function plantaoDoDia(
   return competicoes.flatMap((id) => {
     const c = m.competicao(id);
     const e = estado.competicoes[id];
-    return c && e ? simularJogosDoDia(m, c, e, data, semente, pular) : [];
+    return c && e ? simularJogosDoDia(m, c, e, data, semente, pular, estado.lesionados) : [];
   });
 }
 

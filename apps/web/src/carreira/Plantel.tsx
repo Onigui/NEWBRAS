@@ -21,6 +21,9 @@ import {
   convocadosDoClube,
   diasEntre,
   faixaDaMoral,
+  fatorDeRecaida,
+  fragilidade,
+  somarDias,
   moralDe,
   propostaDeRenovacao,
   renovarContrato,
@@ -404,6 +407,19 @@ function Ficha({
             moral: Math.round(moralDe(e)),
           })}
         </p>
+        {fragilidade(c.semente, j.id) >= 1.5 && (
+          <p className="text-[#ffc38a]">{t("Propenso a lesões.")}</p>
+        )}
+        {fragilidade(c.semente, j.id) <= 0.7 && (
+          <p className="text-suave">{t("Raramente se machuca.")}</p>
+        )}
+        {fatorDeRecaida(e.lesao, c.data) > 1 && (
+          <p className="text-[#ffc38a]">
+            {t("Voltou de lesão há pouco: risco maior de recaída até {data}.", {
+              data: dataCurta(somarDias(e.lesao!.ate, 28)),
+            })}
+          </p>
+        )}
         {e.lesao && e.lesao.ate > c.data && (
           <p className="text-[#ffb3a8]">
             {t("Lesionado: {lesao}, volta em {data}.", {
