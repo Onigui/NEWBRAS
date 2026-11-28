@@ -30,7 +30,13 @@ import {
   noQuadro,
   type Ponto,
 } from "./campo";
-import { notaNaVaga, papelNaVaga, vagasDaEscalacao } from "./escalacao";
+import {
+  atribuicaoOtima,
+  notaNaVaga,
+  papelNaVaga,
+  vagasDaEscalacao,
+  valorNaVaga,
+} from "./escalacao";
 import { COMPORTAMENTO, type Comportamento } from "./funcoes";
 import { FORMACOES, type Formacao, type Vaga } from "./formacoes";
 import {
@@ -177,8 +183,6 @@ const FORMACAO_POR_POSTURA: Readonly<Record<number, Formacao>> = {
   [-1]: "4-5-1",
   [-2]: "4-5-1",
 };
-/** Ordem de preencher as vagas ao reorganizar: o que é mais difícil de improvisar primeiro. */
-const PRIORIDADE_VAGA: readonly Posicao[] = ["G", "Z", "L", "M", "A"];
 
 export class Partida {
   private readonly rng: Rng;
@@ -1364,7 +1368,7 @@ export class Partida {
       this.registrar("cartao-amarelo", { time: infrator.lado, jogador: infrator.j.id });
       if (infrator.amarelos >= 2) this.expulsar(infrator, true);
     }
-    if (vitima.emCampo && this.rng.chance(0.01 * Math.sqrt(vitima.j.risco ?? 1)))
+    if (vitima.emCampo && this.rng.chance(0.008 * Math.sqrt(vitima.j.risco ?? 1)))
       this.lesionar(vitima, infrator);
 
     const direita = this.paraDireita(vitima.lado);
@@ -1813,7 +1817,7 @@ export class Partida {
     // Lesões raras, mais prováveis em quem está esgotado e em quem tem mais risco.
     for (const time of Object.values(this.times))
       for (const a of this.emCampoDe(time.lado))
-        if (this.rng.chance(0.0001 * (1 + (100 - a.condicao) / 40) * (a.j.risco ?? 1)))
+        if (this.rng.chance(0.00008 * (1 + (100 - a.condicao) / 40) * (a.j.risco ?? 1)))
           this.lesionar(a);
 
     const minuto = this.minutoDe(this.s).minuto;
@@ -1892,8 +1896,8 @@ export class Partida {
         estilo = "contra-ataque";
         motivo = chave("recua para não tomar uma goleada ainda maior");
       } else if (saldo === 1) {
-        postura = minuto >= 85 ? -2 : minuto >= 75 ? -1 : 0;
-        estilo = postura < 0 ? "contra-ataque" : diferenca > 5 ? "cadenciado" : "equilibrado";
+        postura = minuto >= 85 ? -1 : 0;
+        estilo = minuto >= 75 ? "cadenciado" : "equilibrado";
         motivo = chave("fecha a defesa para segurar a vantagem");
       } else {
         postura = -1;
@@ -1947,24 +1951,29 @@ export class Partida {
     });
   }
 
-  /** Redistribui quem está em campo nas vagas de outra formação, cada um onde rende mais. */
+  /**
+   * Redistribui quem está em campo nas vagas de outra formação: o arranjo que soma mais, com cada
+   * um de preferência no setor e na posição dele (a mesma conta da escalação automática).
+   */
   private reorganizar(time: Time, vagas: readonly Vaga[]): void {
     const goleiro = time.vagas[0] ?? null;
-    const livres = new Set(this.emCampoDe(time.lado).filter((a) => a !== goleiro));
+    const livres = this.emCampoDe(time.lado).filter((a) => a !== goleiro);
     const novas: (Atleta | null)[] = vagas.map(() => null);
     novas[0] = goleiro;
-    const ordem = vagas
-      .map((v, i) => ({ v, i }))
-      .filter(({ i }) => i !== 0)
-      .sort((a, b) => PRIORIDADE_VAGA.indexOf(a.v.posicao) - PRIORIDADE_VAGA.indexOf(b.v.posicao));
-    for (const { v, i } of ordem) {
-      let melhor: Atleta | null = null;
-      for (const a of livres)
-        if (!melhor || notaNaVaga(a.j, v) > notaNaVaga(melhor.j, v)) melhor = a;
-      if (!melhor) continue;
-      livres.delete(melhor);
-      novas[i] = melhor;
-    }
+    // Com um a menos, sobram vagas: as menos valiosas ficam vazias.
+    const linhas = vagas.map((v, i) => ({ v, i })).filter(({ i }) => i !== 0);
+    const colunas = Math.max(livres.length, linhas.length);
+    const tabela = linhas.map(({ v }) =>
+      Array.from({ length: colunas }, (_, k) => {
+        const a = livres[k];
+        return a ? valorNaVaga(a.j, v) : 0;
+      }),
+    );
+    atribuicaoOtima(tabela).forEach((k, linha) => {
+      const a = livres[k];
+      const vaga = linhas[linha];
+      if (a && vaga) novas[vaga.i] = a;
+    });
     time.formacao = vagas;
     time.papeis = vagas.map(() => null);
     time.vagas = novas;

@@ -347,29 +347,48 @@ export const LIMITES_VAGA = {
 };
 
 /**
- * Posição e lado de uma vaga pelo lugar no campo: até 36 m do próprio gol é defesa
- * (lateral se estiver aberto, zagueiro se estiver no meio), até 62 m é meio-campo, depois ataque.
- * É o que permite posicionar os jogadores livremente: o motor lê a função pelo lugar.
+ * Faixa em que meio-campo e ataque se misturam: o meia pode subir até perto da área sem virar
+ * atacante, e o atacante pode recuar até o meio sem virar meia. Dentro dela, a vaga mantém o setor
+ * de onde veio; sem setor anterior, vale a linha dos 62 m.
  */
-export function classificarVaga(x: number, y: number, goleiro = false): Vaga {
+export const FAIXA_MEIO_ATAQUE = { inicio: 58, fim: 80, linha: 62 };
+
+/**
+ * Posição e lado de uma vaga pelo lugar no campo: até 36 m do próprio gol é defesa
+ * (lateral se estiver aberto, zagueiro se estiver no meio); depois, meio-campo ou ataque pela
+ * faixa de transição (FAIXA_MEIO_ATAQUE). É o que permite posicionar os jogadores livremente: o
+ * motor lê a função pelo lugar.
+ */
+export function classificarVaga(
+  x: number,
+  y: number,
+  goleiro = false,
+  anterior?: Vaga["posicao"],
+): Vaga {
   if (goleiro) return { posicao: "G", lado: "C", x: LIMITES_VAGA.goleiroX, y: 34 };
   const aberto = Math.abs(y - 34) > 18;
   const lado: Lado = y < 24 ? "D" : y > 44 ? "E" : "C";
   if (x < 36)
     return aberto ? { posicao: "L", lado: y < 34 ? "D" : "E", x, y } : { posicao: "Z", lado, x, y };
-  if (x < 62) return { posicao: "M", lado, x, y };
-  return { posicao: "A", lado, x, y };
+  const f = FAIXA_MEIO_ATAQUE;
+  const meio =
+    x < f.inicio || (x < f.fim && (anterior === "M" || (anterior !== "A" && x < f.linha)));
+  return { posicao: meio ? "M" : "A", lado, x, y };
 }
 
 /**
  * Formação personalizada a partir de 11 pontos (o primeiro é o goleiro, que fica no gol).
- * Os pontos são limitados ao campo útil; a função de cada vaga vem do lugar.
+ * Os pontos são limitados ao campo útil; a função de cada vaga vem do lugar e, na faixa entre
+ * meio-campo e ataque, do setor que ela tinha antes (as vagas anteriores, se vierem).
  */
-export function formacaoPersonalizada(pontos: ReadonlyArray<{ x: number; y: number }>): Vaga[] {
+export function formacaoPersonalizada(
+  pontos: ReadonlyArray<{ x: number; y: number }>,
+  anteriores?: readonly Vaga[],
+): Vaga[] {
   return pontos.map((p, i) => {
     const x = Math.min(LIMITES_VAGA.xMax, Math.max(LIMITES_VAGA.xMin, p.x));
     const y = Math.min(LIMITES_VAGA.yMax, Math.max(LIMITES_VAGA.yMin, p.y));
-    return classificarVaga(x, y, i === 0);
+    return classificarVaga(x, y, i === 0, anteriores?.[i]?.posicao);
   });
 }
 

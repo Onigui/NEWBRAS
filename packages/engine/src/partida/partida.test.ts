@@ -255,7 +255,7 @@ describe("partida", () => {
 
   it(
     "o técnico da CPU lê o jogo: reage ao placar e o humano decide sozinho",
-    { timeout: 120_000 },
+    { timeout: 300_000 },
     () => {
       // Mesmo jogo com e sem o técnico da CPU no time da casa (o visitante nunca reage).
       const medir = (cpu: boolean) => {
@@ -265,7 +265,8 @@ describe("partida", () => {
         let buscou = 0;
         let mudancas = 0;
         let mudancasVisitante = 0;
-        for (let i = 0; i < 250; i++) {
+        // 750 jogos: com menos, o "segurou" (uns 90 jogos na frente) oscila mais que a margem.
+        for (let i = 0; i < 750; i++) {
           const r = simularPartida({
             semente: `tecnico-${i}`,
             casa: timeDeTeste("A", 70, { cpu }),
@@ -300,7 +301,7 @@ describe("partida", () => {
       };
       const com = medir(true);
       const sem = medir(false);
-      expect(com.mudancas).toBeGreaterThan(100);
+      expect(com.mudancas).toBeGreaterThan(300);
       expect(sem.mudancas).toBe(0);
       expect(com.mudancasVisitante).toBe(0);
       // Atrás no placar, a CPU busca o empate mais vezes; na frente, segura pelo menos tão bem.
