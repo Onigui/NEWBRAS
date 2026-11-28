@@ -7,6 +7,7 @@
 import { useRef, useState } from "react";
 import {
   desenhoDaFormacao,
+  FAIXA_MEIO_ATAQUE,
   formacaoPersonalizada,
   LIMITES_VAGA,
   papelNaVaga,
@@ -16,6 +17,7 @@ import {
 } from "@newbras/engine";
 import {
   DADOS_FUNCAO,
+  NOME_POSICAO,
   NOME_POSICAO_CAMPO,
   notaNoPapel,
   papeisPossiveis,
@@ -78,10 +80,29 @@ interface Props {
   onTrocarVagas?: (a: number, b: number, vagas: Vaga[]) => void;
   /** Jogadores em campo machucados (cruz vermelha ao lado), na partida ao vivo. */
   machucados?: ReadonlySet<string>;
+  /** Reservas, mostrados numa faixa abaixo do campo. */
+  banco?: readonly JogadorPartida[];
+  /**
+   * Arrastar um jogador do campo para cima de um reserva (ou o contrário) faz a troca. Recebe a
+   * vaga, o reserva que entra e o desenho de antes do arraste, para restaurar.
+   */
+  onBanco?: (vaga: number, reserva: string, vagas: Vaga[]) => void;
+  /** Motivo de o banco não poder ser usado agora (sem trocas); null = pode. */
+  bancoBloqueado?: string | null;
 }
 
 /** Distância (em metros) para o jogador solto contar como em cima de outro. */
 const RAIO_DA_TROCA = 4;
+/** Altura (no desenho) da faixa do banco, abaixo do campo. */
+const BANCO_Y = 83;
+
+/** Centro de cada reserva na faixa do banco. */
+function lugaresDoBanco(n: number): number[] {
+  if (!n) return [];
+  const passo = Math.min(11, 101 / n);
+  const inicio = 52.5 - (passo * (n - 1)) / 2;
+  return Array.from({ length: n }, (_, k) => inicio + passo * k);
+}
 
 export function EditorFormacao({
   vagas,
@@ -92,6 +113,9 @@ export function EditorFormacao({
   onMudar,
   onTrocarVagas,
   machucados,
+  banco,
+  onBanco,
+  bancoBloqueado = null,
 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
   const [arrastando, setArrastando] = useState<number | null>(null);
@@ -104,20 +128,62 @@ export function EditorFormacao({
   } | null>(null);
   /** Vaga sob o jogador arrastado (troca ao soltar). */
   const [alvo, setAlvo] = useState<number | null>(null);
+  /** Reserva sob o jogador do campo arrastado (substituição ao soltar). */
+  const [alvoBanco, setAlvoBanco] = useState<string | null>(null);
+  /** Reserva sendo arrastado para o campo, com o ponto onde está (no desenho). */
+  const [doBanco, setDoBanco] = useState<{ id: string; x: number; y: number } | null>(null);
   const problemas = validarFormacao(vagas);
+  const comBanco = !!banco && !!onBanco;
+  const lugares = lugaresDoBanco(banco?.length ?? 0);
+  const bancoLivre = comBanco && !bancoBloqueado;
 
-  const paraCampo = (e: React.PointerEvent): { x: number; y: number } | null => {
+  /** Ponto do ponteiro no desenho (y da tela) e no campo (y do motor). */
+  const noDesenho = (e: React.PointerEvent): { x: number; y: number } | null => {
     const el = svg.current;
     const matriz = el?.getScreenCTM();
     if (!el || !matriz) return null;
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(matriz.inverse());
-    return { x: p.x, y: tela(p.y) };
+    return { x: p.x, y: p.y };
+  };
+  const paraCampo = (e: React.PointerEvent): { x: number; y: number } | null => {
+    const p = noDesenho(e);
+    return p ? { x: p.x, y: tela(p.y) } : null;
+  };
+
+  /** Reserva perto de um ponto do desenho. */
+  const reservaSob = (x: number, y: number): string | null => {
+    if (!bancoLivre || !banco || Math.abs(y - BANCO_Y) > RAIO_DA_TROCA) return null;
+    let melhor: string | null = null;
+    let menor = RAIO_DA_TROCA;
+    lugares.forEach((bx, k) => {
+      const d = Math.abs(bx - x);
+      if (d < menor) {
+        menor = d;
+        melhor = banco[k]?.id ?? null;
+      }
+    });
+    return melhor;
+  };
+
+  /** Vaga do campo perto de um ponto do desenho (para o reserva arrastado). */
+  const vagaNoDesenho = (x: number, y: number): number | null => {
+    let melhor: number | null = null;
+    let menor = RAIO_DA_TROCA;
+    vagas.forEach((v, k) => {
+      if (!ocupantes[k]) return;
+      const d = Math.hypot(v.x - x, tela(v.y) - y);
+      if (d < menor) {
+        menor = d;
+        melhor = k;
+      }
+    });
+    return melhor;
   };
 
   const mover = (i: number, x: number, y: number) => {
     const pontos = vagas.map((v) => ({ x: v.x, y: v.y }));
     pontos[i] = { x, y };
-    onMudar(formacaoPersonalizada(pontos));
+    onMudar(formacaoPersonalizada(pontos, vagas));
   };
 
   /** Outra vaga (do desenho de antes do arraste) perto do ponto, se houver troca. */
@@ -139,14 +205,28 @@ export function EditorFormacao({
 
   const soltar = () => {
     const ini = inicio.current;
+    if (doBanco) {
+      if (alvo !== null && onBanco)
+        onBanco(
+          alvo,
+          doBanco.id,
+          vagas.map((v) => ({ ...v })),
+        );
+      setDoBanco(null);
+      setAlvo(null);
+      return;
+    }
     if (arrastando !== null && ini && !ini.moveu)
       onSelecionar?.(selecionada === arrastando ? null : arrastando);
-    else if (arrastando !== null && ini && alvo !== null && onTrocarVagas) {
+    else if (arrastando !== null && ini && alvoBanco !== null && onBanco) {
+      onBanco(arrastando, alvoBanco, ini.vagas);
+    } else if (arrastando !== null && ini && alvo !== null && onTrocarVagas) {
       onTrocarVagas(arrastando, alvo, ini.vagas);
       if (selecionada === arrastando) onSelecionar?.(alvo);
     }
     setArrastando(null);
     setAlvo(null);
+    setAlvoBanco(null);
     inicio.current = null;
   };
 
@@ -154,22 +234,36 @@ export function EditorFormacao({
     <div className="flex flex-col gap-1.5">
       <svg
         ref={svg}
-        viewBox="-6 -6 117 80"
+        viewBox={comBanco ? "-6 -6 117 97" : "-6 -6 117 80"}
         className="w-full touch-none rounded select-none"
         onPointerMove={(e) => {
-          if (arrastando === null || arrastando === 0) return;
+          if (doBanco) {
+            const d = noDesenho(e);
+            if (!d) return;
+            setDoBanco({ ...doBanco, x: d.x, y: d.y });
+            setAlvo(vagaNoDesenho(d.x, d.y));
+            return;
+          }
+          if (arrastando === null) return;
           const p = paraCampo(e);
-          if (!p) return;
+          const d = noDesenho(e);
+          if (!p || !d) return;
           const ini = inicio.current;
           if (ini && !ini.moveu && Math.hypot(p.x - ini.x, p.y - ini.y) < 1.2) return;
           if (ini) ini.moveu = true;
-          setAlvo(vagaSob(arrastando, p.x, p.y));
+          const reserva = ocupantes[arrastando] ? reservaSob(d.x, d.y) : null;
+          setAlvoBanco(reserva);
+          // O goleiro não sai do gol: só pode ser arrastado até o banco.
+          if (arrastando === 0) return;
+          setAlvo(reserva ? null : vagaSob(arrastando, p.x, p.y));
           mover(arrastando, p.x, p.y);
         }}
         onPointerUp={soltar}
         onPointerLeave={() => {
           setArrastando(null);
           setAlvo(null);
+          setAlvoBanco(null);
+          setDoBanco(null);
           inicio.current = null;
         }}
         role="group"
@@ -179,9 +273,18 @@ export function EditorFormacao({
       >
         <MarcacoesCampo />
         {/* Faixas que decidem a família da vaga: defesa, meio-campo, ataque. */}
+        <rect
+          x={FAIXA_MEIO_ATAQUE.inicio}
+          y={0}
+          width={FAIXA_MEIO_ATAQUE.fim - FAIXA_MEIO_ATAQUE.inicio}
+          height={68}
+          fill="var(--color-cal)"
+          opacity={0.05}
+        />
         <g stroke="var(--color-cal)" strokeWidth={0.25} strokeDasharray="1 1.5" opacity={0.5}>
           <line x1={36} y1={0} x2={36} y2={68} />
-          <line x1={62} y1={0} x2={62} y2={68} />
+          <line x1={FAIXA_MEIO_ATAQUE.inicio} y1={0} x2={FAIXA_MEIO_ATAQUE.inicio} y2={68} />
+          <line x1={FAIXA_MEIO_ATAQUE.fim} y1={0} x2={FAIXA_MEIO_ATAQUE.fim} y2={68} />
         </g>
         {vagas.map((v, i) => {
           const j = ocupantes[i] ?? null;
@@ -194,7 +297,7 @@ export function EditorFormacao({
             <g
               key={i}
               transform={`translate(${v.x} ${tela(v.y)})`}
-              className={i === 0 ? "cursor-pointer" : "cursor-grab"}
+              className={`group outline-none ${i === 0 ? "cursor-pointer" : "cursor-grab"}`}
               onPointerDown={(e) => {
                 (e.target as Element).setPointerCapture?.(e.pointerId);
                 const p = paraCampo(e);
@@ -235,6 +338,14 @@ export function EditorFormacao({
               }}
             >
               {ativo && <circle r={4} fill="none" stroke="#ffffff" strokeWidth={0.45} />}
+              {/* Foco pelo teclado: anel próprio no lugar do contorno quadrado do navegador. */}
+              <circle
+                r={4.2}
+                fill="none"
+                stroke="#7cc4f5"
+                strokeWidth={0.45}
+                className="hidden group-focus-visible:block"
+              />
               {alvo === i && (
                 <circle
                   r={4.6}
@@ -303,12 +414,108 @@ export function EditorFormacao({
             </g>
           );
         })}
+        {comBanco && (
+          <g>
+            <rect x={-4} y={75.5} width={113} height={15} rx={1.5} fill="#0f1922" opacity={0.85} />
+            <text x={-2.5} y={78.4} fontSize={1.9} fontWeight={700} fill="var(--color-cal)">
+              {bancoBloqueado
+                ? t("Banco: {motivo}", { motivo: bancoBloqueado })
+                : t("Banco: arraste um reserva para cima de quem sai, ou o contrário")}
+            </text>
+            {(banco ?? []).map((j, k) => {
+              const x = lugares[k] ?? 0;
+              const ativo = alvoBanco === j.id;
+              const arrastado = doBanco?.id === j.id;
+              return (
+                <g
+                  key={j.id}
+                  transform={`translate(${x} ${BANCO_Y})`}
+                  className={`group outline-none ${bancoLivre ? "cursor-grab" : "cursor-not-allowed"}`}
+                  opacity={bancoLivre ? (arrastado ? 0.35 : 1) : 0.45}
+                  tabIndex={-1}
+                  onPointerDown={(e) => {
+                    if (!bancoLivre) return;
+                    (e.target as Element).setPointerCapture?.(e.pointerId);
+                    const d = noDesenho(e);
+                    if (d) setDoBanco({ id: j.id, x: d.x, y: d.y });
+                  }}
+                >
+                  <title>
+                    {t("{nome}, {posicao}, força {forca}", {
+                      nome: j.nome,
+                      posicao: j.posicoesCampo?.[0]
+                        ? NOME_POSICAO_CAMPO[j.posicoesCampo[0]]
+                        : NOME_POSICAO[j.posicao],
+                      forca: j.forca,
+                    })}
+                  </title>
+                  {ativo && (
+                    <circle
+                      r={4.2}
+                      fill="none"
+                      stroke="#f4c430"
+                      strokeWidth={0.6}
+                      strokeDasharray="1.2 0.8"
+                    />
+                  )}
+                  <circle
+                    r={2.6}
+                    fill={COR[j.posicao]}
+                    stroke="var(--color-placar)"
+                    strokeWidth={0.5}
+                  />
+                  <text
+                    y={0.75}
+                    textAnchor="middle"
+                    fontSize={1.9}
+                    fontWeight={800}
+                    fill="var(--color-placar)"
+                  >
+                    {j.forca}
+                  </text>
+                  <text
+                    y={5}
+                    textAnchor="middle"
+                    fontSize={1.9}
+                    fontWeight={700}
+                    fill="var(--color-cal)"
+                  >
+                    {j.nome.split(" ").at(-1)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+        {doBanco &&
+          (() => {
+            const j = banco?.find((x) => x.id === doBanco.id);
+            return j ? (
+              <g transform={`translate(${doBanco.x} ${doBanco.y})`} pointerEvents="none">
+                <circle r={2.8} fill={COR[j.posicao]} stroke="#ffffff" strokeWidth={0.5} />
+                <text
+                  y={5.5}
+                  textAnchor="middle"
+                  fontSize={2.3}
+                  fontWeight={700}
+                  fill="var(--color-cal)"
+                  stroke="var(--color-placar)"
+                  strokeWidth={0.5}
+                  paintOrder="stroke"
+                >
+                  {j.nome.split(" ").at(-1)}
+                </text>
+              </g>
+            ) : null;
+          })()}
       </svg>
       <p className="text-xs text-suave">
         {t(
-          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar (solte em cima de outro jogador para trocar os dois de vaga, com posição e função); clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa, até 62 m é meio-campo, depois é ataque. Campo útil de {xMin} a {xMax} m.",
+          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar (solte em cima de outro jogador para trocar os dois de vaga, com posição e função); clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa e até {inicio} m é meio-campo. Na faixa clara, de {inicio} a {fim} m, o jogador mantém o setor de onde veio: o meia sobe até perto da área e o atacante recua sem mudar de setor. Depois de {fim} m é ataque. Campo útil de {xMin} a {xMax} m.",
           {
             desenhoDaFormacao: desenhoDaFormacao(vagas),
+            inicio: FAIXA_MEIO_ATAQUE.inicio,
+            fim: FAIXA_MEIO_ATAQUE.fim,
             xMin: LIMITES_VAGA.xMin,
             xMax: LIMITES_VAGA.xMax,
           },

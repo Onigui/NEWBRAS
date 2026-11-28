@@ -97,18 +97,21 @@ export function EditorEscalacao({
           });
 
   /** Põe o jogador na vaga escolhida: troca com quem estava (outra vaga, o banco ou fora da lista). */
-  const escalar = (id: string, vaga: number) => {
+  const escalar = (id: string, vaga: number, vagas: Vaga[] = valor.vagas) => {
     const titulares = [...valor.titulares];
     let reservas = [...valor.reservas];
     const saiu = titulares[vaga] ?? "";
     const outra = titulares.indexOf(id);
     titulares[vaga] = id;
     if (outra >= 0) titulares[outra] = saiu;
+    else if (reservas.includes(id))
+      // Do banco: quem sai fica no lugar dele no banco.
+      reservas = reservas.map((r) => (r === id ? saiu : r)).filter(Boolean);
     else
       reservas = [saiu, ...reservas.filter((r) => r !== id)]
         .filter(Boolean)
         .slice(0, TAMANHO_BANCO);
-    onMudar({ ...valor, titulares, reservas });
+    onMudar({ ...valor, vagas, titulares, reservas });
   };
 
   const alternarReserva = (id: string) => {
@@ -214,6 +217,11 @@ export function EditorEscalacao({
           [titulares[a], titulares[b]] = [titulares[b] ?? "", titulares[a] ?? ""];
           onMudar({ ...valor, vagas, titulares });
         }}
+        banco={valor.reservas.flatMap((id) => {
+          const j = porId.get(id);
+          return j ? [j] : [];
+        })}
+        onBanco={(vaga, reserva, vagas) => escalar(reserva, vaga, vagas)}
       />
 
       {selecionada !== null && valor.vagas[selecionada] && (

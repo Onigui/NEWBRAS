@@ -558,6 +558,19 @@ function Comando({
             partida.mudarFormacao(lado, antes);
             if (partida.trocarVagas(lado, a, b)) onMudou();
           }}
+          banco={reservas.flatMap((id) => {
+            const j = porId.get(id);
+            return j ? [j] : [];
+          })}
+          bancoBloqueado={restantes > 0 ? null : t("sem trocas disponíveis")}
+          onBanco={(vaga, reserva, antes) => {
+            partida.mudarFormacao(lado, antes);
+            const sai = emCampo[vaga];
+            if (sai && partida.substituir(lado, sai, reserva)) {
+              setSelecionada(null);
+              onMudou();
+            } else onMudou();
+          }}
         />
         {selecionada !== null && vagas[selecionada] && (
           <PainelVaga

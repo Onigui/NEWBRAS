@@ -56,7 +56,7 @@ export const TIPOS_DE_LESAO: readonly {
 ];
 
 /** Chance de se machucar num dia de treino, antes dos fatores do jogador. */
-export const CHANCE_LESAO_TREINO = 0.001;
+export const CHANCE_LESAO_TREINO = 0.0008;
 /** Lesões por time em cada jogo simulado da CPU (a média do motor de partida). */
 export const LESOES_POR_JOGO_CPU = 0.24;
 /** Na CPU, lesão por falta e por cansaço meio a meio (como no motor). */

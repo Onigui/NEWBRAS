@@ -826,3 +826,29 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - O jogador continua em campo, no sacrifício, rendendo 60% (atributos e passada) e marcado com uma cruz vermelha no campo e na lista de trocas. Fica até o técnico substituí-lo ou decidir seguir com ele.
   - Na expulsão de um jogador do técnico, o jogo também para, para ele reorganizar a formação, as instruções ou as trocas.
   - "Pular para o fim" devolve a decisão ao motor: quem está machucado é trocado como antes. A simulação dos outros jogos e o time da CPU seguem como estavam.
+
+## Correções pedidas pelo dono: campo, escalação automática, lesões e banco (27/11/2026)
+
+- **Seleção do jogador sem o quadrado:**
+  - Clicar num jogador desenhava o contorno quadrado do navegador, em branco e preto.
+  - Agora só aparece o anel do jogo. O foco pelo teclado ganhou um anel azul próprio.
+- **Meio-campo e ataque:**
+  - A linha fixa dos 62 m deu lugar a uma faixa de transição de 58 a 80 m, que aparece mais clara no campo.
+  - Dentro da faixa, o jogador mantém o setor de onde veio: o meia sobe até perto da área (que começa a 88,5 m) sem virar atacante, e o atacante recua até o meio sem virar meia.
+  - Antes de 58 m é sempre meio-campo e depois de 80 m é sempre ataque. Formações prontas e salvas não mudam.
+- **Escalação automática:**
+  - Era gulosa, preenchendo vaga por vaga: o craque do meio podia acabar na lateral só porque rendia ali mais que o lateral.
+  - Agora escolhe o conjunto que soma mais (atribuição ótima, pelo método húngaro). Quem joga fora do setor dele perde 10% nessa conta, e quem joga fora das posições em que atua de verdade perde mais 8%.
+  - Vale para a CPU e para o botão do técnico. `ENGINE_VERSION` 0.40.0.
+- **Lesões, cerca de 20% menos frequentes:**
+  - No jogo, por minuto: 0,0001 → 0,00008. Por falta: 1% → 0,8%. No treino: 0,001 → 0,0008 por dia.
+  - Medido em 400 jogos: 0,235 → 0,19 lesão por time por jogo.
+- **Banco no campo:**
+  - Os reservas aparecem numa faixa abaixo do campo, com a força e o nome.
+  - Arrastar um jogador do campo para cima de um reserva, ou um reserva para cima de quem sai, faz a troca.
+  - Vale no pré-jogo, no amistoso e no meio da partida. No meio da partida conta como substituição; sem trocas disponíveis, o banco fica apagado e explica o motivo.
+- **Efeitos na CPU:**
+  - A reorganização da CPU ao mudar de formação no meio do jogo usa a mesma atribuição ótima da escalação automática. Antes também era gulosa.
+  - Com a escalação melhor, a CPU que vencia por um gol passou a segurar menos do que se não mexesse em nada.
+  - Agora, na frente por um gol, ela cadencia o jogo a partir dos 75 minutos e só fecha a defesa (4-5-1) a partir dos 85, em vez de recuar no contra-ataque desde os 75.
+  - O teste dessa reação passou de 250 para 750 jogos, porque com menos jogos a oscilação era maior que a margem.

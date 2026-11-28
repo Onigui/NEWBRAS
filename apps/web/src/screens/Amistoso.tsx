@@ -423,6 +423,21 @@ function EscolhaTime({
             [novos[a], novos[b]] = [novos[b] ?? "", novos[a] ?? ""];
             onMudar({ ...escolha, vagas, titulares: novos, reservas: [...reservas] });
           }}
+          banco={reservas.flatMap((id) => {
+            const j = porId.get(id);
+            return j ? [j] : [];
+          })}
+          onBanco={(vaga, reserva, vagas) => {
+            const novos = [...titulares];
+            const saiu = novos[vaga] ?? "";
+            novos[vaga] = reserva;
+            onMudar({
+              ...escolha,
+              vagas,
+              titulares: novos,
+              reservas: reservas.map((r) => (r === reserva ? saiu : r)).filter(Boolean),
+            });
+          }}
         />
       )}
       {time && selecionada !== null && escolha.vagas[selecionada] && (
