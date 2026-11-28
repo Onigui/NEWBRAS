@@ -5,8 +5,17 @@ import { salarioBase } from "../gerador/jogador";
 import { novaCarreira, estadoDe, type Carreira, type Compromisso, type Mundo } from "./carreira";
 import { moralDe } from "../elenco/vida";
 import {
+  capitaoDe,
+  escolherCapitao,
+  lideranca,
+  pedeAumento,
+  salarioDeMercado,
+  torcidaDe,
+} from "./vestiario";
+import {
   conversasDepoisDoJogo,
   diaDaDiretoria,
+  diretoriaDe,
   responderConversa,
   type Conversa,
 } from "./conversas";
@@ -270,5 +279,154 @@ describe("diretoria", () => {
     expect(ultimato.carreira.conversas?.[0]?.tipo).toBe("diretoria-ultimato");
     // Não repete no dia seguinte.
     expect(diaDaDiretoria(cobra.carreira, m, "2027-03-03").decisao).toBe(false);
+  });
+});
+
+describe("vestiário e imprensa (etapa 15d)", () => {
+  it("aumento: dado, o salário vai ao mercado; negado, a moral cai e ele não pede de novo logo", () => {
+    const m = mundo();
+    const conv: Conversa = {
+      id: "a1",
+      tipo: "pede-aumento",
+      jogador: "n9",
+      data: "2027-02-01",
+      prazo: "2027-02-08",
+    };
+    const c: Carreira = {
+      ...nova(m),
+      data: "2027-02-02",
+      contratos: { n9: { fim: "2029-12-31", salario: 1000 } },
+      conversas: [conv],
+    };
+    const dado = responderConversa(c, m, "a1", "dar-aumento");
+    expect(dado.contratos?.n9?.salario).toBe(salarioDeMercado(m.jogador("n9")!));
+    expect(dado.contratos?.n9?.fim).toBe("2029-12-31");
+    expect(moralDe(estadoDe(dado, "n9"))).toBe(moralDe(estadoDe(c, "n9")) + 10);
+    const negado = responderConversa(c, m, "a1", "negar-aumento");
+    expect(moralDe(estadoDe(negado, "n9"))).toBe(moralDe(estadoDe(c, "n9")) - 12);
+    expect(pedeAumento(negado, m, m.jogador("n9")!, true)).toBe(false);
+    expect(pedeAumento(c, m, m.jogador("n9")!, true)).toBe(true);
+  });
+
+  it("capitão: a braçadeira passa e o antigo capitão fica chateado", () => {
+    const m = mundo();
+    const c = nova(m);
+    const antigo = capitaoDe(c, m)!;
+    const novo = antigo === "n1" ? "n2" : "n1";
+    const r = escolherCapitao(c, m, novo);
+    expect(capitaoDe(r, m)).toBe(novo);
+    expect(moralDe(estadoDe(r, novo))).toBe(moralDe(estadoDe(c, novo)) + 10);
+    expect(moralDe(estadoDe(r, antigo))).toBe(moralDe(estadoDe(c, antigo)) - 8);
+    // A liderança é a mesma em qualquer carreira.
+    expect(lideranca(m.jogador("n1")!, "2027-01-01")).toBe(
+      lideranca(m.jogador("n1")!, "2027-01-01"),
+    );
+  });
+
+  it("briga: punir um anima o elenco; deixar para lá derruba a moral do time", () => {
+    const m = mundo();
+    const conv: Conversa = {
+      id: "b1",
+      tipo: "briga",
+      jogador: "n3",
+      outro: "n4",
+      data: "2027-02-01",
+      prazo: "2027-02-08",
+    };
+    const c: Carreira = { ...nova(m), data: "2027-02-02", conversas: [conv] };
+    const punido = responderConversa(c, m, "b1", "punir-primeiro");
+    expect(moralDe(estadoDe(punido, "n3"))).toBe(moralDe(estadoDe(c, "n3")) - 10);
+    expect(moralDe(estadoDe(punido, "n4"))).toBe(moralDe(estadoDe(c, "n4")) + 3);
+    expect(punido.moral).toBe(c.moral + 3);
+    expect(responderConversa(c, m, "b1", "deixar-briga").moral).toBe(c.moral - 6);
+  });
+
+  it("imprensa: a provocação que dá errado custa torcida e diretoria", () => {
+    const m = mundo();
+    const conv: Conversa = {
+      id: "i1",
+      tipo: "imprensa-antes",
+      data: "2027-02-10",
+      prazo: "2027-02-10",
+      jogo: "j0",
+      adversario: "rico",
+    };
+    let c: Carreira = { ...nova(m), data: "2027-02-10", conversas: [conv] };
+    c = responderConversa(c, m, "i1", "provocador");
+    expect(c.entrevista).toEqual({ jogo: "j0", tom: "provocador" });
+    const torcida = torcidaDe(c);
+    const confianca = diretoriaDe(c).confianca;
+    const depois = conversasDepoisDoJogo(
+      c,
+      c,
+      m,
+      jogo("j0", "2027-02-10"),
+      resultado("casa", [["n0", 90]], [0, 2]),
+    ).carreira;
+    expect(depois.entrevista).toBeUndefined();
+    // Derrota (−2) e a provocação que deu errado (−6).
+    expect(torcidaDe(depois)).toBeLessThanOrEqual(torcida - 8);
+    expect(diretoriaDe(depois).confianca).toBeLessThan(confianca);
+    // A derrota por 2 gols chama a imprensa (às vezes) e a conversa tem o placar.
+    const coletiva = depois.conversas?.find((x) => x.tipo === "imprensa-derrota");
+    if (coletiva) expect(coletiva.params).toEqual({ pro: 0, contra: 2 });
+  });
+
+  it("três jogos fora da posição: ele reclama; a promessa quebra se jogar fora de novo", () => {
+    const m = mundo();
+    const vagas = Array.from({ length: 11 }, (_, i) => ({
+      posicao: i === 0 ? "G" : "M",
+      lado: "C",
+      x: 10 + i * 5,
+      y: 34,
+    }));
+    // O n5 é meia e joga de goleiro.
+    const titulares = ["n5", "n1", "n2", "n3", "n4", "n0", "n6", "n7", "n8", "n9", "n10"];
+    let c: Carreira = {
+      ...nova(m),
+      escalacao: {
+        formacao: "personalizada",
+        vagas,
+        titulares,
+        reservas: [],
+        papeis: titulares.map(() => null),
+      } as never,
+    };
+    for (let i = 0; i < 3; i++)
+      c = conversasDepoisDoJogo(
+        c,
+        c,
+        m,
+        jogo(`j${i}`, `2027-02-1${i}`),
+        resultado(
+          "casa",
+          titulares.map((id) => [id, 90] as [string, number]),
+          [1, 0],
+        ),
+      ).carreira;
+    expect(c.foraDaPosicao?.n5).toBe(3);
+    c = {
+      ...c,
+      conversas: [
+        { id: "p1", tipo: "posicao", jogador: "n5", data: "2027-02-13", prazo: "2027-02-20" },
+      ],
+    };
+    c = responderConversa(c, m, "p1", "volta-posicao");
+    expect(c.foraDaPosicao?.n5).toBeUndefined();
+    expect(c.promessas?.[0]).toMatchObject({ jogador: "n5", tipo: "posicao" });
+    const antes = moralDe(estadoDe(c, "n5"));
+    c = conversasDepoisDoJogo(
+      c,
+      c,
+      m,
+      jogo("j9", "2027-02-19"),
+      resultado(
+        "casa",
+        titulares.map((id) => [id, 90] as [string, number]),
+        [1, 0],
+      ),
+    ).carreira;
+    expect(c.promessas).toEqual([]);
+    expect(moralDe(estadoDe(c, "n5"))).toBe(antes - 15);
   });
 });

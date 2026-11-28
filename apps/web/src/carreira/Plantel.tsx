@@ -16,6 +16,9 @@ import {
   type Jogador,
 } from "@newbras/data";
 import {
+  capitaoDe,
+  escolherCapitao,
+  lideranca,
   avisoPoupar,
   contratoDe,
   convocadosDoClube,
@@ -108,6 +111,7 @@ export function Plantel({
     desc: false,
   });
   const [aberto, setAberto] = useState<string | null>(null);
+  const capitao = capitaoDe(c, mundo);
 
   const linhas: Linha[] = useMemo(() => {
     const convocados = convocadosDoClube(mundo, c.clube);
@@ -224,6 +228,14 @@ export function Plantel({
                   <td className="py-1 pr-2">
                     <IconeHumor humor={l.e.humor} />
                     {l.j.nome}
+                    {l.j.id === capitao && (
+                      <span
+                        className="ml-1 rounded-sm bg-canarinho px-1 text-[10px] font-bold text-placar"
+                        title={t("Capitão")}
+                      >
+                        C
+                      </span>
+                    )}
                     {l.j.estrela && (
                       <span className="ml-1 text-canarinho" title={t("Estrela")}>
                         ★
@@ -453,6 +465,7 @@ function Ficha({
           </p>
         )}
       </div>
+      <Vestiario l={l} c={c} montado={montado} {...(mudar ? { mudar } : {})} />
       {l.contrato && <Renovacao l={l} c={c} montado={montado} {...(mudar ? { mudar } : {})} />}
       {mudar && <AcoesDeMercado l={l} c={c} montado={montado} mudar={mudar} />}
     </aside>
@@ -460,6 +473,47 @@ function Ficha({
 }
 
 /** Quanto a força mudou desde a temporada anterior. */
+/** Liderança e braçadeira: o técnico escolhe o capitão. */
+function Vestiario({
+  l,
+  c,
+  montado,
+  mudar,
+}: {
+  l: Linha;
+  c: Carreira;
+  montado: MundoMontado;
+  mudar?: (f: (c: Carreira) => Carreira) => void;
+}) {
+  const { mundo } = montado;
+  const capitao = capitaoDe(c, mundo) === l.j.id;
+  const fora = c.foraDaPosicao?.[l.j.id] ?? 0;
+  return (
+    <div className="text-sm">
+      <p className="mb-1 text-xs font-bold text-suave">{t("Vestiário")}</p>
+      <p>
+        {t("Liderança: {valor}.", { valor: lideranca(l.j, c.data) })}{" "}
+        {capitao && <span className="font-bold text-canarinho">{t("É o capitão.")}</span>}
+      </p>
+      {fora > 0 && (
+        <p className="text-xs text-[#ffc38a]">
+          {t("{n} jogo(s) seguido(s) fora da posição dele.", { n: fora })}
+        </p>
+      )}
+      {mudar && !capitao && (
+        <button
+          type="button"
+          className="mt-1 rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho"
+          title={t("Ele ganha moral; o capitão atual perde.")}
+          onClick={() => mudar((x) => escolherCapitao(x, mundo, l.j.id))}
+        >
+          {t("Fazer capitão")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Evolucao({ antes, agora }: { antes: number | undefined; agora: number }) {
   if (antes === undefined || antes === agora) return null;
   const sobe = agora > antes;
@@ -576,7 +630,7 @@ function AcoesDeMercado({
           <>
             <button
               type="button"
-              className={`${botao} mt-1`}
+              className="mt-1 rounded border border-placar-borda px-2 py-0.5 text-xs hover:border-canarinho hover:text-canarinho"
               onClick={() => {
                 const r = exercerOpcao(c, mundo, l.j.id);
                 setAviso(

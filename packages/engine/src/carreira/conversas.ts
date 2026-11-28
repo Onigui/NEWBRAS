@@ -20,7 +20,7 @@
 import { marcar } from "@newbras/textos";
 import type { ResultadoPartida } from "../partida/tipos";
 import type { Carreira, Compromisso, EstadoJogador, Mundo, Noticia } from "./carreira";
-import { estadoDe, indisponiveisNoJogo } from "./carreira";
+import { agendaCompleta, estadoDe, indisponiveisNoJogo } from "./carreira";
 import { lesionado } from "../elenco/lesoes";
 import { diasEntre, somarDias } from "./datas";
 import { tabelaDoGrupo } from "../competicoes/competicao";
@@ -28,9 +28,41 @@ import { moralDe } from "../elenco/vida";
 import { idadeEm } from "../evolucao";
 import { Rng } from "../rng";
 import { demitir, mexerNaReputacao } from "./tecnico";
+import {
+  capitaoDe,
+  cobrarEntrevista,
+  contarForaDaPosicao,
+  darAumento,
+  escolherCapitao,
+  jogoGrande,
+  lideranca,
+  mexerNaTorcida,
+  naPosicao,
+  pedeAumento,
+  posicoesJogadas,
+  prazoDaImprensa,
+  resultadoDeImprensa,
+  salarioDeMercado,
+  torcidaDe,
+  torcidaDepoisDoJogo,
+} from "./vestiario";
+import { contratoDe } from "../elenco/vida";
+import type { PosicaoCampo } from "@newbras/data";
 
 export type TipoConversa =
-  "quer-sair" | "quer-jogar" | "cansado" | "diretoria-cobra" | "diretoria-ultimato";
+  | "quer-sair"
+  | "quer-jogar"
+  | "cansado"
+  | "diretoria-cobra"
+  | "diretoria-ultimato"
+  // Etapa 15d: vestiário e imprensa.
+  | "pede-aumento"
+  | "posicao"
+  | "quer-ser-capitao"
+  | "briga"
+  | "imprensa-antes"
+  | "imprensa-vitoria"
+  | "imprensa-derrota";
 
 export type OpcaoConversa =
   | "negociar"
@@ -40,7 +72,26 @@ export type OpcaoConversa =
   | "emprestar"
   | "poupar"
   | "precisa-jogar"
-  | "entendido";
+  | "entendido"
+  | "dar-aumento"
+  | "aumento-depois"
+  | "negar-aumento"
+  | "volta-posicao"
+  | "time-precisa"
+  | "dar-bracadeira"
+  | "manter-capitao"
+  | "punir-primeiro"
+  | "punir-segundo"
+  | "reunir"
+  | "deixar-briga"
+  | "confiante"
+  | "cauteloso"
+  | "provocador"
+  | "elogiar-time"
+  | "pes-no-chao"
+  | "assumir-culpa"
+  | "cobrar-elenco"
+  | "culpar-arbitragem";
 
 export interface Conversa {
   id: string;
@@ -50,11 +101,16 @@ export interface Conversa {
   /** Sem resposta até aqui, o jogador se sente ignorado. */
   prazo: string;
   params?: Readonly<Record<string, string | number>>;
+  /** O outro jogador da conversa (na briga, com quem brigou; no capitão, o capitão atual). */
+  outro?: string;
+  /** Entrevista: o jogo e o adversário. */
+  jogo?: string;
+  adversario?: string;
 }
 
 export interface Promessa {
   jogador: string;
-  tipo: "minutos" | "poupar" | "negociar";
+  tipo: "minutos" | "poupar" | "negociar" | "posicao";
   feita: string;
   /** Jogos oficiais desde a promessa e em quantos ele jogou. */
   jogos: number;
@@ -89,7 +145,21 @@ export const OPCOES: Readonly<Record<TipoConversa, readonly OpcaoConversa[]>> = 
   cansado: ["poupar", "precisa-jogar"],
   "diretoria-cobra": ["entendido"],
   "diretoria-ultimato": ["entendido"],
+  "pede-aumento": ["dar-aumento", "aumento-depois", "negar-aumento"],
+  posicao: ["volta-posicao", "time-precisa"],
+  "quer-ser-capitao": ["dar-bracadeira", "manter-capitao"],
+  briga: ["punir-primeiro", "punir-segundo", "reunir", "deixar-briga"],
+  "imprensa-antes": ["confiante", "cauteloso", "provocador"],
+  "imprensa-vitoria": ["elogiar-time", "pes-no-chao"],
+  "imprensa-derrota": ["assumir-culpa", "cobrar-elenco", "culpar-arbitragem"],
 };
+
+/** Conversas da imprensa (não contam no limite das conversas dos jogadores). */
+export const DA_IMPRENSA: ReadonlySet<TipoConversa> = new Set([
+  "imprensa-antes",
+  "imprensa-vitoria",
+  "imprensa-derrota",
+]);
 
 const DIAS_PARA_RESPONDER = 7;
 /** O mesmo jogador só volta a procurar o técnico depois de tantos dias. */
@@ -201,12 +271,107 @@ export function responderConversa(
       break;
     case "entendido":
       break;
+    case "dar-aumento":
+      if (!j) break;
+      r = darAumento(r, mundo, j);
+      r = mexerNoJogador(r, j, 10, 1);
+      break;
+    case "aumento-depois":
+      if (j) r = mexerNoJogador({ ...r, aumentos: { ...r.aumentos, [j]: c.data } }, j, -4);
+      break;
+    case "negar-aumento":
+      if (j) r = mexerNoJogador({ ...r, aumentos: { ...r.aumentos, [j]: c.data } }, j, -12, -1);
+      break;
+    case "volta-posicao":
+      if (!j) break;
+      r = mexerNoJogador(r, j, 6);
+      r = { ...r, promessas: promessa("posicao"), foraDaPosicao: semContagem(r, j) };
+      break;
+    case "time-precisa":
+      if (j) r = mexerNoJogador({ ...r, foraDaPosicao: semContagem(r, j) }, j, -6);
+      break;
+    case "dar-bracadeira":
+      if (j) r = escolherCapitao(r, mundo, j);
+      break;
+    case "manter-capitao":
+      if (j) r = mexerNoJogador(r, j, -6);
+      break;
+    case "punir-primeiro":
+    case "punir-segundo": {
+      const [punido, poupado] = opcao === "punir-primeiro" ? [j, conv.outro] : [conv.outro, j];
+      if (punido) r = mexerNoJogador(r, punido, -10, -1);
+      if (poupado) r = mexerNoJogador(r, poupado, 3);
+      r = moralDoTime(r, 3);
+      if (punido)
+        ns.push(
+          noticia(
+            c.data,
+            marcar("{jogador} foi punido pela briga no treino. O elenco viu pulso firme.", {
+              jogador: nome(mundo, punido),
+            }),
+          ),
+        );
+      break;
+    }
+    case "reunir":
+      if (j) r = mexerNoJogador(r, j, -2);
+      if (conv.outro) r = mexerNoJogador(r, conv.outro, -2);
+      r = moralDoTime(r, 1);
+      break;
+    case "deixar-briga":
+      r = moralDoTime(r, -6);
+      break;
+    case "confiante":
+    case "cauteloso":
+    case "provocador":
+      if (conv.jogo) r = { ...r, entrevista: { jogo: conv.jogo, tom: opcao } };
+      r = moralDoTime(r, opcao === "confiante" ? 3 : opcao === "provocador" ? 4 : 1);
+      break;
+    case "elogiar-time":
+      r = moralDoTime(r, 3);
+      break;
+    case "pes-no-chao":
+      r = confiancaDaDiretoria(mexerNaTorcida(moralDoTime(r, 1), 1), 1);
+      break;
+    case "assumir-culpa":
+      r = confiancaDaDiretoria(mexerNaTorcida(moralDoTime(r, 3), 1), -1);
+      break;
+    case "cobrar-elenco":
+      r = confiancaDaDiretoria(mexerNaTorcida(moralDoTime(r, -4), 2), 1);
+      break;
+    case "culpar-arbitragem":
+      r = confiancaDaDiretoria(mexerNaTorcida(moralDoTime(r, 1), 2), -2);
+      break;
   }
   return comNoticias(r, ns);
 }
 
+const semContagem = (c: Carreira, id: string): Record<string, number> => {
+  const fora = { ...c.foraDaPosicao };
+  delete fora[id];
+  return fora;
+};
+
+function moralDoTime(c: Carreira, delta: number): Carreira {
+  return { ...c, moral: Math.max(0, Math.min(100, Math.round((c.moral + delta) * 10) / 10)) };
+}
+
+function confiancaDaDiretoria(c: Carreira, delta: number): Carreira {
+  const d = diretoriaDe(c);
+  return { ...c, diretoria: { ...d, confianca: limitar(d.confianca + delta) } };
+}
+
 /** Resposta padrão quando o técnico deixa a conversa passar do prazo. */
 function ignorar(c: Carreira, mundo: Mundo, conv: Conversa, data: string): Carreira {
+  if (conv.tipo === "imprensa-antes") return c;
+  if (conv.tipo === "imprensa-vitoria" || conv.tipo === "imprensa-derrota")
+    return comNoticias(mexerNaTorcida(c, -1), [
+      noticia(
+        data,
+        marcar("O técnico não deu entrevista, e a torcida não gostou do silêncio.", {}),
+      ),
+    ]);
+  if (conv.tipo === "briga") return moralDoTime(c, -6);
   if (!conv.jogador) return c;
   const r = mexerNoJogador(c, conv.jogador, -10, -1);
   return comNoticias(r, [
@@ -305,15 +470,54 @@ export function conversasDepoisDoJogo(
   );
   const ns: Noticia[] = [];
   let out = c;
+  const saldo = nosso === "casa" ? r.placar[0] - r.placar[1] : r.placar[1] - r.placar[0];
+  const doClube = x.tipo === "oficial" && !x.selecao;
+  // A posição em que cada titular começou (para a reclamação e a promessa de posição).
+  const jogadas = doClube ? posicoesJogadas(antes, x, r) : new Map<string, PosicaoCampo>();
 
   // Promessas: só os jogos oficiais contam.
   if (x.tipo === "oficial" && out.promessas?.length) {
     // Quem não podia jogar (lesionado, suspenso, com a seleção) não conta o jogo na promessa.
-    const fora = indisponiveisNoJogo(c, mundo, x.competicao, x.data);
+    const fora = indisponiveisNoJogo(antes, mundo, x.competicao, x.data);
     const ficam: Promessa[] = [];
     for (const p of out.promessas) {
       if (p.tipo === "negociar" || fora.has(p.jogador)) {
         ficam.push(p);
+        continue;
+      }
+      if (p.tipo === "posicao") {
+        // Conta só os jogos em que ele começou: fora da posição, a promessa quebra.
+        const pos = jogadas.get(p.jogador);
+        const j = mundo.jogador(p.jogador);
+        if (!pos || !j) {
+          ficam.push(p);
+          continue;
+        }
+        if (!naPosicao(j, pos)) {
+          out = mexerNoJogador(out, p.jogador, -15, -1);
+          ns.push(
+            noticia(
+              x.data,
+              marcar("{jogador} jogou de novo fora da posição e diz que a promessa não valeu.", {
+                jogador: j.nome,
+              }),
+            ),
+          );
+          continue;
+        }
+        if (p.jogou + 1 >= 2) {
+          out = mexerNoJogador(out, p.jogador, 6, 1);
+          ns.push(
+            noticia(
+              x.data,
+              marcar("{jogador} voltou à posição dele, como o técnico prometeu.", {
+                jogador: j.nome,
+              }),
+            ),
+          );
+          continue;
+        }
+        ficam.push({ ...p, jogos: p.jogos + 1, jogou: p.jogou + 1 });
         continue;
       }
       const e = jogaram.get(p.jogador);
@@ -364,6 +568,21 @@ export function conversasDepoisDoJogo(
     out = { ...out, promessas: ficam };
   }
 
+  if (doClube) {
+    // Jogos fora da posição, a torcida, a entrevista de antes do jogo e a que ficou sem resposta.
+    out = contarForaDaPosicao(out, mundo, jogadas);
+    out = torcidaDepoisDoJogo(out, mundo, x, saldo);
+    const cobrada = cobrarEntrevista(out, mundo, x, saldo);
+    out = cobrada.carreira;
+    ns.push(...cobrada.noticias);
+    out = {
+      ...out,
+      conversas: (out.conversas ?? []).filter(
+        (v) => !(v.tipo === "imprensa-antes" && v.jogo === x.id),
+      ),
+    };
+  }
+
   // Diretoria: cada resultado oficial mexe na confiança (pesando a força do adversário).
   if (x.tipo === "oficial" && x.resultado === undefined) {
     const [gc, gf] = r.placar;
@@ -381,7 +600,8 @@ export function conversasDepoisDoJogo(
   // O vestiário: no máximo uma conversa nova por jogo e 3 pendentes.
   let nova = false;
   const pendentes = out.conversas ?? [];
-  if (pendentes.length < MAX_PENDENTES) {
+  const doVestiario = pendentes.filter((v) => !DA_IMPRENSA.has(v.tipo));
+  if (doVestiario.length < MAX_PENDENTES) {
     const rng = new Rng(`${c.semente}:conversa:${x.id}`);
     const recentes = out.conversasRecentes ?? {};
     const livre = (id: string) =>
@@ -393,6 +613,9 @@ export function conversasDepoisDoJogo(
       elenco.slice(0, 11).reduce((s, j) => s + j.forca, 0) /
       Math.max(1, Math.min(11, elenco.length));
     const candidatos: { id: string; tipo: TipoConversa; peso: number }[] = [];
+    const principais = new Set(elenco.slice(0, 13).map((j) => j.id));
+    const idCapitao = capitaoDe(out, mundo);
+    const capitao = idCapitao ? mundo.jogador(idCapitao) : undefined;
     for (const j of elenco) {
       if (!livre(j.id)) continue;
       const e = estadoDe(out, j.id);
@@ -410,6 +633,22 @@ export function conversasDepoisDoJogo(
       const condicaoAntes = estadoDe(antes, j.id).condicao;
       if (jogou && jogou.minutos >= 60 && condicaoAntes < 70 && !machucado)
         candidatos.push({ id: j.id, tipo: "cansado", peso: 0.35 });
+      if (!doClube || machucado) continue;
+      // Etapa 15d: aumento, posição e braçadeira.
+      const titular = principais.has(j.id);
+      if (moral >= 30 && pedeAumento(out, mundo, j, titular))
+        candidatos.push({ id: j.id, tipo: "pede-aumento", peso: 0.25 });
+      if ((out.foraDaPosicao?.[j.id] ?? 0) >= 3)
+        candidatos.push({ id: j.id, tipo: "posicao", peso: 0.4 });
+      if (
+        capitao &&
+        capitao.id !== j.id &&
+        titular &&
+        moral >= 50 &&
+        idadeEm(j.nascimento, x.data) >= 26 &&
+        lideranca(j, x.data) >= lideranca(capitao, x.data) + 12
+      )
+        candidatos.push({ id: j.id, tipo: "quer-ser-capitao", peso: 0.12 });
     }
     for (const k of candidatos) {
       if (!rng.chance(k.peso)) continue;
@@ -423,7 +662,18 @@ export function conversasDepoisDoJogo(
           ? { params: { jogos: estadoDe(out, k.id).semJogar } }
           : k.tipo === "cansado"
             ? { params: { condicao: Math.round(estadoDe(antes, k.id).condicao) } }
-            : {}),
+            : k.tipo === "pede-aumento"
+              ? { params: paramsDoAumento(out, mundo, k.id) }
+              : k.tipo === "posicao"
+                ? {
+                    params: {
+                      jogos: out.foraDaPosicao?.[k.id] ?? 0,
+                      posicao: jogadas.get(k.id) ?? "",
+                    },
+                  }
+                : k.tipo === "quer-ser-capitao" && capitao
+                  ? { outro: capitao.id }
+                  : {}),
       };
       out = {
         ...out,
@@ -433,8 +683,79 @@ export function conversasDepoisDoJogo(
       nova = true;
       break;
     }
+    // Briga no vestiário: time de moral baixa ou goleada sofrida. O capitão líder evita.
+    const comBriga = out.conversas ?? [];
+    const lider = capitao ? lideranca(capitao, x.data) : 50;
+    if (
+      doClube &&
+      !nova &&
+      comBriga.filter((v) => !DA_IMPRENSA.has(v.tipo)).length < MAX_PENDENTES &&
+      (out.moral < 45 || saldo <= -3) &&
+      rng.chance(0.2 * Math.max(0.3, 1.5 - lider / 100))
+    ) {
+      const grupo = elenco
+        .slice(0, 18)
+        .filter((j) => livre(j.id) && !lesionado(estadoDe(out, j.id), x.data));
+      const a = [...grupo].sort(
+        (p, q) => moralDe(estadoDe(out, p.id)) - moralDe(estadoDe(out, q.id)),
+      )[0];
+      const outros = grupo.filter((j) => j !== a);
+      const b = outros.length ? outros[rng.int(0, outros.length - 1)] : undefined;
+      if (a && b) {
+        out = {
+          ...out,
+          conversas: [
+            ...comBriga,
+            {
+              id: `briga:${a.id}:${x.data}`,
+              tipo: "briga",
+              jogador: a.id,
+              outro: b.id,
+              data: x.data,
+              prazo: somarDias(x.data, DIAS_PARA_RESPONDER),
+            },
+          ],
+          conversasRecentes: { ...out.conversasRecentes, [a.id]: x.data, [b.id]: x.data },
+        };
+        nova = true;
+      }
+    }
+  }
+  // A imprensa depois dos resultados que chamam atenção.
+  const imprensa = resultadoDeImprensa(out, mundo, x, saldo);
+  if (
+    imprensa &&
+    new Rng(`${c.semente}:imprensa:${x.id}`).chance(imprensa === "imprensa-derrota" ? 0.7 : 0.5)
+  ) {
+    out = {
+      ...out,
+      conversas: [
+        ...(out.conversas ?? []).filter(
+          (v) => v.tipo !== "imprensa-vitoria" && v.tipo !== "imprensa-derrota",
+        ),
+        {
+          id: `${imprensa}:${x.id}`,
+          tipo: imprensa,
+          data: x.data,
+          prazo: prazoDaImprensa(x.data),
+          jogo: x.id,
+          adversario: x.adversario,
+          params: {
+            pro: nosso === "casa" ? r.placar[0] : r.placar[1],
+            contra: nosso === "casa" ? r.placar[1] : r.placar[0],
+          },
+        },
+      ],
+    };
+    nova = true;
   }
   return { carreira: comNoticias(out, ns), nova };
+}
+
+function paramsDoAumento(c: Carreira, mundo: Mundo, id: string): Record<string, number> {
+  const j = mundo.jogador(id);
+  const atual = contratoDe(c, mundo, id)?.salario ?? 0;
+  return { salario: atual, pedido: j ? Math.max(atual, salarioDeMercado(j)) : atual };
 }
 
 /**
@@ -458,6 +779,28 @@ export function diaDaDiretoria(
     lesionado(r.jogadores[x.jogador], data);
   if (conversas.some(deLesionado))
     r = { ...r, conversas: conversas.filter((x) => !deLesionado(x)) };
+
+  // Entrevista antes do jogo grande, no dia do jogo (vale até a bola rolar).
+  const hoje = agendaCompleta(r).find((x) => x.data === data && !x.resultado);
+  if (
+    hoje &&
+    jogoGrande(r, mundo, hoje) &&
+    !(r.conversas ?? []).some((v) => v.tipo === "imprensa-antes" && v.jogo === hoje.id)
+  )
+    r = adicionarConversa(r, {
+      id: `imprensa-antes:${hoje.id}`,
+      tipo: "imprensa-antes",
+      data,
+      prazo: data,
+      jogo: hoje.id,
+      adversario: hoje.adversario,
+    });
+
+  // A torcida volta aos poucos ao normal; muito brava ou muito feliz, pesa na diretoria todo mês.
+  if (r.torcida !== undefined) {
+    const t = torcidaDe(r);
+    r = { ...r, torcida: Math.round((t + (60 - t) * 0.01) * 10) / 10 };
+  }
 
   // Conversas sem resposta no prazo.
   const vencidas = (r.conversas ?? []).filter((x) => x.prazo < data);
@@ -549,6 +892,9 @@ export function diaDaDiretoria(
     }
     if ((r.caixa ?? 0) < 0) delta -= 3;
     if ((r.crise?.mesesAtrasados ?? 0) > 0) delta -= 5;
+    const torcida = torcidaDe(r);
+    if (torcida < 30) delta -= 3;
+    else if (torcida >= 80) delta += 2;
     if (delta) d = { ...d, confianca: limitar(d.confianca + delta) };
   }
 

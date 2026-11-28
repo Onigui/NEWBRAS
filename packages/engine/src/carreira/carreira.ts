@@ -98,6 +98,7 @@ import {
   type PerfilDoTecnico,
 } from "./tecnico";
 import { melhorDoMundo, premiarTemporadas, type Premios } from "./premios";
+import { freioDoCapitao, moralDaTorcida } from "./vestiario";
 import {
   conversasDepoisDoJogo,
   diaDaDiretoria,
@@ -314,6 +315,16 @@ export interface Carreira {
   premios?: Premios;
   /** Última data em que o técnico abriu cada aba (o que chegou depois vira aviso na aba). */
   vistas?: Record<string, string>;
+  /** Apoio da torcida, de 0 a 100 (sem o campo, 60). Etapa 15d. */
+  torcida?: number;
+  /** Capitão escolhido pelo técnico (sem o campo, o de mais liderança). */
+  capitao?: string;
+  /** Jogos oficiais seguidos de cada jogador fora das posições dele. */
+  foraDaPosicao?: Record<string, number>;
+  /** Último pedido de aumento resolvido de cada jogador (dado ou negado). */
+  aumentos?: Record<string, string>;
+  /** Tom da entrevista antes do jogo, cobrado no resultado. */
+  entrevista?: { jogo: string; tom: "confiante" | "cauteloso" | "provocador" };
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -1126,6 +1137,9 @@ export function timeDoCompromisso(
 export function partidaDoCompromisso(c: Carreira, mundo: Mundo, x: Compromisso): OpcoesPartida {
   const nosso = timeDoCompromisso(c, mundo, x.selecao ?? c.clube, x.competicao, x.data);
   const deles = timeDoCompromisso(c, mundo, x.adversario, x.competicao, x.data);
+  // Em casa, a torcida empurra (ou vaia): de −8 a +8 de moral.
+  if (x.mando === "casa" && !x.neutro && !x.selecao && nosso.moral !== undefined)
+    nosso.moral = Math.max(0, Math.min(100, nosso.moral + moralDaTorcida(c)));
   const base: OpcoesPartida = {
     semente: `${c.semente}:${c.competicoes.temporadas[mundo.clube(c.clube)?.pais ?? ""]?.nome ?? ""}:${x.id}`,
     casa: x.mando === "casa" ? nosso : deles,
@@ -1256,14 +1270,12 @@ function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoParti
   }
 
   const saldo = pro - contra;
+  // Na derrota, o capitão segura parte da queda (até 30%, pela liderança dele).
+  const variacao =
+    (saldo > 0 ? 6 : saldo < 0 ? -6 : 1) + Math.sign(saldo) * (Math.abs(saldo) >= 3 ? 3 : 0);
   const moral = Math.max(
     0,
-    Math.min(
-      100,
-      c.moral +
-        (saldo > 0 ? 6 : saldo < 0 ? -6 : 1) +
-        Math.sign(saldo) * (Math.abs(saldo) >= 3 ? 3 : 0),
-    ),
+    Math.min(100, c.moral + (saldo < 0 ? variacao * (1 - freioDoCapitao(c, mundo)) : variacao)),
   );
   const gols: GolDoJogo[] = r.eventos
     .filter((ev) => (ev.tipo === "gol" || ev.tipo === "gol-contra") && ev.jogador && ev.time)
