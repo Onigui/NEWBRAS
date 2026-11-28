@@ -977,3 +977,46 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - A promessa de minutos e a de descanso esperam a volta dele: o jogo em que ele não podia jogar não conta.
   - Sem a conta de jogos parados, o lesionado também não fica de mau humor por falta de jogo.
   - `ENGINE_VERSION` 0.44.0.
+
+## Vestiário e imprensa (etapa 15d, 28/11/2026)
+
+Fecha a Fase 15. As conversas de 27/11 ganham os pedidos que ficaram anotados para esta fase. As regras de antes continuam: no máximo uma conversa nova do vestiário por jogo, até 3 esperando e 7 dias para responder.
+
+- **Pedido de aumento:**
+  - Quem pede: um dos 13 mais fortes, com moral 30 ou mais, que ganha menos de 70% do salário de mercado (o salário pela força; estrela, 25% a mais). O contrato precisa ter mais de 8 meses pela frente; mais perto do fim, quem resolve é a renovação.
+  - "Dou o aumento": o salário vai ao de mercado até o fim do contrato atual, moral +10.
+  - "Na renovação a gente conversa": moral −4. "Não vou dar aumento": moral −12 e o humor cai.
+  - Dado ou negado, ele só volta a pedir depois de 300 dias.
+- **Reclamação da posição:**
+  - Depois de 3 jogos oficiais seguidos começando (45 minutos ou mais) fora das posições dele.
+  - "Vai voltar para a sua posição" (moral +6) vira promessa: ele precisa começar 2 jogos na posição dele. Começar fora dela de novo quebra a promessa (moral −15). Jogo em que ele não começa não conta.
+  - "O time precisa de você aí": moral −6.
+- **Capitão e liderança:**
+  - A liderança (10 a 99) sai da idade, da força, de ser estrela e de um traço de personalidade de cada jogador. O traço é o mesmo em todas as carreiras.
+  - O capitão é o escolhido pelo técnico (botão "Fazer capitão" na ficha). Sem escolha, ou se o escolhido deixa o clube, é o de mais liderança que não está lesionado. O novo capitão ganha 10 de moral; o que perde a braçadeira, perde 8.
+  - O capitão segura parte da queda de moral do time nas derrotas, até 30% (liderança 95).
+  - Um titular de 26 anos ou mais, com moral 50 ou mais e 12 pontos de liderança acima do capitão, pede a braçadeira.
+- **Briga no vestiário:**
+  - Com o time de moral abaixo de 45 ou depois de perder por 3 gols ou mais: 20% de chance, menos com um capitão líder (até 70% a menos).
+  - Briga o jogador de moral mais baixa com outro do grupo. Punir um: ele perde 10 de moral, o outro ganha 3 e o time ganha 3. Reunir os dois: −2 cada e +1 no time. Deixar para lá, ou não responder: −6 no time.
+- **Imprensa:**
+  - **Antes do jogo grande** (clássico, mata-mata ou adversário com 8 de nível acima), no dia do jogo, até a bola rolar:
+    - Confiante: moral do time +3; vitória dá +3 de torcida, derrota tira 4.
+    - Cauteloso: moral +1, torcida ±1.
+    - Provocador: moral +4; vitória dá +5 de torcida, empate tira 1, derrota tira 6 e 2 de confiança da diretoria.
+  - **Depois do jogo:** a derrota chama a imprensa em 70% das vezes quando é jogo grande, por 2 gols ou mais ou com a torcida abaixo de 45. A vitória chama em 50% das vezes quando é jogo grande ou por 3 gols ou mais. As respostas:
+    - Elogiar o time: moral +3.
+    - Pés no chão: moral +1, torcida +1, diretoria +1.
+    - A culpa é minha: moral +3, torcida +1, diretoria −1.
+    - Cobrar o elenco: moral −4, torcida +2, diretoria +1.
+    - Culpar a arbitragem: moral +1, torcida +2, diretoria −2.
+    - Sem resposta em 2 dias: torcida −1.
+  - As entrevistas não contam no limite das conversas do vestiário e aparecem com uma faixa amarela no painel.
+- **Torcida (0 a 100, começa em 60):**
+  - Jogo oficial: vitória +1,5, empate −0,3, derrota −2. Clássico vale 1,5 vez; goleada, +1 ou −1,5 a mais.
+  - Volta aos poucos para 60 (1% da diferença por dia).
+  - Nos jogos em casa, dá de −8 a +8 de moral ao time.
+  - Todo mês, abaixo de 30 tira 3 da confiança da diretoria; a partir de 80, dá 2.
+  - Na aba Início, o quadro da diretoria mostra a barra da torcida e o capitão.
+- **Teste de uma temporada** (respondendo sempre a segunda opção): o Sunderland teve 17 entrevistas antes de jogos e 17 depois. O Arsenal teve 16 e 18.
+- `ENGINE_VERSION` 0.45.0.
