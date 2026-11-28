@@ -882,3 +882,25 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - Seleções aparecem com escudo nas cores do país nas listas de jogos, no calendário e na partida.
 - **Teste numa carreira real:** Flamengo e Brasil. A convocação à mão bloqueou abaixo do mínimo e passou com 22. No amistoso Argentina x Brasil, o lesionado de um clube da CPU travou o início até a troca; depois veio a vitória por 2 a 1, lançada na campanha.
 - **Para depois:** cartões e suspensões em jogos de seleção, o técnico só de seleção (sem clube) e o período sem emprego.
+
+## Pedidos do dono em 28/11/2026: escalação mais limpa, avanço dia a dia, animações e sons
+
+- **Correções feitas agora:**
+  - **Banco que não abria:** clicar num reserva não fazia nada, porque o clique começava um arraste. Agora clicar e soltar abre o cartão do jogador; clicar e segurar arrasta.
+  - **Elenco todo abaixo do campo no pré-jogo:**
+    - Os reservas ficam na primeira fileira e quem fica fora da partida nas de baixo, até 12 por fileira.
+    - Arrastar entre campo, banco e fora faz a troca, e um ponto laranja marca quem tem aviso (lesionado, suspenso, poupar).
+    - A lista em tabelas continua disponível, recolhida em "Lista do elenco".
+    - Na partida ao vivo, só o banco aparece, porque quem está fora não pode entrar.
+  - **Cartão flutuante no lugar das listas:**
+    - Clicar e soltar num jogador abre um cartão ao lado dele, com força, posições, fôlego, humor e aviso. Em campo, o cartão traz também a posição e a função, com a nota de cada uma.
+    - A lista "Quem joga aqui" saiu, porque a troca agora é arrastando.
+    - Esc ou o × fecha o cartão. Vale no pré-jogo, no amistoso e ao vivo.
+- **Avanço dia a dia (feito agora, não estava previsto em fase nenhuma):**
+  - "Ir até o próximo jogo" vira o calendário uma folha por dia, com as notícias chegando na hora num painel, em três velocidades.
+  - "Parar aqui" interrompe o avanço na data para o técnico agir. Ele para sozinho no dia do jogo, numa decisão e quando chega algo que pede resposta (proposta, conversa, sondagem, convite).
+  - "Pular tudo até o jogo" pede confirmação, avisando que as notícias e as respostas do caminho passam sem parar.
+- **Para a Fase 16 (já prevista: revisão do visual e sons), juntando com o que estava planejado:**
+  - **Transições e animações nos momentos importantes:** título (tela de campeão), jogo importante (final, decisão, clássico), troca entre o clube e a seleção, acesso e rebaixamento. A ideia é tirar o jogo do estático, como nos jogos grandes.
+  - **Efeitos sonoros na partida:** apito de início, intervalo e fim, apito de cartão, comemoração e grito de gol, torcida reagindo ao perigo, como no Brasfoot. Com volume e opção de desligar.
+  - A folha do calendário e a chegada das notícias já ganharam uma animação curta, que respeita a preferência do sistema por menos movimento. Ficam como base para a revisão visual.

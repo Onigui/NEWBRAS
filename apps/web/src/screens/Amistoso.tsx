@@ -14,7 +14,7 @@ import {
   type Vaga,
 } from "@newbras/engine";
 import { AoVivo } from "../partida/AoVivo";
-import { EditorFormacao, PainelVaga, type Candidato } from "../components/EditorFormacao";
+import { EditorFormacao } from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { procurar, type Indices } from "../editor/indices";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
@@ -286,31 +286,6 @@ function EscolhaTime({
   const reservas = time?.escalacao.reservas ?? [];
   const papeis = escolha.papeis ?? escolha.vagas.map(() => null);
   const ocupantes = titulares.map((id) => porId.get(id) ?? null);
-  const candidatos: Candidato[] =
-    selecionada === null
-      ? []
-      : (time?.jogadores ?? [])
-          .filter((j) => j.id !== titulares[selecionada])
-          .map((j) => {
-            const k = titulares.indexOf(j.id);
-            return { jogador: j, origem: k >= 0 ? k : "banco" };
-          });
-
-  /** Põe o candidato na vaga escolhida: troca com quem estava (outra vaga ou o banco). */
-  const escalar = (c: Candidato) => {
-    if (selecionada === null) return;
-    const novos = [...titulares];
-    let banco = [...reservas];
-    const saiu = novos[selecionada] ?? "";
-    if (c.origem === "banco") {
-      novos[selecionada] = c.jogador.id;
-      banco = [saiu, ...banco.filter((id) => id !== c.jogador.id)].filter(Boolean).slice(0, 9);
-    } else {
-      novos[selecionada] = c.jogador.id;
-      novos[c.origem] = saiu;
-    }
-    onMudar({ ...escolha, titulares: novos, reservas: banco });
-  };
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <p className="text-xs font-bold text-suave">{titulo}</p>
@@ -427,6 +402,21 @@ function EscolhaTime({
             const j = porId.get(id);
             return j ? [j] : [];
           })}
+          foraDoJogo={(time.jogadores ?? []).filter(
+            (j) => !titulares.includes(j.id) && !reservas.includes(j.id),
+          )}
+          onTrocarReservas={(reserva, fora) =>
+            onMudar({
+              ...escolha,
+              titulares: [...titulares],
+              reservas: reservas.map((r) => (r === reserva ? fora : r)),
+            })
+          }
+          onPapel={(vaga, papel) => {
+            const novos = escolha.vagas.map((_, i) => papeis[i] ?? null);
+            novos[vaga] = papel;
+            onMudar({ ...escolha, papeis: novos });
+          }}
           onBanco={(vaga, reserva, vagas) => {
             const novos = [...titulares];
             const saiu = novos[vaga] ?? "";
@@ -435,26 +425,11 @@ function EscolhaTime({
               ...escolha,
               vagas,
               titulares: novos,
-              reservas: reservas.map((r) => (r === reserva ? saiu : r)).filter(Boolean),
+              reservas: reservas.includes(reserva)
+                ? reservas.map((r) => (r === reserva ? saiu : r)).filter(Boolean)
+                : [...reservas],
             });
           }}
-        />
-      )}
-      {time && selecionada !== null && escolha.vagas[selecionada] && (
-        <PainelVaga
-          vaga={escolha.vagas[selecionada]}
-          indice={selecionada}
-          ocupante={ocupantes[selecionada] ?? null}
-          escolhido={papeis[selecionada] ?? null}
-          candidatos={candidatos}
-          rotuloTroca={(c) => (c.origem === "banco" ? t("Escalar") : t("Trocar de vaga"))}
-          onPapel={(papel) => {
-            const novos = escolha.vagas.map((_, i) => papeis[i] ?? null);
-            novos[selecionada] = papel;
-            onMudar({ ...escolha, papeis: novos });
-          }}
-          onTrocar={escalar}
-          onFechar={() => setSelecionada(null)}
         />
       )}
       {escolha.formacao === "personalizada" && (

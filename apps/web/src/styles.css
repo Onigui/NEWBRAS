@@ -36,3 +36,38 @@ body {
     outline-offset: 3px;
   }
 }
+
+/* Folha do calendário virando no avanço dia a dia. */
+@keyframes virar-folha {
+  from {
+    transform: rotateX(70deg) translateY(-0.4rem);
+    opacity: 0.2;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes chegar-noticia {
+  from {
+    transform: translateX(-0.6rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.folha-virando {
+  animation: virar-folha 0.32s ease-out;
+  transform-origin: top center;
+}
+.noticia-chegando {
+  animation: chegar-noticia 0.3s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .folha-virando,
+  .noticia-chegando {
+    animation: none;
+  }
+}

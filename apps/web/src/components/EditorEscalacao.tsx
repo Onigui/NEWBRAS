@@ -16,14 +16,7 @@ import {
 import type { PapelEmCampo } from "@newbras/data";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { IconeHumor } from "../partida/Resumo";
-import {
-  corDaNotaNaVaga,
-  EditorFormacao,
-  nomeDoPapel,
-  PainelVaga,
-  papelENota,
-  type Candidato,
-} from "./EditorFormacao";
+import { corDaNotaNaVaga, EditorFormacao, nomeDoPapel, papelENota } from "./EditorFormacao";
 import { t } from "@newbras/textos";
 
 export interface EscalacaoEditavel {
@@ -85,16 +78,6 @@ export function EditorEscalacao({
   const porId = new Map(jogadores.map((j) => [j.id, j]));
   const ocupantes = valor.titulares.map((id) => porId.get(id) ?? null);
   const naLista = new Set([...valor.titulares, ...valor.reservas]);
-
-  const candidatos: Candidato[] =
-    selecionada === null
-      ? []
-      : jogadores
-          .filter((j) => j.id !== valor.titulares[selecionada])
-          .map((j) => {
-            const k = valor.titulares.indexOf(j.id);
-            return { jogador: j, origem: k >= 0 ? k : "banco" };
-          });
 
   /** Põe o jogador na vaga escolhida: troca com quem estava (outra vaga, o banco ou fora da lista). */
   const escalar = (id: string, vaga: number, vagas: Vaga[] = valor.vagas) => {
@@ -221,26 +204,18 @@ export function EditorEscalacao({
           const j = porId.get(id);
           return j ? [j] : [];
         })}
-        onBanco={(vaga, reserva, vagas) => escalar(reserva, vaga, vagas)}
+        foraDoJogo={jogadores.filter((j) => !naLista.has(j.id))}
+        onBanco={(vaga, entra, vagas) => escalar(entra, vaga, vagas)}
+        onTrocarReservas={(reserva, fora) =>
+          onMudar({ ...valor, reservas: valor.reservas.map((r) => (r === reserva ? fora : r)) })
+        }
+        avisos={avisos}
+        onPapel={(vaga, papel) => {
+          const papeis = valor.vagas.map((_, i) => valor.papeis[i] ?? null);
+          papeis[vaga] = papel;
+          onMudar({ ...valor, papeis });
+        }}
       />
-
-      {selecionada !== null && valor.vagas[selecionada] && (
-        <PainelVaga
-          vaga={valor.vagas[selecionada]}
-          indice={selecionada}
-          ocupante={ocupantes[selecionada] ?? null}
-          escolhido={valor.papeis[selecionada] ?? null}
-          candidatos={candidatos}
-          rotuloTroca={(c) => (c.origem !== "banco" ? t("Trocar de vaga") : t("Escalar"))}
-          onPapel={(papel) => {
-            const papeis = valor.vagas.map((_, i) => valor.papeis[i] ?? null);
-            papeis[selecionada] = papel;
-            onMudar({ ...valor, papeis });
-          }}
-          onTrocar={(c) => escalar(c.jogador.id, selecionada)}
-          onFechar={() => setSelecionada(null)}
-        />
-      )}
 
       {onGuardar && valor.formacao === "personalizada" && (
         <div className="flex gap-2">
@@ -263,96 +238,101 @@ export function EditorEscalacao({
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <h3 className="mb-1 text-sm font-bold">{t("Titulares")}</h3>
-          <table className="w-full table-fixed text-sm">
-            <tbody>
-              {valor.titulares.map((id, i) => {
-                const j = porId.get(id);
-                return (
-                  <tr
-                    key={`${i}-${id}`}
-                    className={`cursor-pointer border-b border-white/5 hover:bg-white/5 ${selecionada === i ? "bg-canarinho/10" : ""}`}
-                    onClick={() => setSelecionada(selecionada === i ? null : i)}
-                  >
-                    {j ? (
-                      linha(j, i)
-                    ) : (
-                      <td colSpan={4} className="py-1 text-suave">
-                        {t("Vaga vazia")}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <p className="mt-1 text-xs text-suave">
-            {t("Clique num titular (ou no campo) para escolher a função ou trocar quem joga ali.")}
-          </p>
-        </div>
-        <div>
-          <h3 className="mb-1 text-sm font-bold">
-            {t("Reservas ({reservas} de {tamanhoBanco})", {
-              reservas: valor.reservas.length,
-              tamanhoBanco: TAMANHO_BANCO,
-            })}
-          </h3>
-          <table className="w-full table-fixed text-sm">
-            <tbody>
-              {valor.reservas.map((id) => {
-                const j = porId.get(id);
-                return j ? (
-                  <tr key={id} className="border-b border-white/5">
-                    {linha(j, null)}
-                    <td className="w-8 py-1 text-right">
-                      <button
-                        type="button"
-                        className="rounded px-1 text-xs text-suave hover:bg-white/10"
-                        onClick={() => alternarReserva(id)}
-                        aria-label={t("Tirar {nome} do banco", { nome: j.nome })}
-                      >
-                        {t("tirar")}
-                      </button>
-                    </td>
-                  </tr>
-                ) : null;
-              })}
-            </tbody>
-          </table>
-          {jogadores.some((j) => !naLista.has(j.id)) && (
-            <details className="mt-2 text-sm">
-              <summary className="cursor-pointer text-suave">
-                {t("Fora da lista ({jogadores})", {
-                  jogadores: jogadores.filter((j) => !naLista.has(j.id)).length,
-                })}
-              </summary>
-              <table className="mt-1 w-full table-fixed">
-                <tbody>
-                  {jogadores
-                    .filter((j) => !naLista.has(j.id))
-                    .map((j) => (
-                      <tr key={j.id} className="border-b border-white/5">
-                        {linha(j, null)}
-                        <td className="w-12 py-1 text-right">
-                          <button
-                            type="button"
-                            disabled={valor.reservas.length >= TAMANHO_BANCO}
-                            className="rounded px-1 text-xs text-suave hover:bg-white/10 disabled:opacity-40"
-                            onClick={() => alternarReserva(j.id)}
-                          >
-                            {t("ao banco")}
-                          </button>
+      <details className="text-sm">
+        <summary className="cursor-pointer text-suave">
+          {t("Lista do elenco: titulares, banco e quem está fora, com fôlego e humor")}
+        </summary>
+        <div className="mt-2 grid gap-4 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-1 text-sm font-bold">{t("Titulares")}</h3>
+            <table className="w-full table-fixed text-sm">
+              <tbody>
+                {valor.titulares.map((id, i) => {
+                  const j = porId.get(id);
+                  return (
+                    <tr
+                      key={`${i}-${id}`}
+                      className={`cursor-pointer border-b border-white/5 hover:bg-white/5 ${selecionada === i ? "bg-canarinho/10" : ""}`}
+                      onClick={() => setSelecionada(selecionada === i ? null : i)}
+                    >
+                      {j ? (
+                        linha(j, i)
+                      ) : (
+                        <td colSpan={4} className="py-1 text-suave">
+                          {t("Vaga vazia")}
                         </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </details>
-          )}
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-1 text-xs text-suave">
+              {t("Clique num titular para abrir o cartão dele no campo.")}
+            </p>
+          </div>
+          <div>
+            <h3 className="mb-1 text-sm font-bold">
+              {t("Reservas ({reservas} de {tamanhoBanco})", {
+                reservas: valor.reservas.length,
+                tamanhoBanco: TAMANHO_BANCO,
+              })}
+            </h3>
+            <table className="w-full table-fixed text-sm">
+              <tbody>
+                {valor.reservas.map((id) => {
+                  const j = porId.get(id);
+                  return j ? (
+                    <tr key={id} className="border-b border-white/5">
+                      {linha(j, null)}
+                      <td className="w-8 py-1 text-right">
+                        <button
+                          type="button"
+                          className="rounded px-1 text-xs text-suave hover:bg-white/10"
+                          onClick={() => alternarReserva(id)}
+                          aria-label={t("Tirar {nome} do banco", { nome: j.nome })}
+                        >
+                          {t("tirar")}
+                        </button>
+                      </td>
+                    </tr>
+                  ) : null;
+                })}
+              </tbody>
+            </table>
+            {jogadores.some((j) => !naLista.has(j.id)) && (
+              <details className="mt-2 text-sm">
+                <summary className="cursor-pointer text-suave">
+                  {t("Fora da lista ({jogadores})", {
+                    jogadores: jogadores.filter((j) => !naLista.has(j.id)).length,
+                  })}
+                </summary>
+                <table className="mt-1 w-full table-fixed">
+                  <tbody>
+                    {jogadores
+                      .filter((j) => !naLista.has(j.id))
+                      .map((j) => (
+                        <tr key={j.id} className="border-b border-white/5">
+                          {linha(j, null)}
+                          <td className="w-12 py-1 text-right">
+                            <button
+                              type="button"
+                              disabled={valor.reservas.length >= TAMANHO_BANCO}
+                              className="rounded px-1 text-xs text-suave hover:bg-white/10 disabled:opacity-40"
+                              onClick={() => alternarReserva(j.id)}
+                            >
+                              {t("ao banco")}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </details>
+            )}
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   );
 }

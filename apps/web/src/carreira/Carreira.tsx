@@ -4,7 +4,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  avancarAteJogo,
   avancarDia,
   avisoPoupar,
   compromissoDoDia,
@@ -56,6 +55,7 @@ import { Sondagens } from "./Sondagens";
 import { Conversas, QuadroDaDiretoria } from "./Conversas";
 import { PainelDeEmprego, QuadroDoTecnico } from "./Tecnico";
 import { MinhaSelecao } from "./MinhaSelecao";
+import { PainelDoAvanco, useAvanco } from "./Avanco";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
@@ -121,6 +121,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const { mundo } = montado;
   const [aba, setAba] = useState<Aba>("inicio");
   const [dia, setDia] = useState<"hub" | "pre-jogo" | "jogo">("hub");
+  const avanco = useAvanco(c, mundo, mudar);
   const [jogo, setJogo] = useState<{
     opcoes: OpcoesPartida;
     x: Compromisso;
@@ -297,16 +298,19 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             </Botao>
           ) : (
             <>
-              <Botao onClick={() => mudar((x) => avancarDia(x, mundo).carreira)}>
+              <Botao
+                disabled={avanco.ativo}
+                onClick={() => mudar((x) => avancarDia(x, mundo).carreira)}
+              >
                 {t("Avançar um dia")}
               </Botao>
               <Botao
                 variante="primario"
-                disabled={!proximo}
                 title={
                   proximo ? undefined : t("Nenhum jogo marcado: marque um amistoso na aba Jogos")
                 }
-                onClick={() => mudar((x) => avancarAteJogo(x, mundo).carreira)}
+                disabled={!proximo || avanco.ativo}
+                onClick={avanco.comecar}
               >
                 {proximo
                   ? t("Ir até o próximo jogo ({diasEntre} dias)", {
@@ -319,6 +323,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         </div>
       </header>
 
+      <PainelDoAvanco c={c} avanco={avanco} />
       <PainelDeEmprego c={c} montado={montado} mudar={mudar} />
       <Sondagens c={c} montado={montado} mudar={mudar} />
       <Conversas c={c} montado={montado} mudar={mudar} />
