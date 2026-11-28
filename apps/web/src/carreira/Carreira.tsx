@@ -27,6 +27,9 @@ import {
   suspensosNaCompeticao,
   foraPelaSelecao,
   indisponiveisNoJogo,
+  indisponiveisNaSelecao,
+  clubeOuSelecao,
+  type Escalacao,
   mundoNaData,
   type Carreira as CarreiraT,
   type Compromisso,
@@ -52,6 +55,7 @@ import { Financas } from "./Financas";
 import { Sondagens } from "./Sondagens";
 import { Conversas, QuadroDaDiretoria } from "./Conversas";
 import { PainelDeEmprego, QuadroDoTecnico } from "./Tecnico";
+import { MinhaSelecao } from "./MinhaSelecao";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
@@ -161,42 +165,60 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
     if (c.formato !== FORMATO_CARREIRA || !c.competicoes) mudar((x) => atualizarCarreira(x, mundo));
   }, [c.formato, c.competicoes, mudar, mundo]);
 
-  const escalacao: EscalacaoEditavel = useMemo(() => {
-    const e = escalacaoDoTecnico(c, jogadores);
-    const vagas = (e.vagas ?? FORMACOES[e.formacao === "personalizada" ? "4-4-2" : e.formacao]).map(
-      (v) => ({ ...v }),
-    );
-    return {
-      formacao: e.formacao,
-      vagas,
-      titulares: [...e.titulares],
-      reservas: [...e.reservas],
-      papeis: vagas.map((_, i) => e.papeis?.[i] ?? null),
-    };
-  }, [c, jogadores]);
+  const escalacao: EscalacaoEditavel = useMemo(
+    () => paraEditavel(escalacaoDoTecnico(c, jogadores)),
+    [c, jogadores],
+  );
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
+
+  // O jogo de hoje pode ser do clube ou da seleção que o técnico comanda.
+  const selecaoHoje = hoje?.selecao;
+  const jogadoresHoje = useMemo(() => {
+    const pais = compromissoDoDia(c)?.selecao;
+    return pais ? elencoParaPartida(c, mundo, pais) : jogadores;
+  }, [c, mundo, jogadores]);
+  const salvaHoje = selecaoHoje ? (c.selecao?.escalacao ?? null) : c.escalacao;
+  const escalacaoHoje: EscalacaoEditavel = useMemo(
+    () => paraEditavel(escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje)),
+    [salvaHoje, jogadoresHoje],
+  );
+  const mudarEscalacaoHoje = (v: EscalacaoEditavel) =>
+    selecaoHoje
+      ? mudar((x) => (x.selecao ? { ...x, selecao: { ...x.selecao, escalacao: v } } : x))
+      : mudarEscalacao(v);
 
   // Lesionados, suspensos e convocados escalados para o jogo de hoje: o jogo não começa assim.
   const foraDeHoje = useMemo(() => {
     const x = compromissoDoDia(c) ?? proximoCompromisso(c);
-    return x ? indisponiveisNoJogo(c, mundo, x.competicao, x.data) : new Set<string>();
+    if (!x) return new Set<string>();
+    return x.selecao
+      ? indisponiveisNaSelecao(c, mundo, x.data)
+      : indisponiveisNoJogo(c, mundo, x.competicao, x.data);
   }, [c, mundo]);
-  const titularesFora = escalacao.titulares.filter((id) => id && foraDeHoje.has(id));
-  const reservasFora = escalacao.reservas.filter((id) => foraDeHoje.has(id));
-  const nomeDoJogador = (id: string) => jogadores.find((j) => j.id === id)?.nome ?? id;
-  const tirarIndisponiveis = () => {
-    const e = escalacaoDoTecnico(c, jogadores, foraDeHoje);
-    const vagas = (e.vagas ?? FORMACOES[e.formacao === "personalizada" ? "4-4-2" : e.formacao]).map(
-      (v) => ({ ...v }),
+  const avisosHoje = useMemo(() => {
+    if (!compromissoDoDia(c)?.selecao) return avisos;
+    const m = new Map<string, string>();
+    for (const j of jogadoresHoje) {
+      const lesao = estadoDe(c, j.id).lesao;
+      const poupar = avisoPoupar(estadoDe(c, j.id));
+      const a = foraDeHoje.has(j.id)
+        ? lesao
+          ? t("lesionado até {data}", { data: dataCurta(lesao.ate) })
+          : t("lesionado")
+        : poupar
+          ? t("poupar: {aviso}", { aviso: poupar })
+          : null;
+      if (a) m.set(j.id, a);
+    }
+    return m;
+  }, [avisos, jogadoresHoje, c, foraDeHoje]);
+  const titularesFora = escalacaoHoje.titulares.filter((id) => id && foraDeHoje.has(id));
+  const reservasFora = escalacaoHoje.reservas.filter((id) => foraDeHoje.has(id));
+  const nomeDoJogador = (id: string) => jogadoresHoje.find((j) => j.id === id)?.nome ?? id;
+  const tirarIndisponiveis = () =>
+    mudarEscalacaoHoje(
+      paraEditavel(escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje, foraDeHoje)),
     );
-    mudarEscalacao({
-      formacao: e.formacao,
-      vagas,
-      titulares: [...e.titulares],
-      reservas: [...e.reservas],
-      papeis: vagas.map((_, i) => e.papeis?.[i] ?? null),
-    });
-  };
 
   // F2 salva na hora; 1 a 9 e 0 trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
@@ -225,8 +247,8 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         <AoVivo
           opcoes={jogo.opcoes}
           clubes={{
-            casa: mundo.clube(jogo.opcoes.casa.id),
-            fora: mundo.clube(jogo.opcoes.fora.id),
+            casa: clubeOuSelecao(mundo, jogo.opcoes.casa.id),
+            fora: clubeOuSelecao(mundo, jogo.opcoes.fora.id),
           }}
           humano={lado}
           rotuloNovo={t("Voltar à carreira")}
@@ -244,7 +266,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
     );
   }
 
-  const adversarioHoje = hoje ? mundo.clube(hoje.adversario) : undefined;
+  const adversarioHoje = hoje ? clubeOuSelecao(mundo, hoje.adversario) : undefined;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-7xl flex-col gap-4 p-4 lg:p-6">
@@ -265,9 +287,13 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         <div className="flex flex-wrap gap-2">
           {hoje ? (
             <Botao variante="primario" onClick={() => setDia("pre-jogo")}>
-              {t("Dia de jogo: {nomeCurto}", {
-                nomeCurto: adversarioHoje?.nomeCurto ?? hoje.adversario,
-              })}
+              {hoje.selecao
+                ? t("Jogo da seleção: {nomeCurto}", {
+                    nomeCurto: adversarioHoje?.nomeCurto ?? hoje.adversario,
+                  })
+                : t("Dia de jogo: {nomeCurto}", {
+                    nomeCurto: adversarioHoje?.nomeCurto ?? hoje.adversario,
+                  })}
             </Botao>
           ) : (
             <>
@@ -308,8 +334,19 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         <section className="flex flex-col gap-3 rounded-md border-2 border-placar-borda bg-placar p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-placar text-3xl font-bold">
-              {nomeDoCompromisso(c, mundo, hoje)}:{" "}
-              {hoje.mando === "casa" ? t("contra o") : t("na casa do")} {adversarioHoje?.nomeCurto}
+              {hoje.selecao
+                ? t("{jogo}: {nos} x {eles}", {
+                    jogo: nomeDoCompromisso(c, mundo, hoje),
+                    nos:
+                      hoje.mando === "casa"
+                        ? (mundo.pais(hoje.selecao)?.nome ?? hoje.selecao)
+                        : (adversarioHoje?.nomeCurto ?? hoje.adversario),
+                    eles:
+                      hoje.mando === "casa"
+                        ? (adversarioHoje?.nomeCurto ?? hoje.adversario)
+                        : (mundo.pais(hoje.selecao)?.nome ?? hoje.selecao),
+                  })
+                : `${nomeDoCompromisso(c, mundo, hoje)}: ${hoje.mando === "casa" ? t("contra o") : t("na casa do")} ${adversarioHoje?.nomeCurto ?? ""}`}
             </h2>
             <div className="flex gap-2">
               <Botao onClick={() => setDia("hub")}>{t("Voltar")}</Botao>
@@ -348,7 +385,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                   <li key={id}>
                     {t("{jogador} ({motivo}) está {onde}.", {
                       jogador: nomeDoJogador(id),
-                      motivo: avisos.get(id) ?? t("indisponível"),
+                      motivo: avisosHoje.get(id) ?? t("indisponível"),
                       onde: titularesFora.includes(id) ? t("entre os titulares") : t("no banco"),
                     })}
                   </li>
@@ -366,10 +403,10 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
           )}
           <Tatica c={c} mudar={mudar} />
           <EditorEscalacao
-            jogadores={jogadores}
-            valor={escalacao}
-            onMudar={mudarEscalacao}
-            avisos={avisos}
+            jogadores={jogadoresHoje}
+            valor={escalacaoHoje}
+            onMudar={mudarEscalacaoHoje}
+            avisos={avisosHoje}
             indisponiveis={foraDeHoje}
             guardadas={c.formacoesSalvas}
             onGuardar={(f) =>
@@ -423,7 +460,12 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
               />
             )}
             {aba === "plantel" && <Plantel c={c} montado={montado} mudar={mudar} />}
-            {aba === "selecoes" && <Selecoes c={c} montado={montado} />}
+            {aba === "selecoes" && (
+              <div className="flex flex-col gap-5">
+                <MinhaSelecao c={c} montado={montado} mudar={mudar} />
+                <Selecoes c={c} montado={montado} />
+              </div>
+            )}
             {aba === "base" && <Base c={c} montado={montado} mudar={mudar} />}
             {aba === "mercado" && <Mercado c={c} montado={montado} mudar={mudar} />}
             {aba === "financas" && <Financas c={c} montado={montado} mudar={mudar} />}
@@ -545,7 +587,7 @@ function Inicio({
 }) {
   const { mundo } = montado;
   const proximo = proximoCompromisso(c);
-  const adv = proximo ? mundo.clube(proximo.adversario) : undefined;
+  const adv = proximo ? clubeOuSelecao(mundo, proximo.adversario) : undefined;
   const ultimos = agendaCompleta(c)
     .filter((x) => x.resultado)
     .slice(-5)
@@ -618,8 +660,8 @@ function Inicio({
                       {letra}
                     </span>
                     <span className="flex-1">
-                      {mundo.clube(x.adversario)?.nomeCurto} ({x.mando === "casa" ? "casa" : "fora"}
-                      )
+                      {clubeOuSelecao(mundo, x.adversario)?.nomeCurto} (
+                      {x.mando === "casa" ? "casa" : "fora"})
                     </span>
                     <span className="font-bold">
                       {pro} x {contra}
@@ -644,4 +686,18 @@ function Inicio({
       </div>
     </div>
   );
+}
+
+/** Escalação do motor no formato do editor (vagas copiadas, uma função por vaga). */
+function paraEditavel(e: Escalacao): EscalacaoEditavel {
+  const vagas = (e.vagas ?? FORMACOES[e.formacao === "personalizada" ? "4-4-2" : e.formacao]).map(
+    (v) => ({ ...v }),
+  );
+  return {
+    formacao: e.formacao,
+    vagas,
+    titulares: [...e.titulares],
+    reservas: [...e.reservas],
+    papeis: vagas.map((_, i) => e.papeis?.[i] ?? null),
+  };
 }

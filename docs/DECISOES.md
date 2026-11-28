@@ -852,3 +852,33 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - Com a escalação melhor, a CPU que vencia por um gol passou a segurar menos do que se não mexesse em nada.
   - Agora, na frente por um gol, ela cadencia o jogo a partir dos 75 minutos e só fecha a defesa (4-5-1) a partir dos 85, em vez de recuar no contra-ataque desde os 75.
   - O teste dessa reação passou de 250 para 750 jogos, porque com menos jogos a oscilação era maior que a margem.
+
+## Técnico de seleção (etapa 15b, 28/11/2026)
+
+- **Convites das seleções:**
+  - Chegam no dia 1 de cada mês, para quem tem reputação de 50 ou mais e ainda não comanda uma seleção. A chance é de 6%, ou 18% nos 90 dias depois de um título ou de uma meta cumprida.
+  - Vêm de seleções da força que a reputação alcança: a média dos 11 melhores da convocação fica de 12 pontos abaixo até 1 acima de "45 + metade da reputação". A seleção do país do clube tem mais chance.
+  - Valem por 21 dias e aparecem no painel do topo e nas notícias.
+- **Clube e seleção ao mesmo tempo:**
+  - Aceitar não tira o técnico do clube. Ele continua com o clube e passa a comandar também a seleção.
+  - Os jogos da seleção (oficiais e amistosos nas datas FIFA) entram na agenda e são jogados como os do clube: o pré-jogo tem a escalação própria da seleção (separada da do clube), o bloqueio de lesionados e a partida ao vivo.
+  - A tática é a mesma do clube.
+  - Um amistoso da seleção é marcado na véspera, então só aparece na agenda um dia antes.
+  - Num torneio de junho e julho com a liga em andamento, os dois jogos do mesmo dia são jogados um depois do outro.
+- **Convocação à mão:**
+  - Na aba Seleções, o técnico escolhe de 20 a 26 jogadores do país, com pelo menos 2 goleiros, entre os 30 mais fortes de cada posição, em qualquer clube do mundo.
+  - A lista vale em todo o jogo: nos jogos da seleção, na liberação dos convocados do clube e na convocação mostrada na aba.
+  - "Voltar à automática" devolve a lista dos 26 melhores. Quem sai do país ou se aposenta cai da lista sozinho.
+- **Confiança da federação:**
+  - Começa em 60. Vitória oficial dá +6 e amistoso +3. Derrota oficial tira 9 e amistoso 4. Empate em amistoso dá +1.
+  - Título dá +25 e reputação (+18 no mundial, +12 nos continentais).
+  - Abaixo de 15, a federação demite o técnico da seleção, com −3 de reputação; o clube não muda. O técnico também pode deixar a seleção quando quiser.
+  - A reputação ainda ganha 0,3 por vitória oficial e perde 0,2 por derrota.
+- **Lesões na seleção:** quem é do clube do técnico e se machuca jogando pela seleção volta lesionado. O desgaste e os jogos pela seleção seguem a regra da etapa 11e.
+- **Na tela:**
+  - O botão "Jogo da seleção" aparece no dia do jogo.
+  - A aba Seleções ganhou o quadro "Sua seleção": campanha, confiança, próximos jogos, convocação e os botões de escolher a lista, voltar à automática e deixar a seleção.
+  - O quadro do técnico mostra a seleção atual e as anteriores.
+  - Seleções aparecem com escudo nas cores do país nas listas de jogos, no calendário e na partida.
+- **Teste numa carreira real:** Flamengo e Brasil. A convocação à mão bloqueou abaixo do mínimo e passou com 22. No amistoso Argentina x Brasil, o lesionado de um clube da CPU travou o início até a troca; depois veio a vitória por 2 a 1, lançada na campanha.
+- **Para depois:** cartões e suspensões em jogos de seleção, o técnico só de seleção (sem clube) e o período sem emprego.

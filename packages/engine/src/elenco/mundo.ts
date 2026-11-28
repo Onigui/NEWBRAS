@@ -13,7 +13,23 @@ import type { Transferencia } from "../mercado/mercado";
 
 /** Marca do mundo da data: guarda o mundo do banco por trás dele. */
 const BASE = Symbol("mundo do banco");
-type MundoNaData = Mundo & { [BASE]: Mundo; evolucao?: EvolucaoDoMundo; data: string };
+type MundoNaData = Mundo & {
+  [BASE]: Mundo;
+  evolucao?: EvolucaoDoMundo;
+  data: string;
+  /** Todos os jogadores de uma nacionalidade, em qualquer clube. */
+  nacionalidade?: (pais: string) => readonly Jogador[];
+};
+
+/** Todos os jogadores de uma nacionalidade no mundo (em qualquer clube), sem ordem. */
+export function jogadoresDaNacionalidade(m: Mundo, pais: string): readonly Jogador[] {
+  const view = m as Partial<MundoNaData>;
+  if (view.nacionalidade) return view.nacionalidade(pais);
+  const lista: Jogador[] = [];
+  for (const clube of m.clubes ?? [])
+    for (const j of m.elenco(clube.id)) if (j.nacionalidade === pais) lista.push(j);
+  return lista;
+}
 
 const evolucoes = new WeakMap<Mundo, Map<string, EvolucaoDoMundo>>();
 /** Jogadores de cada nacionalidade e as convocações já feitas, numa marca do mundo. */
@@ -57,6 +73,8 @@ export interface CarreiraParaMundo {
   garotosCpu?: readonly JogadorDaBase[];
   /** Garotos da CPU que já estavam no clube quando o técnico chegou (ficam). */
   herdados?: readonly string[];
+  /** Seleção do técnico, com a convocação escolhida à mão (se houver). */
+  selecao?: { pais: string; convocados?: readonly string[] };
 }
 
 /** O jogador com a força ajustada pelos minutos (os atributos acompanham na mesma proporção). */
@@ -101,7 +119,9 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
   const promovidos = c.promovidos ?? [];
   const transferencias = c.transferencias ?? [];
   const garotos = (c.garotosCpu ?? []).filter((g) => g.entrada <= data);
+  const convocadosDoTecnico = c.selecao?.convocados?.length ? c.selecao : undefined;
   if (
+    !convocadosDoTecnico &&
     !evolui &&
     !saidas.size &&
     !ajustes.size &&
@@ -173,8 +193,8 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     return r;
   };
   let marca: string | undefined;
-  const convocacao = (pais: string): readonly Jogador[] => {
-    if (!evolucao || !evolui) return base.elenco(pais);
+  const cacheDaData = () => {
+    if (!evolucao || !evolui) return undefined;
     marca ??= evolucao.marca(data);
     let cache = convocacoes.get(evolucao);
     if (!cache || cache.marca !== marca) {
@@ -188,6 +208,31 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
       cache = { marca, porNacionalidade, feitas: new Map() };
       convocacoes.set(evolucao, cache);
     }
+    return cache;
+  };
+  const daNacionalidade = (pais: string): readonly Jogador[] => {
+    const cache = cacheDaData();
+    if (cache) return cache.porNacionalidade.get(pais) ?? [];
+    const lista: Jogador[] = [];
+    for (const clube of base.clubes ?? [])
+      for (const j of base.elenco(clube.id)) if (j.nacionalidade === pais) lista.push(j);
+    return lista;
+  };
+  // Convocação à mão do técnico: na ordem das posições e da força, como a automática.
+  const ORDEM = { G: 0, Z: 1, L: 2, M: 3, A: 4 } as const;
+  let escolhidos: readonly Jogador[] | undefined;
+  const convocacaoDoTecnico = (): readonly Jogador[] =>
+    (escolhidos ??= (convocadosDoTecnico?.convocados ?? [])
+      .map((id) => view.jogador(id))
+      .filter((j): j is Jogador => !!j && j.nacionalidade === convocadosDoTecnico?.pais)
+      .sort((a, b) => ORDEM[a.posicao] - ORDEM[b.posicao] || b.forca - a.forca));
+  const convocacao = (pais: string): readonly Jogador[] => {
+    if (convocadosDoTecnico && pais === convocadosDoTecnico.pais) {
+      const lista = convocacaoDoTecnico();
+      if (lista.length) return lista;
+    }
+    const cache = cacheDaData();
+    if (!cache) return base.elenco(pais);
     let lista = cache.feitas.get(pais);
     if (!lista) {
       lista = convocar(pais, cache.porNacionalidade.get(pais) ?? []);
@@ -241,6 +286,7 @@ export function mundoNaData(m: Mundo, c: CarreiraParaMundo, data: string): Mundo
     [BASE]: base,
     ...(evolucao ? { evolucao } : {}),
     data,
+    nacionalidade: daNacionalidade,
     jogador: (id) => {
       let j = jogadorBruto(id);
       const t = ultima.get(id);

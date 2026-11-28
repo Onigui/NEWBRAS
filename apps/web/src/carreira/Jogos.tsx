@@ -14,6 +14,7 @@ import {
   problemasDoAmistoso,
   somarDias,
   type Carreira,
+  clubeOuSelecao,
 } from "@newbras/engine";
 import { Escudo } from "../components/Escudo";
 import { procurar } from "../editor/indices";
@@ -40,7 +41,7 @@ export function Jogos({
         {agenda.length === 0 && <p className="text-sm text-suave">{t("Nenhum jogo marcado.")}</p>}
         <ul className="flex flex-col">
           {agenda.map((x) => {
-            const adv = mundo.clube(x.adversario);
+            const adv = clubeOuSelecao(mundo, x.adversario);
             const r = x.resultado;
             const nosso = mundo.clube(c.clube);
             const [casa, fora] = x.mando === "casa" ? [nosso, adv] : [adv, nosso];
@@ -123,7 +124,7 @@ export function Jogos({
                 <div key={x.id} className="mb-2">
                   <p>
                     {t("{clube} em {data}, campo neutro, cachê de {cache} (responda até {ate}).", {
-                      clube: mundo.clube(x.adversario)?.nomeCurto ?? x.adversario,
+                      clube: clubeOuSelecao(mundo, x.adversario)?.nomeCurto ?? x.adversario,
                       data: dataCurta(x.data),
                       cache: x.cache.toLocaleString(locale()),
                       ate: dataCurta(x.ate),
