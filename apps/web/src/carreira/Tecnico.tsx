@@ -4,6 +4,7 @@
  */
 import {
   aceitarConvite,
+  clubeOuSelecao,
   dataCurta,
   faixaDaReputacao,
   nivelAlcancado,
@@ -55,8 +56,38 @@ export function PainelDeEmprego({
         </p>
       )}
       {convites.map((x) => {
-        const clube = mundo.clube(x.clube);
+        const clube = clubeOuSelecao(mundo, x.clube);
         if (!clube) return null;
+        if (x.tipo === "selecao") {
+          if (p.demitido) return null;
+          return (
+            <div key={x.id} className="flex flex-wrap items-center gap-2">
+              <Escudo clube={clube} tamanho={20} />
+              <span className="flex-1">
+                {t(
+                  "Convite: a federação de {pais} (seleção de força {forca}) quer você como técnico, junto com o clube. Responda até {ate}.",
+                  { pais: clube.nome, forca: clube.nivel, ate: dataCurta(x.ate) },
+                )}
+              </span>
+              <button
+                type="button"
+                className={botao}
+                disabled={!!c.selecao}
+                title={c.selecao ? t("Deixe a seleção atual antes de assumir outra.") : undefined}
+                onClick={() => mudar((y) => aceitarConvite(y, mundo, x.id))}
+              >
+                {t("Assumir a seleção")}
+              </button>
+              <button
+                type="button"
+                className={botao}
+                onClick={() => mudar((y) => recusarConvite(y, mundo, x.id))}
+              >
+                {t("Recusar")}
+              </button>
+            </div>
+          );
+        }
         return (
           <div key={x.id} className="flex flex-wrap items-center gap-2">
             <Escudo clube={clube} tamanho={20} />
@@ -137,6 +168,14 @@ export function QuadroDoTecnico({ c, montado }: { c: Carreira; montado: MundoMon
           nivel: nivelAlcancado(p.reputacao),
         })}
       </p>
+      {c.selecao && (
+        <p className="mt-1 text-xs">
+          {t("Também comanda a seleção de {pais} (confiança da federação {confianca}).", {
+            pais: mundo.pais(c.selecao.pais)?.nome ?? c.selecao.pais,
+            confianca: Math.round(c.selecao.confianca),
+          })}
+        </p>
+      )}
       <ul className="mt-2 flex flex-col gap-0.5 text-xs">
         {[...p.passagens].reverse().map((x) => (
           <li key={`${x.clube}-${x.inicio}`}>
@@ -144,6 +183,23 @@ export function QuadroDoTecnico({ c, montado }: { c: Carreira; montado: MundoMon
               clube: mundo.clube(x.clube)?.nomeCurto ?? x.clube,
               inicio: dataCurta(x.inicio),
               fim: x.fim ? dataCurta(x.fim) : t("hoje"),
+              jogos: x.jogos,
+              v: x.vitorias,
+              e: x.empates,
+              d: x.derrotas,
+            })}
+            {x.titulos.length > 0 && (
+              <span className="text-canarinho"> · {x.titulos.join(", ")}</span>
+            )}
+            {x.motivo === "demitido" && <span className="text-[#ff8a7a]"> · {t("demitido")}</span>}
+          </li>
+        ))}
+        {[...(c.selecoesAnteriores ?? [])].reverse().map((x) => (
+          <li key={`${x.pais}-${x.inicio}`}>
+            {t("Seleção de {pais} ({inicio} a {fim}): {jogos} jogos, {v}V {e}E {d}D", {
+              pais: mundo.pais(x.pais)?.nome ?? x.pais,
+              inicio: dataCurta(x.inicio),
+              fim: dataCurta(x.fim),
               jogos: x.jogos,
               v: x.vitorias,
               e: x.empates,

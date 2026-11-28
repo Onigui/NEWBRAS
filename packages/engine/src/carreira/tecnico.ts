@@ -21,6 +21,7 @@ import { diasEntre, somarDias } from "./datas";
 import { caixaDaCpu } from "../financas/financas";
 import { evolucaoDe } from "../elenco/mundo";
 import { Rng } from "../rng";
+import { assumirSelecao } from "./selecaoDoTecnico";
 import type { Transferencia } from "../mercado/comum";
 
 export interface PassagemDoTecnico {
@@ -41,6 +42,8 @@ export interface ConviteDeEmprego {
   data: string;
   ate: string;
   motivo: "reputacao" | "demissao";
+  /** Convite de uma seleção (o país em `clube`): o técnico assume sem deixar o clube. */
+  tipo?: "selecao";
 }
 
 export interface PerfilDoTecnico {
@@ -305,6 +308,8 @@ export function aceitarConvite(c: Carreira, mundo: Mundo, id: string): Carreira 
   const p = perfilDe(c, mundo);
   const convite = (p.convites ?? []).find((x) => x.id === id);
   if (!convite || (!p.demitido && convite.ate < c.data)) return c;
+  if (convite.tipo === "selecao")
+    return p.demitido || c.selecao ? c : assumirSelecao(c, mundo, convite.clube);
   return trocarDeClube(c, mundo, convite.clube, p.demitido ? "demitido" : "convite");
 }
 

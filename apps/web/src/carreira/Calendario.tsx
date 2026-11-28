@@ -9,6 +9,7 @@ import {
   marcasDoMes,
   mesEAno,
   type Carreira,
+  clubeOuSelecao,
 } from "@newbras/engine";
 import { Escudo } from "../components/Escudo";
 import { Botao } from "../editor/ui";
@@ -77,7 +78,7 @@ export function Calendario({
         ))}
         {dias.map((d) => {
           const jogo = jogoNoDia.get(d.data);
-          const adv = jogo ? mundo.clube(jogo.adversario) : undefined;
+          const adv = jogo ? clubeOuSelecao(mundo, jogo.adversario) : undefined;
           const hoje = d.data === c.data;
           const livre = !jogo && d.data > c.data;
           return (
@@ -129,7 +130,8 @@ export function Calendario({
           {jogoNoDia.get(selecionado.data) ? (
             <p>
               {t("Jogo marcado contra o {nomeCurto}.", {
-                nomeCurto: mundo.clube(jogoNoDia.get(selecionado.data)!.adversario)?.nomeCurto,
+                nomeCurto: clubeOuSelecao(mundo, jogoNoDia.get(selecionado.data)!.adversario)
+                  ?.nomeCurto,
               })}
             </p>
           ) : selecionado.data > c.data ? (
