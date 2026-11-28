@@ -20,7 +20,8 @@
 import { marcar } from "@newbras/textos";
 import type { ResultadoPartida } from "../partida/tipos";
 import type { Carreira, Compromisso, EstadoJogador, Mundo, Noticia } from "./carreira";
-import { estadoDe } from "./carreira";
+import { estadoDe, indisponiveisNoJogo } from "./carreira";
+import { lesionado } from "../elenco/lesoes";
 import { diasEntre, somarDias } from "./datas";
 import { tabelaDoGrupo } from "../competicoes/competicao";
 import { moralDe } from "../elenco/vida";
@@ -307,9 +308,11 @@ export function conversasDepoisDoJogo(
 
   // Promessas: só os jogos oficiais contam.
   if (x.tipo === "oficial" && out.promessas?.length) {
+    // Quem não podia jogar (lesionado, suspenso, com a seleção) não conta o jogo na promessa.
+    const fora = indisponiveisNoJogo(c, mundo, x.competicao, x.data);
     const ficam: Promessa[] = [];
     for (const p of out.promessas) {
-      if (p.tipo === "negociar") {
+      if (p.tipo === "negociar" || fora.has(p.jogador)) {
         ficam.push(p);
         continue;
       }
@@ -393,6 +396,8 @@ export function conversasDepoisDoJogo(
     for (const j of elenco) {
       if (!livre(j.id)) continue;
       const e = estadoDe(out, j.id);
+      // O lesionado sabe da condição dele: não pede para jogar nem reclama de cansaço.
+      const machucado = lesionado(e, x.data);
       const moral = moralDe(e);
       const jogou = jogaram.get(j.id);
       if (moral < 25 && !(out.aVenda ?? []).includes(j.id))
@@ -400,9 +405,10 @@ export function conversasDepoisDoJogo(
       const promessa =
         idadeEm(j.nascimento, x.data) <= 22 && j.potencial >= j.forca + 6 && e.semJogar >= 4;
       const esquecido = j.forca >= titularMedio - 3 && e.semJogar >= 6;
-      if (promessa || esquecido) candidatos.push({ id: j.id, tipo: "quer-jogar", peso: 0.4 });
+      if ((promessa || esquecido) && !machucado)
+        candidatos.push({ id: j.id, tipo: "quer-jogar", peso: 0.4 });
       const condicaoAntes = estadoDe(antes, j.id).condicao;
-      if (jogou && jogou.minutos >= 60 && condicaoAntes < 70)
+      if (jogou && jogou.minutos >= 60 && condicaoAntes < 70 && !machucado)
         candidatos.push({ id: j.id, tipo: "cansado", peso: 0.35 });
     }
     for (const k of candidatos) {
@@ -443,6 +449,15 @@ export function diaDaDiretoria(
   let r = c;
   const noticias: Noticia[] = [];
   let decisao = false;
+
+  // Quem se machucou com uma conversa de minutos ou de cansaço aberta deixa o assunto para depois.
+  const conversas = r.conversas ?? [];
+  const deLesionado = (x: Conversa) =>
+    (x.tipo === "quer-jogar" || x.tipo === "cansado") &&
+    !!x.jogador &&
+    lesionado(r.jogadores[x.jogador], data);
+  if (conversas.some(deLesionado))
+    r = { ...r, conversas: conversas.filter((x) => !deLesionado(x)) };
 
   // Conversas sem resposta no prazo.
   const vencidas = (r.conversas ?? []).filter((x) => x.prazo < data);

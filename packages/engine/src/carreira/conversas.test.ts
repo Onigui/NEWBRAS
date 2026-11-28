@@ -138,6 +138,44 @@ describe("conversas com os jogadores", () => {
     expect(c.noticias.some((n) => n.texto.includes("se sente enganado"))).toBe(true);
   });
 
+  it("o lesionado sabe da condição: não conta jogo na promessa e não pede para jogar", () => {
+    const m = mundo();
+    const lesao = { nome: "Lesão muscular", ate: "2027-03-30", dias: 30 };
+    const promessa = {
+      jogador: "n3",
+      tipo: "minutos" as const,
+      feita: "2027-02-01",
+      jogos: 0,
+      jogou: 0,
+    };
+    let c: Carreira = {
+      ...nova(m),
+      promessas: [promessa],
+      jogadores: { ...nova(m).jogadores, n3: { ...estadoDe(nova(m), "n3"), lesao, semJogar: 9 } },
+    };
+    for (let i = 0; i < 5; i++)
+      c = conversasDepoisDoJogo(
+        c,
+        c,
+        m,
+        jogo(`j${i}`, `2027-02-1${i}`),
+        resultado("casa", [["n0", 90]], [1, 0]),
+      ).carreira;
+    // A promessa espera a volta dele, e ele não abre conversa de minutos.
+    expect(c.promessas).toEqual([promessa]);
+    expect((c.conversas ?? []).some((x) => x.jogador === "n3")).toBe(false);
+    // Conversa de minutos aberta antes da lesão sai da lista.
+    const conversa: Conversa = {
+      id: "c9",
+      tipo: "quer-jogar",
+      jogador: "n3",
+      data: "2027-02-20",
+      prazo: "2027-02-27",
+    };
+    const r = diaDaDiretoria({ ...c, conversas: [conversa] }, m, "2027-02-21");
+    expect(r.carreira.conversas).toEqual([]);
+  });
+
   it("promessa cumprida: jogou 2 dos jogos seguintes", () => {
     const m = mundo();
     let c: Carreira = {

@@ -971,3 +971,9 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - Vermelha (espera uma ação): propostas pelos jogadores (Mercado), escalado lesionado, suspenso ou convocado para o próximo jogo (Escalação), convocação da seleção fora das regras (Seleções) e salários atrasados (Finanças).
   - Conversas, sondagens e convites de emprego já aparecem acima das abas, em qualquer uma delas.
 - **Banco e fora do jogo com posição e força:** a bolinha de quem está no banco ou fora do jogo mostra a melhor posição de campo dele (a sigla, como em campo) e a força num selo em cima, no lugar de só a força.
+- **Lesionado sabe da condição dele** (correção): o jogador lesionado reclamava de não jogar como se estivesse bem.
+  - Lesionado não conta jogo sem jogar: a conta zera na lesão e recomeça quando ele volta. Suspenso e convocado também não contam (a conta fica parada).
+  - Não abre conversa pedindo para jogar nem reclamando de cansaço, e a conversa desse tipo aberta antes da lesão sai da lista.
+  - A promessa de minutos e a de descanso esperam a volta dele: o jogo em que ele não podia jogar não conta.
+  - Sem a conta de jogos parados, o lesionado também não fica de mau humor por falta de jogo.
+  - `ENGINE_VERSION` 0.44.0.
