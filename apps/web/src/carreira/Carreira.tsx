@@ -19,6 +19,7 @@ import {
   partidaDoCompromisso,
   plantaoDoCompromisso,
   proximoCompromisso,
+  problemasDaConvocacao,
   registrarJogo,
   agendaCompleta,
   atualizarCarreira,
@@ -44,6 +45,7 @@ import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { AoVivo } from "../partida/AoVivo";
 import { Calendario } from "./Calendario";
 import { Competicoes } from "./Competicoes";
+import { Premios } from "./Premios";
 import { Jogos } from "./Jogos";
 import { Plantao } from "./Plantao";
 import { Plantel } from "./Plantel";
@@ -57,6 +59,7 @@ import { PainelDeEmprego, QuadroDoTecnico } from "./Tecnico";
 import { MinhaSelecao } from "./MinhaSelecao";
 import { reservasDaCompeticao } from "@newbras/data";
 import { PainelDoAvanco, useAvanco } from "./Avanco";
+import { avisosDasAbas, type AvisoDaAba } from "./avisosDasAbas";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
 import { useCarreira, type MundoMontado } from "./useCarreira";
@@ -72,7 +75,8 @@ type Aba =
   | "selecoes"
   | "base"
   | "mercado"
-  | "financas";
+  | "financas"
+  | "premios";
 const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "inicio", nome: t("Início"), tecla: "1" },
   { id: "plantel", nome: t("Plantel"), tecla: "2" },
@@ -84,6 +88,7 @@ const ABAS: { id: Aba; nome: string; tecla: string }[] = [
   { id: "base", nome: t("Base"), tecla: "8" },
   { id: "mercado", nome: t("Mercado"), tecla: "9" },
   { id: "financas", nome: t("Finanças"), tecla: "0" },
+  { id: "premios", nome: t("Prêmios"), tecla: "p" },
 ];
 
 const NOME_ESTILO: Record<Estilo, string> = {
@@ -221,6 +226,20 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   }, [avisos, jogadoresHoje, c, foraDeHoje]);
   const titularesFora = escalacaoHoje.titulares.filter((id) => id && foraDeHoje.has(id));
   const reservasFora = escalacaoHoje.reservas.filter((id) => foraDeHoje.has(id));
+  // Avisos nas abas: o que chegou desde a última visita e o que espera uma ação.
+  const avisosAbas = avisosDasAbas(c, mundo, {
+    escalacao: titularesFora.length + reservasFora.length,
+    selecao: c.selecao && problemasDaConvocacao(mundo.elenco(c.selecao.pais)).length ? 1 : 0,
+  });
+  // Abrir uma aba (e sair dela) marca o que ela tinha como visto.
+  useEffect(() => {
+    const marcarVista = () =>
+      mudar((x) =>
+        x.vistas?.[aba] === x.data ? x : { ...x, vistas: { ...x.vistas, [aba]: x.data } },
+      );
+    marcarVista();
+    return marcarVista;
+  }, [aba, mudar]);
   const nomeDoJogador = (id: string) => jogadoresHoje.find((j) => j.id === id)?.nome ?? id;
   const tirarIndisponiveis = () =>
     mudarEscalacaoHoje(
@@ -229,7 +248,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
       ),
     );
 
-  // F2 salva na hora; 1 a 9 e 0 trocam de aba (fora de campos de texto).
+  // F2 salva na hora; 1 a 9, 0 e P trocam de aba (fora de campos de texto).
   const salvarAgora = cr.salvarAgora;
   const tecla = useCallback(
     (e: KeyboardEvent) => {
@@ -239,7 +258,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
         return;
       }
       if (dia !== "hub" || (e.target as HTMLElement).closest("input, select, textarea")) return;
-      const a = ABAS.find((x) => x.tecla === e.key);
+      const a = ABAS.find((x) => x.tecla === e.key.toLowerCase());
       if (a) setAba(a.id);
     },
     [salvarAgora, dia],
@@ -444,6 +463,7 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                 className={`rounded-t-md px-4 py-2 text-sm font-bold ${aba === a.id ? "bg-placar text-cal" : "text-suave hover:text-cal"}`}
               >
                 {a.nome} <span className="text-xs font-normal opacity-60">{a.tecla}</span>
+                <AvisoNaAba aviso={aba === a.id ? undefined : avisosAbas[a.id]} />
               </button>
             ))}
             <div className="ml-auto flex items-center gap-2 text-xs text-suave">
@@ -508,10 +528,23 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             {aba === "calendario" && <Calendario c={c} montado={montado} mudar={mudar} />}
             {aba === "jogos" && <Jogos c={c} montado={montado} mudar={mudar} />}
             {aba === "competicoes" && <Competicoes c={c} montado={montado} />}
+            {aba === "premios" && <Premios c={c} montado={montado} />}
           </section>
         </>
       )}
     </div>
+  );
+}
+
+function AvisoNaAba({ aviso }: { aviso: AvisoDaAba | undefined }) {
+  if (!aviso) return null;
+  return (
+    <span
+      className={`ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 align-middle text-[10px] font-bold ${aviso.urgente ? "bg-[#e74c3c] text-white" : "bg-canarinho text-placar"}`}
+      title={aviso.urgente ? t("Espera uma ação sua") : t("Novidades desde a última visita")}
+    >
+      {aviso.n > 9 ? "9+" : aviso.n}
+    </span>
   );
 }
 

@@ -97,6 +97,7 @@ import {
   titulosNaCarreira,
   type PerfilDoTecnico,
 } from "./tecnico";
+import { melhorDoMundo, premiarTemporadas, type Premios } from "./premios";
 import {
   conversasDepoisDoJogo,
   diaDaDiretoria,
@@ -309,6 +310,10 @@ export interface Carreira {
   perfil?: PerfilDoTecnico;
   /** Garotos que a CPU já tinha subido no clube quando o técnico chegou (ficam no elenco). */
   herdados?: string[];
+  /** Prêmios das ligas e o melhor do mundo de cada ano (etapa 15c). */
+  premios?: Premios;
+  /** Última data em que o técnico abriu cada aba (o que chegou depois vira aviso na aba). */
+  vistas?: Record<string, string>;
 }
 
 /** O que a carreira precisa saber do mundo. */
@@ -659,6 +664,8 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
   const antes = c.competicoes;
   let competicoes = jogarDia(mundo, c.competicoes, c.data, c.semente);
   const data = somarDias(c.data, 1);
+  // As temporadas que acabam hoje ainda inteiras (para os prêmios).
+  const jogadas = competicoes;
   const virada = virarTemporadas(mundo, competicoes, data, c.semente);
   competicoes = virada.estado;
   const clube = mundo.clube(c.clube);
@@ -855,7 +862,19 @@ export function avancarDia(c: Carreira, mundoDoBanco: Mundo): Avanco {
           ].slice(0, MAX_NOTICIAS),
         }
       : convitesSel.carreira;
-  const financasDoDia = diaDasFinancas(comSelecao, mundoAmanha, data);
+  // Prêmios das ligas que acabaram (Bola de Ouro, Bola de Prata, revelação, técnico) e, no 1º de
+  // janeiro, o melhor do mundo e os rankings (etapa 15c).
+  const daLiga = premiarTemporadas(comSelecao, mundo, jogadas, virada.encerradas, data);
+  const doMundo = melhorDoMundo(daLiga.carreira, mundo, data);
+  const premiacaoDoAno = [...doMundo.noticias, ...daLiga.noticias];
+  for (const n of premiacaoDoAno) novidades.unshift(n);
+  const comPremios = premiacaoDoAno.length
+    ? {
+        ...doMundo.carreira,
+        noticias: [...premiacaoDoAno, ...doMundo.carreira.noticias].slice(0, MAX_NOTICIAS),
+      }
+    : doMundo.carreira;
+  const financasDoDia = diaDasFinancas(comPremios, mundoAmanha, data);
   // Diretoria e conversas: metas, prazos, avaliação mensal, cobranças.
   const emprego = data.endsWith("-01")
     ? convitesDeEmprego(esquecimento(financasDoDia.carreira, mundoAmanha, data), mundoAmanha, data)
