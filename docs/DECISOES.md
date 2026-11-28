@@ -936,3 +936,38 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - A CPU também escala com o banco da competição.
   - O limite de 5 substituições, em até 3 paradas, não mudou.
 - `ENGINE_VERSION` 0.42.0.
+
+## Prêmios da temporada e rankings (etapa 15c, 28/11/2026)
+
+- **Prêmios de cada liga principal** (as 207 ligas de 1ª divisão do mundo), quando a temporada do país termina:
+  - **Bola de Ouro:** o craque da temporada, a maior nota.
+  - **Bola de Prata:** a seleção da temporada num 4-3-3 (1 goleiro, 2 laterais, um de cada lado quando dá, 2 zagueiros, 3 do meio e 3 atacantes).
+  - **Artilheiro** da liga, **revelação** (o melhor com até 21 anos) e **técnico da temporada**: quem terminou mais acima do que o elenco prometia (posição esperada pela força menos a posição final; o campeão ganha 3). O técnico humano premiado ganha 3 de reputação.
+- **A nota da temporada:**
+  - Força do jogador, mais gols e assistências nas competições do país (atacante 0,3 por gol e 0,15 por assistência, até 10; meio 0,35 e 0,25; defensor 0,5 e 0,3, até 6).
+  - Campanha do clube: até 3,5 pela posição, mais 1 do campeão.
+  - Goleiros e defensores (e um pouco o meio): gols sofridos do clube abaixo da média da liga, de −2 a +4.
+  - Um sorteio de ±1,5 para a votação não ser sempre igual.
+- **Só concorre quem jogou:** no clube do técnico, quem esteve em 40% dos jogos da liga (contando os jogos desde o último prêmio). Na CPU, os titulares pela força: 1 goleiro, 3 laterais, 3 zagueiros, 5 do meio e 4 atacantes de cada clube. O goleiro reserva não leva prêmio.
+- **Melhor do mundo:** todo 1º de janeiro, entre os premiados das ligas no ano, pela nota, a força da liga (cada ponto acima de 70 vale 0,6), a Bola de Ouro (+2), títulos de clube no ano (Champions, Libertadores e Mundial +4; outras continentais +1,5) e da seleção (Copa do Mundo +6; Euro, Copa América e as outras +3). Sai a lista dos 10. O ano em que a carreira começou no meio fica sem prêmio, porque as ligas não foram jogadas inteiras.
+- **Ranking de clubes:**
+  - Pontos das últimas 5 temporadas, a mais recente com peso 1 e a mais antiga 0,2.
+  - Liga: 12, 10, 8, 7, 6, 5, 4, 3, 2 e 1 do 1º ao 10º, vezes o peso da liga pela força (de 0,3 a 1,5; a Premier League perto do topo). País com Apertura e Clausura divide os pontos entre as duas.
+  - Títulos (campeão e vice): Champions e Libertadores 20 e 10; outras continentais 12 e 6; Mundial de Clubes 15 e 7; Intercontinental 8 e 4; copa nacional 10 e 5; estadual 5; supercopas 3 a 4.
+  - Os anos antes da carreira valem o estimado pelo nível do clube (0,6 por ponto acima de 50), até a temporada de verdade do país entrar.
+- **Ranking de técnicos:**
+  - Pela reputação (0 a 100), com as mesmas faixas do técnico humano.
+  - Clube grande tem técnico consagrado: o da CPU parte do nível do clube menos 15 (até 82). Soma os títulos do clube na carreira (os mesmos pesos da reputação do humano), que se apagam 15% por ano, e 3 por técnico da temporada.
+  - Os técnicos da CPU têm nome gerado pelo país do clube, o mesmo durante toda a carreira (o do banco, se o clube tiver).
+- **Notícias:** Bola de Ouro, revelação e técnico da temporada das ligas do país do técnico. Para os jogadores do técnico: a Bola de Prata e o top 10 do mundo, e os premiados ganham 8 de moral. O melhor do mundo e a posição do técnico no ranking mundial (subiu ou caiu) saem no 1º de janeiro.
+- `ENGINE_VERSION` 0.43.0 (a moral dos premiados e a reputação do técnico da temporada mudam a carreira).
+- **Na tela:** aba Prêmios (tecla P), com o ranking mundial ou de um país, de técnicos ou de clubes (os 30 primeiros e a linha do técnico), os prêmios de cada liga das últimas 5 temporadas e o melhor do mundo de cada ano.
+
+## Pedidos do dono em 28/11/2026 (madrugada)
+
+- **Avanço do calendário mais lento:** cada dia fica na tela 5 segundos na velocidade lenta, 3 na normal e 1 na rápida (eram 0,9, 0,45 e 0,15). Uma barra abaixo da folha do calendário mostra o tempo do dia passando.
+- **Avisos nas abas:** a aba responsável ganha uma bolinha com o número do que chegou desde a última visita ou espera uma ação. Abrir a aba, e sair dela, marca o que ela tinha como visto (a data fica na carreira).
+  - Amarela (novidade): relatório novo do olheiro (Base), notícias do elenco (Plantel), pré-contrato assinado com um jogador do técnico (Mercado), convites de excursão (Jogos), eventos e oferta de nome do estádio (Finanças), prêmios das ligas do país e o melhor do mundo (Prêmios).
+  - Vermelha (espera uma ação): propostas pelos jogadores (Mercado), escalado lesionado, suspenso ou convocado para o próximo jogo (Escalação), convocação da seleção fora das regras (Seleções) e salários atrasados (Finanças).
+  - Conversas, sondagens e convites de emprego já aparecem acima das abas, em qualquer uma delas.
+- **Banco e fora do jogo com posição e força:** a bolinha de quem está no banco ou fora do jogo mostra a melhor posição de campo dele (a sigla, como em campo) e a força num selo em cima, no lugar de só a força.

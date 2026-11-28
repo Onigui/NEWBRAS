@@ -20,7 +20,12 @@ import { t } from "@newbras/textos";
 import { Botao } from "../editor/ui";
 
 export type VelocidadeDoAvanco = "lenta" | "normal" | "rapida";
-const ESPERA: Record<VelocidadeDoAvanco, number> = { lenta: 900, normal: 450, rapida: 150 };
+/** Quanto tempo cada dia fica na tela antes de virar a folha. */
+export const ESPERA: Record<VelocidadeDoAvanco, number> = {
+  lenta: 5000,
+  normal: 3000,
+  rapida: 1000,
+};
 
 /** O que pede a atenção do técnico: quando cresce, o avanço para. */
 function pendencias(c: Carreira): number {
@@ -132,6 +137,15 @@ export function PainelDoAvanco({ c, avanco }: { c: Carreira; avanco: Avanco }) {
           <span className="font-placar text-5xl leading-tight font-extrabold">{dia}</span>
           <span className="pb-1 text-xs">{resto.join(", ").replace(/^\d+ de /, "")}</span>
         </div>
+        {avanco.ativo && (
+          <div className="h-1 w-28 overflow-hidden rounded bg-white/10" aria-hidden>
+            <div
+              key={`${c.data}:${avanco.velocidade}`}
+              className="dia-passando h-1 bg-canarinho"
+              style={{ animationDuration: `${ESPERA[avanco.velocidade]}ms` }}
+            />
+          </div>
+        )}
         {faltam !== null && (
           <p className="text-xs text-suave">
             {faltam > 0 ? t("{n} dias para o próximo jogo", { n: faltam }) : t("Hoje tem jogo")}

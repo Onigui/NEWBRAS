@@ -24,12 +24,18 @@ import {
   papeisPossiveis,
   papelValido,
   posicaoDaVaga,
+  posicoesNaturais,
   type PapelEmCampo,
   type Posicao,
 } from "@newbras/data";
 import { MarcacoesCampo } from "./Pitch";
 import { HUMOR } from "../partida/Resumo";
 import { t } from "@newbras/textos";
+
+/** A melhor posição de campo do jogador (a sigla na bolinha do banco e de quem está fora do jogo). */
+function melhorPosicao(j: JogadorPartida): string {
+  return j.posicoesCampo?.[0] ?? posicoesNaturais(j)[0] ?? j.posicao;
+}
 
 const COR: Record<Posicao, string> = {
   G: "#f4c430",
@@ -104,7 +110,7 @@ interface Props {
 /** Distância (em metros) para o jogador solto contar como em cima de outro. */
 const RAIO_DA_TROCA = 4;
 /** Primeira fileira do banco (no desenho) e a distância entre as fileiras. */
-const BANCO_Y = 83;
+const BANCO_Y = 85;
 const ENTRE_FILEIRAS = 12;
 /** Jogadores por fileira abaixo do campo. */
 const POR_FILEIRA = 12;
@@ -130,7 +136,7 @@ function lugaresAbaixo(
   ] as const) {
     if (!lista.length && grupo === "fora") continue;
     // O título de cada grupo pede um respiro acima da primeira fileira dele.
-    if (grupo === "fora" && fileiras.length) y += 2;
+    if (grupo === "fora" && fileiras.length) y += 4;
     for (let i = 0; i < Math.max(1, lista.length); i += POR_FILEIRA) {
       const fileira = lista.slice(i, i + POR_FILEIRA);
       const passo = Math.min(9, 101 / Math.max(1, fileira.length));
@@ -516,9 +522,9 @@ export function EditorFormacao({
             <g>
               <rect
                 x={-4}
-                y={BANCO_Y - 7.5}
+                y={BANCO_Y - 9.5}
                 width={113}
-                height={altura - BANCO_Y + 9}
+                height={altura - BANCO_Y + 11}
                 rx={1.5}
                 fill="#0f1922"
                 opacity={0.85}
@@ -528,7 +534,7 @@ export function EditorFormacao({
                   <text
                     key={`r${f.y}`}
                     x={-2.5}
-                    y={f.y - 4.6}
+                    y={f.y - 6.6}
                     fontSize={1.8}
                     fontWeight={700}
                     fill="var(--color-cal)"
@@ -581,12 +587,32 @@ export function EditorFormacao({
                     <text
                       y={0.7}
                       textAnchor="middle"
-                      fontSize={1.8}
+                      fontSize={melhorPosicao(j).length > 2 ? 1.5 : 1.9}
                       fontWeight={800}
                       fill="var(--color-placar)"
                     >
-                      {j.forca}
+                      {melhorPosicao(j)}
                     </text>
+                    <g transform="translate(1.9 -3.5)">
+                      <rect
+                        x={-0.2}
+                        y={-1.7}
+                        width={3.9}
+                        height={2.4}
+                        rx={0.6}
+                        fill="var(--color-placar)"
+                      />
+                      <text
+                        x={1.75}
+                        y={0.1}
+                        textAnchor="middle"
+                        fontSize={1.7}
+                        fontWeight={800}
+                        fill="var(--color-cal)"
+                      >
+                        {j.forca}
+                      </text>
+                    </g>
                     {avisos?.has(j.id) && <PontoDeAviso dx={-2.6} dy={-2.6} />}
                     <text
                       y={4.8}
@@ -608,6 +634,15 @@ export function EditorFormacao({
               return j ? (
                 <g transform={`translate(${doBanco.x} ${doBanco.y})`} pointerEvents="none">
                   <circle r={2.8} fill={COR[j.posicao]} stroke="#ffffff" strokeWidth={0.5} />
+                  <text
+                    y={0.8}
+                    textAnchor="middle"
+                    fontSize={melhorPosicao(j).length > 2 ? 1.8 : 2.2}
+                    fontWeight={800}
+                    fill="var(--color-placar)"
+                  >
+                    {melhorPosicao(j)}
+                  </text>
                   <text
                     y={5.5}
                     textAnchor="middle"
