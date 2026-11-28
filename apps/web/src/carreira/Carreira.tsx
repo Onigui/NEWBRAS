@@ -55,6 +55,7 @@ import { Sondagens } from "./Sondagens";
 import { Conversas, QuadroDaDiretoria } from "./Conversas";
 import { PainelDeEmprego, QuadroDoTecnico } from "./Tecnico";
 import { MinhaSelecao } from "./MinhaSelecao";
+import { reservasDaCompeticao } from "@newbras/data";
 import { PainelDoAvanco, useAvanco } from "./Avanco";
 import { exportarCarreira } from "./salvamentos";
 import { TelaDeEspera } from "./TelaDeEspera";
@@ -166,9 +167,13 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
     if (c.formato !== FORMATO_CARREIRA || !c.competicoes) mudar((x) => atualizarCarreira(x, mundo));
   }, [c.formato, c.competicoes, mudar, mundo]);
 
-  const escalacao: EscalacaoEditavel = useMemo(
-    () => paraEditavel(escalacaoDoTecnico(c, jogadores)),
-    [c, jogadores],
+  // Banco do próximo jogo: a regra da competição dele (amistoso: 12).
+  const competicaoDoProximo = proximo?.competicao
+    ? mundo.competicao(proximo.competicao)
+    : undefined;
+  const bancoDoProximo = reservasDaCompeticao(competicaoDoProximo);
+  const escalacao: EscalacaoEditavel = paraEditavel(
+    escalacaoDoTecnico(c, jogadores, new Set(), bancoDoProximo),
   );
   const mudarEscalacao = (v: EscalacaoEditavel) => mudar((x) => ({ ...x, escalacao: v }));
 
@@ -179,9 +184,10 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
     return pais ? elencoParaPartida(c, mundo, pais) : jogadores;
   }, [c, mundo, jogadores]);
   const salvaHoje = selecaoHoje ? (c.selecao?.escalacao ?? null) : c.escalacao;
-  const escalacaoHoje: EscalacaoEditavel = useMemo(
-    () => paraEditavel(escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje)),
-    [salvaHoje, jogadoresHoje],
+  const competicaoDeHoje = hoje?.competicao ? mundo.competicao(hoje.competicao) : undefined;
+  const bancoDeHoje = reservasDaCompeticao(competicaoDeHoje);
+  const escalacaoHoje: EscalacaoEditavel = paraEditavel(
+    escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje, new Set(), bancoDeHoje),
   );
   const mudarEscalacaoHoje = (v: EscalacaoEditavel) =>
     selecaoHoje
@@ -218,7 +224,9 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
   const nomeDoJogador = (id: string) => jogadoresHoje.find((j) => j.id === id)?.nome ?? id;
   const tirarIndisponiveis = () =>
     mudarEscalacaoHoje(
-      paraEditavel(escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje, foraDeHoje)),
+      paraEditavel(
+        escalacaoDoTecnico({ escalacao: salvaHoje }, jogadoresHoje, foraDeHoje, bancoDeHoje),
+      ),
     );
 
   // F2 salva na hora; 1 a 9 e 0 trocam de aba (fora de campos de texto).
@@ -411,6 +419,8 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
             jogadores={jogadoresHoje}
             valor={escalacaoHoje}
             onMudar={mudarEscalacaoHoje}
+            tamanhoBanco={bancoDeHoje}
+            {...(competicaoDeHoje ? { competicaoDoBanco: competicaoDeHoje.nome } : {})}
             avisos={avisosHoje}
             indisponiveis={foraDeHoje}
             guardadas={c.formacoesSalvas}
@@ -481,6 +491,8 @@ function TelaCarreira({ cr, onSair }: { cr: Cr; onSair: () => void }) {
                   jogadores={jogadores}
                   valor={escalacao}
                   onMudar={mudarEscalacao}
+                  tamanhoBanco={bancoDoProximo}
+                  {...(competicaoDoProximo ? { competicaoDoBanco: competicaoDoProximo.nome } : {})}
                   avisos={avisos}
                   indisponiveis={foraDeHoje}
                   guardadas={c.formacoesSalvas}

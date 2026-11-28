@@ -260,6 +260,8 @@ export const Competicao = z
     escopo: Escopo,
     /** Divisão da liga (1 = principal). */
     divisao: z.int().min(1).max(10).optional(),
+    /** Reservas no banco (sem isso, vale a regra do país ou da confederação em `reservas.ts`). */
+    reservas: z.int().min(3).max(15).optional(),
     /** De quantos em quantos anos acontece, e um ano de referência (ex.: Copa do Mundo a cada 4 anos desde 2026). */
     periodicidade: z
       .object({ aCadaAnos: z.int().min(1).max(4), anoBase: z.int().min(1900) })

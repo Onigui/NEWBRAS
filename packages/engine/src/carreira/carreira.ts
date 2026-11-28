@@ -15,6 +15,7 @@ import type {
   Pais,
   Patch,
 } from "@newbras/data";
+import { RESERVAS_PADRAO, reservasDaCompeticao } from "@newbras/data";
 import { convocar } from "../selecoes/convocacao";
 import {
   avancarCompeticao,
@@ -1011,10 +1012,14 @@ export function escalacaoDoTecnico(
   c: Pick<Carreira, "escalacao">,
   jogadores: readonly JogadorPartida[],
   indisponiveis: ReadonlySet<string> = new Set(),
+  tamanhoDoBanco: number = RESERVAS_PADRAO,
 ): Escalacao {
   const salva = c.escalacao;
   const vagas = salva?.vagas ?? FORMACOES["4-4-2"];
-  const automatica = escalacaoAutomatica(jogadores, salva ? vagas : "4-4-2", { indisponiveis });
+  const automatica = escalacaoAutomatica(jogadores, salva ? vagas : "4-4-2", {
+    indisponiveis,
+    reservas: tamanhoDoBanco,
+  });
   if (!salva) return automatica;
   const ids = new Set(jogadores.filter((j) => !indisponiveis.has(j.id)).map((j) => j.id));
   const usados = new Set<string>();
@@ -1042,7 +1047,7 @@ export function escalacaoDoTecnico(
   const reservas = [...salva.reservas, ...automatica.reservas]
     .filter((id) => ids.has(id) && !usados.has(id))
     .filter((id, i, l) => l.indexOf(id) === i)
-    .slice(0, 9);
+    .slice(0, tamanhoDoBanco);
   return {
     formacao: salva.formacao === "personalizada" ? "personalizada" : salva.formacao,
     vagas,
@@ -1062,6 +1067,8 @@ export function timeDoCompromisso(
 ): TimePartida {
   const clube = clubeOuSelecao(mundo, clubeId);
   const jogadores = elencoParaPartida(c, mundo, clubeId);
+  // O banco é o da competição (Premier League 9, LaLiga 12, Serie A 15...).
+  const reservas = reservasDaCompeticao(competicao ? mundo.competicao(competicao) : undefined);
   const daSelecao = !!c.selecao && clubeId === c.selecao.pais;
   const humano = clubeId === c.clube || daSelecao;
   const suspensos = daSelecao
@@ -1075,10 +1082,15 @@ export function timeDoCompromisso(
     jogadores,
     // A CPU escala pela nota na vaga, já descontando cansaço e humor: é o rodízio.
     escalacao: daSelecao
-      ? escalacaoDoTecnico({ escalacao: c.selecao?.escalacao ?? null }, jogadores, suspensos)
+      ? escalacaoDoTecnico(
+          { escalacao: c.selecao?.escalacao ?? null },
+          jogadores,
+          suspensos,
+          reservas,
+        )
       : humano
-        ? escalacaoDoTecnico(c, jogadores, suspensos)
-        : escalacaoAutomatica(jogadores, "4-4-2"),
+        ? escalacaoDoTecnico(c, jogadores, suspensos, reservas)
+        : escalacaoAutomatica(jogadores, "4-4-2", { reservas }),
     tatica: humano ? c.tatica : TATICA_PADRAO,
     cpu: !humano,
     ...(humano && !daSelecao ? { moral: c.moral } : {}),

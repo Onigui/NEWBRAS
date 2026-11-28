@@ -904,3 +904,35 @@ Antecipado da Fase 15, no estilo do PES e do FIFA: o vestiário e a diretoria fa
   - **Transições e animações nos momentos importantes:** título (tela de campeão), jogo importante (final, decisão, clássico), troca entre o clube e a seleção, acesso e rebaixamento. A ideia é tirar o jogo do estático, como nos jogos grandes.
   - **Efeitos sonoros na partida:** apito de início, intervalo e fim, apito de cartão, comemoração e grito de gol, torcida reagindo ao perigo, como no Brasfoot. Com volume e opção de desligar.
   - A folha do calendário e a chegada das notícias já ganharam uma animação curta, que respeita a preferência do sistema por menos movimento. Ficam como base para a revisão visual.
+
+## Banco de reservas por competição (pedido do dono, 28/11/2026)
+
+- **O que mudou:** o banco era fixo em 9 em todo jogo. Agora cada competição tem o banco do regulamento dela, pesquisado para a temporada 2026/27.
+- **Ligas e copas nacionais** (a regra do país vale para liga, copas e estaduais):
+
+  | País           | Banco          | Fonte                                                               |
+  | -------------- | -------------- | ------------------------------------------------------------------- |
+  | Inglaterra     | 9              | Premier League                                                      |
+  | Alemanha       | 9              | Bundesliga                                                          |
+  | França         | 9 (Ligue 2: 7) | LFP: 20 na súmula da Ligue 1, 18 na Ligue 2                         |
+  | Estados Unidos | 9              | MLS                                                                 |
+  | Arábia Saudita | 9              | súmulas da Saudi Pro League                                         |
+  | Espanha        | 12             | LaLiga                                                              |
+  | Portugal       | 12             | Liga Portugal, de 9 para 12 a partir de 2026/27                     |
+  | Holanda        | 12             | KNVB: 23 na súmula                                                  |
+  | Brasil         | 12             | CBF                                                                 |
+  | Argentina      | 12             | Liga Profesional: 11 titulares e 12 suplentes                       |
+  | Itália         | 15             | Serie A: 15 linhas de reservas na súmula; Coppa e Supercoppa iguais |
+
+- **Competições de clubes de confederação e mundiais:** 12 (Champions, Europa e Conference: 23 na súmula; Libertadores e Sul-Americana: 12 suplentes; Mundial de Clubes: 12). As outras confederações seguem o mesmo número.
+- **Seleções:**
+  - Fase final de torneio com listas de 26 (Copa do Mundo, Euro, Copa América, Copa Africana, Copa da Ásia, Copa Ouro): 15, todos os que não começam.
+  - Eliminatórias, Nations League e repescagem: 12.
+- **Amistosos:** 12. Não há regulamento, e nos amistosos de verdade o banco costuma ser cheio.
+- **A conferir:** os países sem dado confirmado usam 9, o banco mais comum entre as grandes ligas. Entram aqui Turquia, México, Japão, Coreia e as divisões de baixo da Itália, entre outros. Quando um regulamento for confirmado, basta pôr o número na tabela de `reservas.ts` ou o campo `reservas` na competição (vale também no editor e nos patches).
+- **No jogo:**
+  - O banco do próximo jogo aparece na escalação ("banco de até 12 reservas: é a regra da LaLiga"), e a escalação automática enche até esse número.
+  - O banco salvo pelo técnico é completado com os melhores disponíveis quando a competição permite mais.
+  - A CPU também escala com o banco da competição.
+  - O limite de 5 substituições, em até 3 paradas, não mudou.
+- `ENGINE_VERSION` 0.42.0.
