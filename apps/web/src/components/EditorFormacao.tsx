@@ -1,10 +1,11 @@
 /**
  * Editor de escalação em campo: os 11 arrastáveis, cada um com a posição de campo (CA, VOL, PD...)
- * e a nota dele ali, que muda na hora conforme o lugar e a função. Clicar num jogador abre a
- * vaga: dá para escolher a posição e a função (o centroavante que joga de falso 9) e quem ocupa
- * a vaga. O goleiro fica no gol.
+ * e a nota dele ali, que muda na hora conforme o lugar e a função. Abaixo do campo ficam o banco e,
+ * antes do jogo, quem está fora da partida. Arrastar troca (em campo, com o banco ou com quem está
+ * fora); clicar e soltar abre o cartão do jogador, com a posição e a função quando ele está em campo.
+ * O goleiro fica no gol.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   desenhoDaFormacao,
   FAIXA_MEIO_ATAQUE,
@@ -27,6 +28,7 @@ import {
   type Posicao,
 } from "@newbras/data";
 import { MarcacoesCampo } from "./Pitch";
+import { HUMOR } from "../partida/Resumo";
 import { t } from "@newbras/textos";
 
 const COR: Record<Posicao, string> = {
@@ -73,6 +75,8 @@ interface Props {
   selecionada?: number | null;
   onSelecionar?: (vaga: number | null) => void;
   onMudar: (vagas: Vaga[]) => void;
+  /** O técnico escolhe a posição e a função de quem está na vaga (null = automática). */
+  onPapel?: (vaga: number, papel: PapelEmCampo | null) => void;
   /**
    * Soltar um jogador em cima de outro troca os dois de vaga (cada um assume a posição e a função
    * da vaga do outro). Recebe as duas vagas e o desenho de antes do arraste, para restaurar.
@@ -80,28 +84,63 @@ interface Props {
   onTrocarVagas?: (a: number, b: number, vagas: Vaga[]) => void;
   /** Jogadores em campo machucados (cruz vermelha ao lado), na partida ao vivo. */
   machucados?: ReadonlySet<string>;
-  /** Reservas, mostrados numa faixa abaixo do campo. */
+  /** Avisos por jogador (lesionado, suspenso, poupar), mostrados no cartão e com um ponto. */
+  avisos?: ReadonlyMap<string, string> | undefined;
+  /** Reservas, na primeira fileira abaixo do campo. */
   banco?: readonly JogadorPartida[];
+  /** Quem fica fora da partida (antes do jogo), nas fileiras de baixo. */
+  foraDoJogo?: readonly JogadorPartida[];
   /**
-   * Arrastar um jogador do campo para cima de um reserva (ou o contrário) faz a troca. Recebe a
-   * vaga, o reserva que entra e o desenho de antes do arraste, para restaurar.
+   * Arrastar um jogador do campo para cima de alguém do banco ou de fora (ou o contrário) faz a
+   * troca. Recebe a vaga, quem entra e o desenho de antes do arraste, para restaurar.
    */
-  onBanco?: (vaga: number, reserva: string, vagas: Vaga[]) => void;
+  onBanco?: (vaga: number, entra: string, vagas: Vaga[]) => void;
+  /** Troca um reserva com alguém que estava fora da partida. */
+  onTrocarReservas?: (reserva: string, fora: string) => void;
   /** Motivo de o banco não poder ser usado agora (sem trocas); null = pode. */
   bancoBloqueado?: string | null;
 }
 
 /** Distância (em metros) para o jogador solto contar como em cima de outro. */
 const RAIO_DA_TROCA = 4;
-/** Altura (no desenho) da faixa do banco, abaixo do campo. */
+/** Primeira fileira do banco (no desenho) e a distância entre as fileiras. */
 const BANCO_Y = 83;
+const ENTRE_FILEIRAS = 12;
+/** Jogadores por fileira abaixo do campo. */
+const POR_FILEIRA = 12;
 
-/** Centro de cada reserva na faixa do banco. */
-function lugaresDoBanco(n: number): number[] {
-  if (!n) return [];
-  const passo = Math.min(11, 101 / n);
-  const inicio = 52.5 - (passo * (n - 1)) / 2;
-  return Array.from({ length: n }, (_, k) => inicio + passo * k);
+interface LugarReserva {
+  jogador: JogadorPartida;
+  grupo: "banco" | "fora";
+  x: number;
+  y: number;
+}
+
+/** Lugar de cada um abaixo do campo: o banco numa fileira, quem está fora nas seguintes. */
+function lugaresAbaixo(
+  banco: readonly JogadorPartida[],
+  fora: readonly JogadorPartida[],
+): { lugares: LugarReserva[]; fileiras: { y: number; grupo: "banco" | "fora" }[] } {
+  const lugares: LugarReserva[] = [];
+  const fileiras: { y: number; grupo: "banco" | "fora" }[] = [];
+  let y = BANCO_Y;
+  for (const [grupo, lista] of [
+    ["banco", banco],
+    ["fora", fora],
+  ] as const) {
+    if (!lista.length && grupo === "fora") continue;
+    // O título de cada grupo pede um respiro acima da primeira fileira dele.
+    if (grupo === "fora" && fileiras.length) y += 2;
+    for (let i = 0; i < Math.max(1, lista.length); i += POR_FILEIRA) {
+      const fileira = lista.slice(i, i + POR_FILEIRA);
+      const passo = Math.min(9, 101 / Math.max(1, fileira.length));
+      const inicio = 52.5 - (passo * (fileira.length - 1)) / 2;
+      fileira.forEach((jogador, k) => lugares.push({ jogador, grupo, x: inicio + passo * k, y }));
+      fileiras.push({ y, grupo });
+      y += ENTRE_FILEIRAS;
+    }
+  }
+  return { lugares, fileiras };
 }
 
 export function EditorFormacao({
@@ -111,10 +150,14 @@ export function EditorFormacao({
   selecionada = null,
   onSelecionar,
   onMudar,
+  onPapel,
   onTrocarVagas,
   machucados,
+  avisos,
   banco,
+  foraDoJogo,
   onBanco,
+  onTrocarReservas,
   bancoBloqueado = null,
 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
@@ -128,16 +171,41 @@ export function EditorFormacao({
   } | null>(null);
   /** Vaga sob o jogador arrastado (troca ao soltar). */
   const [alvo, setAlvo] = useState<number | null>(null);
-  /** Reserva sob o jogador do campo arrastado (substituição ao soltar). */
-  const [alvoBanco, setAlvoBanco] = useState<string | null>(null);
-  /** Reserva sendo arrastado para o campo, com o ponto onde está (no desenho). */
-  const [doBanco, setDoBanco] = useState<{ id: string; x: number; y: number } | null>(null);
+  /** Reserva (ou de fora) sob o jogador arrastado. */
+  const [alvoReserva, setAlvoReserva] = useState<string | null>(null);
+  /** Reserva sendo arrastado, com o ponto onde está (no desenho) e se já se mexeu. */
+  const [doBanco, setDoBanco] = useState<{
+    id: string;
+    grupo: "banco" | "fora";
+    x: number;
+    y: number;
+    x0: number;
+    y0: number;
+    moveu: boolean;
+  } | null>(null);
+  /** Reserva com o cartão aberto. */
+  const [reservaAberta, setReservaAberta] = useState<string | null>(null);
   const problemas = validarFormacao(vagas);
   const comBanco = !!banco && !!onBanco;
-  const lugares = lugaresDoBanco(banco?.length ?? 0);
+  const { lugares, fileiras } = comBanco
+    ? lugaresAbaixo(banco ?? [], foraDoJogo ?? [])
+    : { lugares: [], fileiras: [] };
   const bancoLivre = comBanco && !bancoBloqueado;
+  const altura = comBanco ? (fileiras.at(-1)?.y ?? BANCO_Y) + 8 : 74;
+  const livre = (grupo: "banco" | "fora") => (grupo === "banco" ? bancoLivre : comBanco);
 
-  /** Ponto do ponteiro no desenho (y da tela) e no campo (y do motor). */
+  // Esc fecha o cartão.
+  useEffect(() => {
+    const fechar = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setReservaAberta(null);
+      onSelecionar?.(null);
+    };
+    window.addEventListener("keydown", fechar);
+    return () => window.removeEventListener("keydown", fechar);
+  }, [onSelecionar]);
+
+  /** Ponto do ponteiro no desenho (y da tela). */
   const noDesenho = (e: React.PointerEvent): { x: number; y: number } | null => {
     const el = svg.current;
     const matriz = el?.getScreenCTM();
@@ -150,18 +218,18 @@ export function EditorFormacao({
     return p ? { x: p.x, y: tela(p.y) } : null;
   };
 
-  /** Reserva perto de um ponto do desenho. */
-  const reservaSob = (x: number, y: number): string | null => {
-    if (!bancoLivre || !banco || Math.abs(y - BANCO_Y) > RAIO_DA_TROCA) return null;
-    let melhor: string | null = null;
+  /** Alguém abaixo do campo perto de um ponto do desenho. */
+  const reservaSob = (x: number, y: number, exceto?: string): LugarReserva | null => {
+    let melhor: LugarReserva | null = null;
     let menor = RAIO_DA_TROCA;
-    lugares.forEach((bx, k) => {
-      const d = Math.abs(bx - x);
+    for (const l of lugares) {
+      if (l.jogador.id === exceto || !livre(l.grupo)) continue;
+      const d = Math.hypot(l.x - x, l.y - y);
       if (d < menor) {
         menor = d;
-        melhor = banco[k]?.id ?? null;
+        melhor = l;
       }
-    });
+    }
     return melhor;
   };
 
@@ -203,296 +271,232 @@ export function EditorFormacao({
     return melhor;
   };
 
+  const limpar = () => {
+    setArrastando(null);
+    setAlvo(null);
+    setAlvoReserva(null);
+    setDoBanco(null);
+    inicio.current = null;
+  };
+
   const soltar = () => {
     const ini = inicio.current;
     if (doBanco) {
-      if (alvo !== null && onBanco)
+      if (!doBanco.moveu) {
+        // Clique: abre (ou fecha) o cartão do jogador de baixo do campo.
+        setReservaAberta(reservaAberta === doBanco.id ? null : doBanco.id);
+        onSelecionar?.(null);
+      } else if (alvo !== null && onBanco) {
         onBanco(
           alvo,
           doBanco.id,
           vagas.map((v) => ({ ...v })),
         );
-      setDoBanco(null);
-      setAlvo(null);
+      } else if (alvoReserva && onTrocarReservas) {
+        const outro = lugares.find((l) => l.jogador.id === alvoReserva);
+        if (outro && outro.grupo !== doBanco.grupo)
+          onTrocarReservas(
+            doBanco.grupo === "banco" ? doBanco.id : alvoReserva,
+            doBanco.grupo === "banco" ? alvoReserva : doBanco.id,
+          );
+      }
+      limpar();
       return;
     }
-    if (arrastando !== null && ini && !ini.moveu)
+    if (arrastando !== null && ini && !ini.moveu) {
+      setReservaAberta(null);
       onSelecionar?.(selecionada === arrastando ? null : arrastando);
-    else if (arrastando !== null && ini && alvoBanco !== null && onBanco) {
-      onBanco(arrastando, alvoBanco, ini.vagas);
+    } else if (arrastando !== null && ini && alvoReserva !== null && onBanco) {
+      onBanco(arrastando, alvoReserva, ini.vagas);
     } else if (arrastando !== null && ini && alvo !== null && onTrocarVagas) {
       onTrocarVagas(arrastando, alvo, ini.vagas);
       if (selecionada === arrastando) onSelecionar?.(alvo);
     }
-    setArrastando(null);
-    setAlvo(null);
-    setAlvoBanco(null);
-    inicio.current = null;
+    limpar();
   };
+
+  // Cartão aberto: um jogador em campo (com as funções) ou um de baixo do campo.
+  const vagaAberta = selecionada !== null && ocupantes[selecionada] ? selecionada : null;
+  const lugarAberto = reservaAberta
+    ? (lugares.find((l) => l.jogador.id === reservaAberta) ?? null)
+    : null;
+  const jogadorAberto =
+    vagaAberta !== null ? (ocupantes[vagaAberta] ?? null) : (lugarAberto?.jogador ?? null);
+  const ancora =
+    vagaAberta !== null && vagas[vagaAberta]
+      ? { x: vagas[vagaAberta].x, y: tela(vagas[vagaAberta].y) }
+      : lugarAberto
+        ? { x: lugarAberto.x, y: lugarAberto.y }
+        : null;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <svg
-        ref={svg}
-        viewBox={comBanco ? "-6 -6 117 97" : "-6 -6 117 80"}
-        className="w-full touch-none rounded select-none"
-        onPointerMove={(e) => {
-          if (doBanco) {
-            const d = noDesenho(e);
-            if (!d) return;
-            setDoBanco({ ...doBanco, x: d.x, y: d.y });
-            setAlvo(vagaNoDesenho(d.x, d.y));
-            return;
-          }
-          if (arrastando === null) return;
-          const p = paraCampo(e);
-          const d = noDesenho(e);
-          if (!p || !d) return;
-          const ini = inicio.current;
-          if (ini && !ini.moveu && Math.hypot(p.x - ini.x, p.y - ini.y) < 1.2) return;
-          if (ini) ini.moveu = true;
-          const reserva = ocupantes[arrastando] ? reservaSob(d.x, d.y) : null;
-          setAlvoBanco(reserva);
-          // O goleiro não sai do gol: só pode ser arrastado até o banco.
-          if (arrastando === 0) return;
-          setAlvo(reserva ? null : vagaSob(arrastando, p.x, p.y));
-          mover(arrastando, p.x, p.y);
-        }}
-        onPointerUp={soltar}
-        onPointerLeave={() => {
-          setArrastando(null);
-          setAlvo(null);
-          setAlvoBanco(null);
-          setDoBanco(null);
-          inicio.current = null;
-        }}
-        role="group"
-        aria-label={t(
-          "Posições do time em campo. Arraste os jogadores; clique para escolher a função. O time ataca para a direita.",
-        )}
-      >
-        <MarcacoesCampo />
-        {/* Faixas que decidem a família da vaga: defesa, meio-campo, ataque. */}
-        <rect
-          x={FAIXA_MEIO_ATAQUE.inicio}
-          y={0}
-          width={FAIXA_MEIO_ATAQUE.fim - FAIXA_MEIO_ATAQUE.inicio}
-          height={68}
-          fill="var(--color-cal)"
-          opacity={0.05}
-        />
-        <g stroke="var(--color-cal)" strokeWidth={0.25} strokeDasharray="1 1.5" opacity={0.5}>
-          <line x1={36} y1={0} x2={36} y2={68} />
-          <line x1={FAIXA_MEIO_ATAQUE.inicio} y1={0} x2={FAIXA_MEIO_ATAQUE.inicio} y2={68} />
-          <line x1={FAIXA_MEIO_ATAQUE.fim} y1={0} x2={FAIXA_MEIO_ATAQUE.fim} y2={68} />
-        </g>
-        {vagas.map((v, i) => {
-          const j = ocupantes[i] ?? null;
-          const info = j ? papelENota(j, v, papeis[i]) : null;
-          const sigla = info?.papel.posicao ?? posicaoDaVaga(v);
-          const familia = info ? DADOS_FUNCAO[info.papel.funcao].familia : v.posicao;
-          const nomeCurto = j?.nome.split(" ").at(-1) ?? "";
-          const ativo = selecionada === i;
-          return (
-            <g
-              key={i}
-              transform={`translate(${v.x} ${tela(v.y)})`}
-              className={`group outline-none ${i === 0 ? "cursor-pointer" : "cursor-grab"}`}
-              onPointerDown={(e) => {
-                (e.target as Element).setPointerCapture?.(e.pointerId);
-                const p = paraCampo(e);
-                inicio.current = p
-                  ? { ...p, moveu: false, vagas: vagas.map((x) => ({ ...x })) }
-                  : null;
-                setArrastando(i);
-              }}
-              tabIndex={0}
-              role="button"
-              aria-pressed={ativo}
-              aria-label={t(
-                "{nome}, {info}{info2}. Enter escolhe a função; setas movem o jogador.",
-                {
-                  nome: j?.nome ?? t("Vaga vazia"),
-                  info: info ? nomeDoPapel(info.papel) : NOME_POSICAO_CAMPO[sigla],
-                  info2: info ? t(", nota {nota}", { nota: info.nota }) : "",
-                },
-              )}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelecionar?.(ativo ? null : i);
-                  return;
-                }
-                if (i === 0) return;
-                const passo = e.shiftKey ? 5 : 2;
-                const d: Record<string, [number, number]> = {
-                  ArrowRight: [passo, 0],
-                  ArrowLeft: [-passo, 0],
-                  ArrowUp: [0, passo],
-                  ArrowDown: [0, -passo],
-                };
-                const delta = d[e.key];
-                if (!delta) return;
-                e.preventDefault();
-                mover(i, v.x + delta[0], v.y + delta[1]);
-              }}
-            >
-              {ativo && <circle r={4} fill="none" stroke="#ffffff" strokeWidth={0.45} />}
-              {/* Foco pelo teclado: anel próprio no lugar do contorno quadrado do navegador. */}
-              <circle
-                r={4.2}
-                fill="none"
-                stroke="#7cc4f5"
-                strokeWidth={0.45}
-                className="hidden group-focus-visible:block"
-              />
-              {alvo === i && (
-                <circle
-                  r={4.6}
-                  fill="none"
-                  stroke="#f4c430"
-                  strokeWidth={0.6}
-                  strokeDasharray="1.2 0.8"
-                />
-              )}
-              <circle
-                r={2.8}
-                fill={COR[familia]}
-                stroke={arrastando === i ? "#ffffff" : "var(--color-placar)"}
-                strokeWidth={0.5}
-              />
-              <text
-                y={0.8}
-                textAnchor="middle"
-                fontSize={sigla.length > 2 ? 1.8 : 2.2}
-                fontWeight={800}
-                fill="var(--color-placar)"
-              >
-                {sigla}
-              </text>
-              {j && machucados?.has(j.id) && (
-                <g transform="translate(-3.6 -3.6)">
-                  <title>{t("Machucado")}</title>
-                  <circle r={1.5} fill="#ffffff" />
-                  <path d="M-0.9 0H0.9M0 -0.9V0.9" stroke="#e53935" strokeWidth={0.6} />
-                </g>
-              )}
-              {info && j && (
-                <g transform="translate(3.4 -3.6)">
-                  <rect
-                    x={-0.2}
-                    y={-1.9}
-                    width={4.6}
-                    height={2.6}
-                    rx={0.6}
-                    fill="var(--color-placar)"
-                  />
-                  <text
-                    x={2.1}
-                    y={0.1}
-                    textAnchor="middle"
-                    fontSize={2}
-                    fontWeight={800}
-                    fill={corDaNotaNaVaga(info.nota, j.forca)}
-                  >
-                    {info.nota}
-                  </text>
-                </g>
-              )}
-              <text
-                y={5.5}
-                textAnchor="middle"
-                fontSize={2.3}
-                fontWeight={700}
-                fill="var(--color-cal)"
-                stroke="var(--color-placar)"
-                strokeWidth={0.5}
-                paintOrder="stroke"
-              >
-                {nomeCurto}
-              </text>
-            </g>
-          );
-        })}
-        {comBanco && (
-          <g>
-            <rect x={-4} y={75.5} width={113} height={15} rx={1.5} fill="#0f1922" opacity={0.85} />
-            <text x={-2.5} y={78.4} fontSize={1.9} fontWeight={700} fill="var(--color-cal)">
-              {bancoBloqueado
-                ? t("Banco: {motivo}", { motivo: bancoBloqueado })
-                : t("Banco: arraste um reserva para cima de quem sai, ou o contrário")}
-            </text>
-            {(banco ?? []).map((j, k) => {
-              const x = lugares[k] ?? 0;
-              const ativo = alvoBanco === j.id;
-              const arrastado = doBanco?.id === j.id;
-              return (
-                <g
-                  key={j.id}
-                  transform={`translate(${x} ${BANCO_Y})`}
-                  className={`group outline-none ${bancoLivre ? "cursor-grab" : "cursor-not-allowed"}`}
-                  opacity={bancoLivre ? (arrastado ? 0.35 : 1) : 0.45}
-                  tabIndex={-1}
-                  onPointerDown={(e) => {
-                    if (!bancoLivre) return;
-                    (e.target as Element).setPointerCapture?.(e.pointerId);
-                    const d = noDesenho(e);
-                    if (d) setDoBanco({ id: j.id, x: d.x, y: d.y });
-                  }}
-                >
-                  <title>
-                    {t("{nome}, {posicao}, força {forca}", {
-                      nome: j.nome,
-                      posicao: j.posicoesCampo?.[0]
-                        ? NOME_POSICAO_CAMPO[j.posicoesCampo[0]]
-                        : NOME_POSICAO[j.posicao],
-                      forca: j.forca,
-                    })}
-                  </title>
-                  {ativo && (
-                    <circle
-                      r={4.2}
-                      fill="none"
-                      stroke="#f4c430"
-                      strokeWidth={0.6}
-                      strokeDasharray="1.2 0.8"
-                    />
-                  )}
-                  <circle
-                    r={2.6}
-                    fill={COR[j.posicao]}
-                    stroke="var(--color-placar)"
-                    strokeWidth={0.5}
-                  />
-                  <text
-                    y={0.75}
-                    textAnchor="middle"
-                    fontSize={1.9}
-                    fontWeight={800}
-                    fill="var(--color-placar)"
-                  >
-                    {j.forca}
-                  </text>
-                  <text
-                    y={5}
-                    textAnchor="middle"
-                    fontSize={1.9}
-                    fontWeight={700}
-                    fill="var(--color-cal)"
-                  >
-                    {j.nome.split(" ").at(-1)}
-                  </text>
-                </g>
+      <div className="relative">
+        <svg
+          ref={svg}
+          viewBox={`-6 -6 117 ${altura + 6}`}
+          className="w-full touch-none rounded select-none"
+          onPointerMove={(e) => {
+            if (doBanco) {
+              const d = noDesenho(e);
+              if (!d) return;
+              const moveu =
+                doBanco.moveu ||
+                (livre(doBanco.grupo) && Math.hypot(d.x - doBanco.x0, d.y - doBanco.y0) > 1.2);
+              setDoBanco({ ...doBanco, x: d.x, y: d.y, moveu });
+              if (!moveu) return;
+              const vaga = vagaNoDesenho(d.x, d.y);
+              setAlvo(vaga);
+              setAlvoReserva(
+                vaga === null ? (reservaSob(d.x, d.y, doBanco.id)?.jogador.id ?? null) : null,
               );
-            })}
+              return;
+            }
+            if (arrastando === null) return;
+            const p = paraCampo(e);
+            const d = noDesenho(e);
+            if (!p || !d) return;
+            const ini = inicio.current;
+            if (ini && !ini.moveu && Math.hypot(p.x - ini.x, p.y - ini.y) < 1.2) return;
+            if (ini) ini.moveu = true;
+            const reserva = ocupantes[arrastando]
+              ? (reservaSob(d.x, d.y)?.jogador.id ?? null)
+              : null;
+            setAlvoReserva(reserva);
+            // O goleiro não sai do gol: só pode ser arrastado até o banco.
+            if (arrastando === 0) return;
+            setAlvo(reserva ? null : vagaSob(arrastando, p.x, p.y));
+            mover(arrastando, p.x, p.y);
+          }}
+          onPointerUp={soltar}
+          onPointerLeave={limpar}
+          role="group"
+          aria-label={t(
+            "Posições do time em campo. Arraste os jogadores; clique para escolher a função. O time ataca para a direita.",
+          )}
+        >
+          <MarcacoesCampo />
+          {/* Faixas que decidem a família da vaga: defesa, meio-campo, ataque. */}
+          <rect
+            x={FAIXA_MEIO_ATAQUE.inicio}
+            y={0}
+            width={FAIXA_MEIO_ATAQUE.fim - FAIXA_MEIO_ATAQUE.inicio}
+            height={68}
+            fill="var(--color-cal)"
+            opacity={0.05}
+          />
+          <g stroke="var(--color-cal)" strokeWidth={0.25} strokeDasharray="1 1.5" opacity={0.5}>
+            <line x1={36} y1={0} x2={36} y2={68} />
+            <line x1={FAIXA_MEIO_ATAQUE.inicio} y1={0} x2={FAIXA_MEIO_ATAQUE.inicio} y2={68} />
+            <line x1={FAIXA_MEIO_ATAQUE.fim} y1={0} x2={FAIXA_MEIO_ATAQUE.fim} y2={68} />
           </g>
-        )}
-        {doBanco &&
-          (() => {
-            const j = banco?.find((x) => x.id === doBanco.id);
-            return j ? (
-              <g transform={`translate(${doBanco.x} ${doBanco.y})`} pointerEvents="none">
-                <circle r={2.8} fill={COR[j.posicao]} stroke="#ffffff" strokeWidth={0.5} />
+          {vagas.map((v, i) => {
+            const j = ocupantes[i] ?? null;
+            const info = j ? papelENota(j, v, papeis[i]) : null;
+            const sigla = info?.papel.posicao ?? posicaoDaVaga(v);
+            const familia = info ? DADOS_FUNCAO[info.papel.funcao].familia : v.posicao;
+            const nomeCurto = j?.nome.split(" ").at(-1) ?? "";
+            const ativo = selecionada === i;
+            return (
+              <g
+                key={i}
+                transform={`translate(${v.x} ${tela(v.y)})`}
+                className={`group outline-none ${i === 0 ? "cursor-pointer" : "cursor-grab"}`}
+                onPointerDown={(e) => {
+                  (e.target as Element).setPointerCapture?.(e.pointerId);
+                  const p = paraCampo(e);
+                  inicio.current = p
+                    ? { ...p, moveu: false, vagas: vagas.map((x) => ({ ...x })) }
+                    : null;
+                  setArrastando(i);
+                }}
+                tabIndex={0}
+                role="button"
+                aria-pressed={ativo}
+                aria-label={t(
+                  "{nome}, {info}{info2}. Enter escolhe a função; setas movem o jogador.",
+                  {
+                    nome: j?.nome ?? t("Vaga vazia"),
+                    info: info ? nomeDoPapel(info.papel) : NOME_POSICAO_CAMPO[sigla],
+                    info2: info ? t(", nota {nota}", { nota: info.nota }) : "",
+                  },
+                )}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setReservaAberta(null);
+                    onSelecionar?.(ativo ? null : i);
+                    return;
+                  }
+                  if (i === 0) return;
+                  const passo = e.shiftKey ? 5 : 2;
+                  const d: Record<string, [number, number]> = {
+                    ArrowRight: [passo, 0],
+                    ArrowLeft: [-passo, 0],
+                    ArrowUp: [0, passo],
+                    ArrowDown: [0, -passo],
+                  };
+                  const delta = d[e.key];
+                  if (!delta) return;
+                  e.preventDefault();
+                  mover(i, v.x + delta[0], v.y + delta[1]);
+                }}
+              >
+                {ativo && <circle r={4} fill="none" stroke="#ffffff" strokeWidth={0.45} />}
+                {/* Foco pelo teclado: anel próprio no lugar do contorno quadrado do navegador. */}
+                <circle
+                  r={4.2}
+                  fill="none"
+                  stroke="#7cc4f5"
+                  strokeWidth={0.45}
+                  className="hidden group-focus-visible:block"
+                />
+                {alvo === i && <Anel />}
+                <circle
+                  r={2.8}
+                  fill={COR[familia]}
+                  stroke={arrastando === i ? "#ffffff" : "var(--color-placar)"}
+                  strokeWidth={0.5}
+                />
+                <text
+                  y={0.8}
+                  textAnchor="middle"
+                  fontSize={sigla.length > 2 ? 1.8 : 2.2}
+                  fontWeight={800}
+                  fill="var(--color-placar)"
+                >
+                  {sigla}
+                </text>
+                {j && machucados?.has(j.id) && (
+                  <g transform="translate(-3.6 -3.6)">
+                    <title>{t("Machucado")}</title>
+                    <circle r={1.5} fill="#ffffff" />
+                    <path d="M-0.9 0H0.9M0 -0.9V0.9" stroke="#e53935" strokeWidth={0.6} />
+                  </g>
+                )}
+                {j && !machucados?.has(j.id) && avisos?.has(j.id) && <PontoDeAviso />}
+                {info && j && (
+                  <g transform="translate(3.4 -3.6)">
+                    <rect
+                      x={-0.2}
+                      y={-1.9}
+                      width={4.6}
+                      height={2.6}
+                      rx={0.6}
+                      fill="var(--color-placar)"
+                    />
+                    <text
+                      x={2.1}
+                      y={0.1}
+                      textAnchor="middle"
+                      fontSize={2}
+                      fontWeight={800}
+                      fill={corDaNotaNaVaga(info.nota, j.forca)}
+                    >
+                      {info.nota}
+                    </text>
+                  </g>
+                )}
                 <text
                   y={5.5}
                   textAnchor="middle"
@@ -503,15 +507,151 @@ export function EditorFormacao({
                   strokeWidth={0.5}
                   paintOrder="stroke"
                 >
-                  {j.nome.split(" ").at(-1)}
+                  {nomeCurto}
                 </text>
               </g>
-            ) : null;
-          })()}
-      </svg>
+            );
+          })}
+          {comBanco && (
+            <g>
+              <rect
+                x={-4}
+                y={BANCO_Y - 7.5}
+                width={113}
+                height={altura - BANCO_Y + 9}
+                rx={1.5}
+                fill="#0f1922"
+                opacity={0.85}
+              />
+              {fileiras.map((f, k) =>
+                k === 0 || fileiras[k - 1]?.grupo !== f.grupo ? (
+                  <text
+                    key={`r${f.y}`}
+                    x={-2.5}
+                    y={f.y - 4.6}
+                    fontSize={1.8}
+                    fontWeight={700}
+                    fill="var(--color-cal)"
+                    opacity={0.8}
+                  >
+                    {f.grupo === "banco"
+                      ? bancoBloqueado
+                        ? t("Banco: {motivo}", { motivo: bancoBloqueado })
+                        : t("Banco: arraste para o campo para trocar; clique para ver o jogador")
+                      : t("Fora do jogo: arraste para o banco ou para o campo")}
+                  </text>
+                ) : null,
+              )}
+              {lugares.map((l) => {
+                const j = l.jogador;
+                const pode = livre(l.grupo);
+                const arrastado = doBanco?.id === j.id && doBanco.moveu;
+                return (
+                  <g
+                    key={j.id}
+                    transform={`translate(${l.x} ${l.y})`}
+                    className={`outline-none ${pode ? "cursor-grab" : "cursor-pointer"}`}
+                    opacity={pode ? (arrastado ? 0.35 : l.grupo === "fora" ? 0.8 : 1) : 0.5}
+                    onPointerDown={(e) => {
+                      (e.target as Element).setPointerCapture?.(e.pointerId);
+                      const d = noDesenho(e);
+                      if (d)
+                        setDoBanco({
+                          id: j.id,
+                          grupo: l.grupo,
+                          x: d.x,
+                          y: d.y,
+                          x0: d.x,
+                          y0: d.y,
+                          moveu: false,
+                        });
+                    }}
+                  >
+                    <title>{j.nome}</title>
+                    {reservaAberta === j.id && (
+                      <circle r={3.6} fill="none" stroke="#ffffff" strokeWidth={0.45} />
+                    )}
+                    {alvoReserva === j.id && <Anel r={4} />}
+                    <circle
+                      r={2.5}
+                      fill={COR[j.posicao]}
+                      stroke="var(--color-placar)"
+                      strokeWidth={0.5}
+                    />
+                    <text
+                      y={0.7}
+                      textAnchor="middle"
+                      fontSize={1.8}
+                      fontWeight={800}
+                      fill="var(--color-placar)"
+                    >
+                      {j.forca}
+                    </text>
+                    {avisos?.has(j.id) && <PontoDeAviso dx={-2.6} dy={-2.6} />}
+                    <text
+                      y={4.8}
+                      textAnchor="middle"
+                      fontSize={1.8}
+                      fontWeight={700}
+                      fill="var(--color-cal)"
+                    >
+                      {j.nome.split(" ").at(-1)}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          )}
+          {doBanco?.moveu &&
+            (() => {
+              const j = lugares.find((l) => l.jogador.id === doBanco.id)?.jogador;
+              return j ? (
+                <g transform={`translate(${doBanco.x} ${doBanco.y})`} pointerEvents="none">
+                  <circle r={2.8} fill={COR[j.posicao]} stroke="#ffffff" strokeWidth={0.5} />
+                  <text
+                    y={5.5}
+                    textAnchor="middle"
+                    fontSize={2.3}
+                    fontWeight={700}
+                    fill="var(--color-cal)"
+                    stroke="var(--color-placar)"
+                    strokeWidth={0.5}
+                    paintOrder="stroke"
+                  >
+                    {j.nome.split(" ").at(-1)}
+                  </text>
+                </g>
+              ) : null;
+            })()}
+        </svg>
+        {ancora && jogadorAberto && (
+          <CartaoDoJogador
+            ancora={ancora}
+            altura={altura + 6}
+            jogador={jogadorAberto}
+            vaga={vagaAberta !== null ? (vagas[vagaAberta] ?? null) : null}
+            escolhido={vagaAberta !== null ? (papeis[vagaAberta] ?? null) : null}
+            onde={
+              vagaAberta !== null
+                ? t("Em campo")
+                : lugarAberto?.grupo === "banco"
+                  ? t("No banco")
+                  : t("Fora do jogo")
+            }
+            aviso={avisos?.get(jogadorAberto.id)}
+            onPapel={
+              vagaAberta !== null && onPapel ? (papel) => onPapel(vagaAberta, papel) : undefined
+            }
+            onFechar={() => {
+              setReservaAberta(null);
+              onSelecionar?.(null);
+            }}
+          />
+        )}
+      </div>
       <p className="text-xs text-suave">
         {t(
-          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar (solte em cima de outro jogador para trocar os dois de vaga, com posição e função); clique para escolher a posição, a função e quem joga ali. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa e até {inicio} m é meio-campo. Na faixa clara, de {inicio} a {fim} m, o jogador mantém o setor de onde veio: o meia sobe até perto da área e o atacante recua sem mudar de setor. Depois de {fim} m é ataque. Campo útil de {xMin} a {xMax} m.",
+          "Desenho {desenhoDaFormacao}. Arraste para mudar o lugar; solte em cima de outro jogador (em campo, no banco ou fora do jogo) para trocar os dois. Clique e solte para ver o jogador e escolher a posição e a função. O número é a nota do jogador naquela vaga (verde: rende o que vale; amarelo e laranja: rende menos; vermelho: improvisado). Até 36 m do próprio gol é defesa e até {inicio} m é meio-campo. Na faixa clara, de {inicio} a {fim} m, o jogador mantém o setor de onde veio: o meia sobe até perto da área e o atacante recua sem mudar de setor. Depois de {fim} m é ataque. Campo útil de {xMin} a {xMax} m.",
           {
             desenhoDaFormacao: desenhoDaFormacao(vagas),
             inicio: FAIXA_MEIO_ATAQUE.inicio,
@@ -526,100 +666,113 @@ export function EditorFormacao({
   );
 }
 
-/** Quem pode ocupar a vaga, com a nota de cada um ali. */
-export interface Candidato {
-  jogador: JogadorPartida;
-  /** Onde ele está agora: outra vaga (índice) ou no banco. */
-  origem: number | "banco";
-  /** Não pode entrar (já saiu, expulso...). */
-  bloqueado?: string;
+function Anel({ r = 4.6 }: { r?: number }) {
+  return <circle r={r} fill="none" stroke="#f4c430" strokeWidth={0.6} strokeDasharray="1.2 0.8" />;
+}
+
+function PontoDeAviso({ dx = -3.4, dy = -3.4 }: { dx?: number; dy?: number }) {
+  return (
+    <circle cx={dx} cy={dy} r={0.9} fill="#ff8a5c" stroke="var(--color-placar)" strokeWidth={0.3} />
+  );
 }
 
 /**
- * Painel da vaga escolhida: posição e função (com a nota do jogador em cada uma) e quem pode
- * jogar ali, do que rende mais ao que rende menos.
+ * Cartão flutuante do jogador, ao lado dele: força, condição, humor, aviso e, em campo, a posição e
+ * a função (com a nota de cada uma ali).
  */
-export function PainelVaga({
+function CartaoDoJogador({
+  ancora,
+  altura,
+  jogador: j,
   vaga,
-  indice,
-  ocupante,
   escolhido: pedido,
-  candidatos,
-  rotuloTroca,
+  onde,
+  aviso,
   onPapel,
-  onTrocar,
   onFechar,
 }: {
-  vaga: Vaga;
-  indice: number;
-  ocupante: JogadorPartida | null;
+  ancora: { x: number; y: number };
+  altura: number;
+  jogador: JogadorPartida;
+  vaga: Vaga | null;
   escolhido: PapelEmCampo | null;
-  candidatos: readonly Candidato[];
-  /** Texto do botão de troca (ex.: "Escalar", "Substituir"). */
-  rotuloTroca: (c: Candidato) => string;
-  onPapel: (papel: PapelEmCampo | null) => void;
-  onTrocar: (c: Candidato) => void;
+  onde: string;
+  aviso: string | undefined;
+  onPapel?: ((papel: PapelEmCampo | null) => void) | undefined;
   onFechar: () => void;
 }) {
-  const posicao = posicaoDaVaga(vaga);
+  const posicao = vaga ? posicaoDaVaga(vaga) : null;
   // Escolha feita para o lugar antigo da vaga não vale mais depois de arrastar.
-  const escolhido = pedido && papelValido(posicao, pedido) ? pedido : null;
-  const atual = ocupante ? papelENota(ocupante, vaga, escolhido) : null;
-  const automatico = ocupante ? papelENota(ocupante, vaga, null) : null;
-  const opcoes = papeisPossiveis(posicao);
-  const lista = candidatos
-    .map((c) => ({ c, ...papelENota(c.jogador, vaga, escolhido) }))
-    .sort((a, b) => b.nota - a.nota);
-  const mesmo = (a: PapelEmCampo | null, b: PapelEmCampo | null) =>
-    !!a && !!b && a.posicao === b.posicao && a.funcao === b.funcao;
-
+  const escolhido = pedido && posicao && papelValido(posicao, pedido) ? pedido : null;
+  const atual = vaga ? papelENota(j, vaga, escolhido) : null;
+  const automatico = vaga ? papelENota(j, vaga, null) : null;
+  const opcoes = posicao ? papeisPossiveis(posicao) : [];
+  const mesmo = (a: PapelEmCampo | null, b: PapelEmCampo) =>
+    !!a && a.posicao === b.posicao && a.funcao === b.funcao;
+  const naturais = j.posicoesCampo?.length
+    ? j.posicoesCampo.map((p) => NOME_POSICAO_CAMPO[p]).join(", ")
+    : NOME_POSICAO[j.posicao];
+  // À direita do jogador na metade de trás e à esquerda na da frente; para cima se estiver embaixo.
+  const esquerda = ((ancora.x + 6) / 117) * 100;
+  const topo = ((ancora.y + 6) / altura) * 100;
+  const lado =
+    ancora.x < 55
+      ? { left: `calc(${esquerda}% + 2.75rem)` }
+      : { right: `calc(${100 - esquerda}% + 2.75rem)` };
+  const vertical =
+    topo > 55
+      ? { bottom: `${Math.max(0, 100 - topo - 6)}%` }
+      : { top: `${Math.max(0, topo - 6)}%` };
   return (
-    <div className="flex flex-col gap-3 rounded border border-placar-borda bg-[#15212d] p-3">
+    <div
+      role="dialog"
+      aria-label={j.nome}
+      className="absolute z-10 flex max-h-[85%] w-72 flex-col gap-2 overflow-y-auto rounded-md border border-placar-borda bg-[#15212d] p-3 text-sm shadow-lg"
+      style={{ ...lado, ...vertical }}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs text-suave">
-            {t("Vaga {indice}: {nomePosicaoCampo}", {
-              indice: indice + 1,
-              nomePosicaoCampo: NOME_POSICAO_CAMPO[posicao],
-            })}
-          </p>
           <p className="truncate font-bold">
-            {ocupante?.nome ?? t("Vaga vazia")}
-            {ocupante && atual && (
-              <>
-                {" "}
-                <span style={{ color: corDaNotaNaVaga(atual.nota, ocupante.forca) }}>
-                  {atual.nota}
-                </span>
-                <span className="text-xs font-normal text-suave">
-                  {" "}
-                  {t("(força {forca})", { forca: ocupante.forca })}
-                </span>
-              </>
+            {j.nome}{" "}
+            {atual && (
+              <span style={{ color: corDaNotaNaVaga(atual.nota, j.forca) }}>{atual.nota}</span>
             )}
           </p>
+          <p className="text-xs text-suave">
+            {t("{onde} · força {forca} · {posicoes}", {
+              onde,
+              forca: j.forca,
+              posicoes: naturais,
+            })}
+          </p>
+          <p className="text-xs text-suave">
+            {t("Fôlego {condicao}% · humor {humor}", {
+              condicao: Math.round(j.condicao ?? 100),
+              humor: HUMOR[j.humor ?? "normal"].nome.toLowerCase(),
+            })}
+          </p>
+          {aviso && <p className="text-xs text-[#ffb38a]">{aviso}</p>}
         </div>
         <button
           type="button"
-          className="rounded px-2 text-sm text-suave hover:bg-white/10"
+          className="rounded px-2 text-suave hover:bg-white/10"
           onClick={onFechar}
-          aria-label={t("Fechar a vaga")}
+          aria-label={t("Fechar")}
         >
-          {t("Fechar")}
+          ×
         </button>
       </div>
-
-      {ocupante && (
-        <fieldset className="flex flex-col gap-1">
+      {vaga && onPapel && (
+        <fieldset className="flex flex-col gap-0.5">
           <legend className="mb-1 text-xs font-bold text-suave">{t("Posição e função")}</legend>
           <OpcaoPapel
             ativo={!escolhido}
             titulo={t("Automática{automatico}", {
               automatico: automatico ? `: ${nomeDoPapel(automatico.papel)}` : "",
             })}
-            descricao={t("A melhor função para quem estiver na vaga.")}
             nota={automatico?.nota}
-            forca={ocupante.forca}
+            forca={j.forca}
             onClick={() => onPapel(null)}
           />
           {opcoes.map((p) => (
@@ -628,56 +781,17 @@ export function PainelVaga({
               ativo={mesmo(escolhido, p)}
               titulo={nomeDoPapel(p)}
               descricao={DADOS_FUNCAO[p.funcao].descricao}
-              nota={notaNoPapel(ocupante, p)}
-              forca={ocupante.forca}
+              nota={notaNoPapel(j, p)}
+              forca={j.forca}
               onClick={() => onPapel(p)}
             />
           ))}
         </fieldset>
       )}
-
-      {lista.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-bold text-suave">
-            {t("Quem joga aqui{escolhido}", {
-              escolhido: escolhido ? ` (${nomeDoPapel(escolhido)})` : "",
-            })}
-          </p>
-          <ul className="flex max-h-64 flex-col overflow-y-auto">
-            {lista.map(({ c, nota, papel }) => (
-              <li
-                key={c.jogador.id}
-                className="flex items-center gap-2 border-b border-white/5 py-1 text-sm"
-              >
-                <span
-                  className="w-7 text-right font-bold"
-                  style={{ color: corDaNotaNaVaga(nota, c.jogador.forca) }}
-                >
-                  {nota}
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  {c.jogador.nome}{" "}
-                  <span className="text-xs text-suave">
-                    {t("força {forca}, {origem}{escolhido}", {
-                      forca: c.jogador.forca,
-                      origem: c.origem === "banco" ? "banco" : `vaga ${c.origem + 1}`,
-                      escolhido: escolhido ? "" : `, ${nomeDoPapel(papel).toLowerCase()}`,
-                    })}
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  disabled={!!c.bloqueado}
-                  title={c.bloqueado}
-                  className="rounded-sm bg-white/10 px-2 py-0.5 text-xs font-bold hover:bg-white/20 disabled:opacity-40"
-                  onClick={() => onTrocar(c)}
-                >
-                  {c.bloqueado ?? rotuloTroca(c)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {!vaga && (
+        <p className="text-xs text-suave">
+          {t("Arraste o jogador para cima de quem está em campo para fazer a troca.")}
+        </p>
       )}
     </div>
   );
@@ -693,7 +807,7 @@ function OpcaoPapel({
 }: {
   ativo: boolean;
   titulo: string;
-  descricao: string;
+  descricao?: string;
   nota: number | undefined;
   forca: number;
   onClick: () => void;
@@ -703,18 +817,16 @@ function OpcaoPapel({
       type="button"
       aria-pressed={ativo}
       onClick={onClick}
-      className={`flex items-start gap-2 rounded-sm px-2 py-1 text-left text-sm ${ativo ? "bg-canarinho/20 ring-1 ring-canarinho" : "hover:bg-white/5"}`}
+      title={descricao}
+      className={`flex items-center gap-2 rounded-sm px-2 py-0.5 text-left ${ativo ? "bg-canarinho/20 ring-1 ring-canarinho" : "hover:bg-white/5"}`}
     >
       <span
-        className="w-7 shrink-0 text-right font-bold"
+        className="w-6 shrink-0 text-right font-bold"
         style={{ color: nota !== undefined ? corDaNotaNaVaga(nota, forca) : undefined }}
       >
         {nota ?? ""}
       </span>
-      <span className="min-w-0">
-        <span className="font-bold">{titulo}</span>
-        <span className="block text-xs text-suave">{descricao}</span>
-      </span>
+      <span className="min-w-0 truncate">{titulo}</span>
     </button>
   );
 }

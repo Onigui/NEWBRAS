@@ -18,12 +18,7 @@ import {
   type ResultadoPartida,
   type TimePartida,
 } from "@newbras/engine";
-import {
-  EditorFormacao,
-  PainelVaga,
-  papelENota,
-  type Candidato,
-} from "../components/EditorFormacao";
+import { EditorFormacao, papelENota } from "../components/EditorFormacao";
 import { Escudo } from "../components/Escudo";
 import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { MiniCampo, type CorTime } from "./MiniCampo";
@@ -379,27 +374,6 @@ function Comando({
   const escolhidos = partida.papeisEscolhidos(lado);
   const ocupantes = emCampo.map((id) => (id ? (porId.get(id) ?? null) : null));
   const vagaSai = sai ? emCampo.indexOf(sai) : -1;
-  const candidatos: Candidato[] =
-    selecionada === null
-      ? []
-      : [
-          ...emCampo.flatMap((id, i) => {
-            const j = id ? porId.get(id) : undefined;
-            return j && i !== selecionada ? [{ jogador: j, origem: i }] : [];
-          }),
-          ...reservas.flatMap((id) => {
-            const j = porId.get(id);
-            return j
-              ? [
-                  {
-                    jogador: j,
-                    origem: "banco" as const,
-                    ...(restantes > 0 && emCampo[selecionada] ? {} : { bloqueado: t("Sem troca") }),
-                  },
-                ]
-              : [];
-          }),
-        ];
   const [formacao, setFormacao] = useState<Formacao | "personalizada">(time.escalacao.formacao);
 
   const nome = (id: string | null) => (id ? (porId.get(id)?.nome ?? id) : "");
@@ -563,6 +537,10 @@ function Comando({
             return j ? [j] : [];
           })}
           bancoBloqueado={restantes > 0 ? null : t("sem trocas disponíveis")}
+          onPapel={(vaga, papel) => {
+            partida.mudarPapel(lado, vaga, papel);
+            onMudou();
+          }}
           onBanco={(vaga, reserva, antes) => {
             partida.mudarFormacao(lado, antes);
             const sai = emCampo[vaga];
@@ -572,28 +550,6 @@ function Comando({
             } else onMudou();
           }}
         />
-        {selecionada !== null && vagas[selecionada] && (
-          <PainelVaga
-            vaga={vagas[selecionada]}
-            indice={selecionada}
-            ocupante={ocupantes[selecionada] ?? null}
-            escolhido={escolhidos[selecionada] ?? null}
-            candidatos={candidatos}
-            rotuloTroca={(c) => (c.origem === "banco" ? t("Substituir") : t("Trocar de vaga"))}
-            onPapel={(papel) => {
-              partida.mudarPapel(lado, selecionada, papel);
-              onMudou();
-            }}
-            onTrocar={(c) => {
-              const ok =
-                c.origem === "banco"
-                  ? partida.substituir(lado, emCampo[selecionada] ?? "", c.jogador.id)
-                  : partida.trocarVagas(lado, selecionada, c.origem);
-              if (ok) onMudou();
-            }}
-            onFechar={() => setSelecionada(null)}
-          />
-        )}
       </section>
     </>
   );
