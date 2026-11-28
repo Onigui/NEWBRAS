@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Banco, Clube, Jogador, PapelEmCampo } from "@newbras/data";
+import { RESERVAS_AMISTOSO } from "@newbras/data";
 import {
   escalacaoAutomatica,
   FORMACOES,
@@ -93,6 +94,7 @@ function montarTime(indices: Indices, escolha: Escolha): TimePartida | null {
   const automatica = escalacaoAutomatica(
     jogadores,
     escolha.formacao === "personalizada" ? escolha.vagas : escolha.formacao,
+    { reservas: RESERVAS_AMISTOSO },
   );
   const ids = new Set(jogadores.map((j) => j.id));
   const mexida =

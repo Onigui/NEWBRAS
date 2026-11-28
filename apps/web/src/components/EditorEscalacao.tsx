@@ -18,6 +18,7 @@ import { Botao, Campo, estiloCampo } from "../editor/ui";
 import { IconeHumor } from "../partida/Resumo";
 import { corDaNotaNaVaga, EditorFormacao, nomeDoPapel, papelENota } from "./EditorFormacao";
 import { t } from "@newbras/textos";
+import { RESERVAS_PADRAO } from "@newbras/data";
 
 export interface EscalacaoEditavel {
   formacao: Formacao | "personalizada";
@@ -33,7 +34,8 @@ export interface FormacaoGuardada {
 }
 
 /** Tamanho do banco de reservas. */
-export const TAMANHO_BANCO = 9;
+/** Banco padrão, quando a tela não sabe a competição. */
+export const TAMANHO_BANCO = RESERVAS_PADRAO;
 
 /** Escalação automática no formato editável (a CPU escala assim). */
 export function escalacaoSugerida(
@@ -41,8 +43,12 @@ export function escalacaoSugerida(
   formacao: Formacao | "personalizada",
   vagas: readonly Vaga[],
   indisponiveis?: ReadonlySet<string>,
+  reservas: number = TAMANHO_BANCO,
 ): EscalacaoEditavel {
-  const e = escalacaoAutomatica(jogadores, vagas, indisponiveis ? { indisponiveis } : {});
+  const e = escalacaoAutomatica(jogadores, vagas, {
+    reservas,
+    ...(indisponiveis ? { indisponiveis } : {}),
+  });
   return {
     formacao,
     vagas: vagas.map((v) => ({ ...v })),
@@ -60,6 +66,10 @@ interface Props {
   avisos?: ReadonlyMap<string, string>;
   /** Quem não pode jogar (lesionados, suspensos, convocados): a escalação automática pula. */
   indisponiveis?: ReadonlySet<string>;
+  /** Reservas que o banco comporta no próximo jogo (regra da competição). */
+  tamanhoBanco?: number;
+  /** Nome da competição que define o banco, para explicar o número. */
+  competicaoDoBanco?: string;
   guardadas?: readonly FormacaoGuardada[];
   onGuardar?: (f: FormacaoGuardada) => void;
 }
@@ -70,6 +80,8 @@ export function EditorEscalacao({
   onMudar,
   avisos,
   indisponiveis,
+  tamanhoBanco = TAMANHO_BANCO,
+  competicaoDoBanco,
   guardadas = [],
   onGuardar,
 }: Props) {
@@ -91,16 +103,14 @@ export function EditorEscalacao({
       // Do banco: quem sai fica no lugar dele no banco.
       reservas = reservas.map((r) => (r === id ? saiu : r)).filter(Boolean);
     else
-      reservas = [saiu, ...reservas.filter((r) => r !== id)]
-        .filter(Boolean)
-        .slice(0, TAMANHO_BANCO);
+      reservas = [saiu, ...reservas.filter((r) => r !== id)].filter(Boolean).slice(0, tamanhoBanco);
     onMudar({ ...valor, vagas, titulares, reservas });
   };
 
   const alternarReserva = (id: string) => {
     const reservas = valor.reservas.includes(id)
       ? valor.reservas.filter((r) => r !== id)
-      : [...valor.reservas, id].slice(0, TAMANHO_BANCO);
+      : [...valor.reservas, id].slice(0, tamanhoBanco);
     onMudar({ ...valor, reservas });
   };
 
@@ -180,13 +190,30 @@ export function EditorEscalacao({
         <Botao
           onClick={() => {
             setSelecionada(null);
-            onMudar(escalacaoSugerida(jogadores, valor.formacao, valor.vagas, indisponiveis));
+            onMudar(
+              escalacaoSugerida(
+                jogadores,
+                valor.formacao,
+                valor.vagas,
+                indisponiveis,
+                tamanhoBanco,
+              ),
+            );
           }}
           title={t("Os melhores para cada vaga, já descontando cansaço e humor")}
         >
           {t("Escalação automática")}
         </Botao>
       </div>
+
+      <p className="text-xs text-suave">
+        {competicaoDoBanco
+          ? t("Banco de até {n} reservas: é a regra da {competicao}.", {
+              n: tamanhoBanco,
+              competicao: competicaoDoBanco,
+            })
+          : t("Banco de até {n} reservas.", { n: tamanhoBanco })}
+      </p>
 
       <EditorFormacao
         vagas={valor.vagas}
@@ -275,7 +302,7 @@ export function EditorEscalacao({
             <h3 className="mb-1 text-sm font-bold">
               {t("Reservas ({reservas} de {tamanhoBanco})", {
                 reservas: valor.reservas.length,
-                tamanhoBanco: TAMANHO_BANCO,
+                tamanhoBanco,
               })}
             </h3>
             <table className="w-full table-fixed text-sm">
@@ -317,7 +344,7 @@ export function EditorEscalacao({
                           <td className="w-12 py-1 text-right">
                             <button
                               type="button"
-                              disabled={valor.reservas.length >= TAMANHO_BANCO}
+                              disabled={valor.reservas.length >= tamanhoBanco}
                               className="rounded px-1 text-xs text-suave hover:bg-white/10 disabled:opacity-40"
                               onClick={() => alternarReserva(j.id)}
                             >

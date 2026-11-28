@@ -15,3 +15,4 @@ export * from "./editor";
 export * from "./visual";
 export * from "./atributos";
 export * from "./funcoes";
+export * from "./reservas";
