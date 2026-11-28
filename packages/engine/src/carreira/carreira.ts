@@ -638,7 +638,13 @@ function viverDia(c: Carreira, mundo: Mundo, data: string): Record<string, Estad
       else if (destino < atual) humor = desce(humor);
     }
     const condicao = j ? Math.min(100, e.condicao + recuperacaoDiaria(j, data)) : 100;
-    novos[id] = { ...e, humor, condicao: Math.round(condicao * 10) / 10 };
+    novos[id] = {
+      ...e,
+      humor,
+      condicao: Math.round(condicao * 10) / 10,
+      // Lesionado sabe que não pode jogar: a conta de jogos sem jogar recomeça na volta.
+      ...(lesionado(e, data) && e.semJogar ? { semJogar: 0 } : {}),
+    };
   }
   return novos;
 }
@@ -1238,12 +1244,15 @@ function lancarJogo(c: Carreira, mundo: Mundo, x: Compromisso, r: ResultadoParti
       vermelhos: antes.vermelhos + (e.vermelho ? 1 : 0),
     };
   }
-  // Quem é do grupo principal e ficou de fora conta um jogo sem jogar.
+  // Quem é do grupo principal e ficou de fora conta um jogo sem jogar. Quem não podia jogar
+  // (lesionado, suspenso ou com a seleção) não conta: o lesionado recomeça a conta na volta.
+  const naoPodia = indisponiveisNoJogo(c, mundo, x.competicao, x.data);
   const elenco = [...mundo.elenco(c.clube)].sort((a, b) => b.forca - a.forca);
   for (const j of elenco.slice(0, 16)) {
     if (usados.has(j.id)) continue;
     const antes = estadoDe(c, j.id);
-    jogadores[j.id] = { ...antes, semJogar: antes.semJogar + 1 };
+    if (lesionado(antes, x.data)) jogadores[j.id] = { ...antes, semJogar: 0 };
+    else if (!naoPodia.has(j.id)) jogadores[j.id] = { ...antes, semJogar: antes.semJogar + 1 };
   }
 
   const saldo = pro - contra;
